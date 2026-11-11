@@ -1,0 +1,117 @@
+/*
+ * Spooky mad-scientist lab theme.
+ *
+ * These CSS custom properties MIRROR the canonical tokens defined in
+ * src/theme/tokens.ts. Keep the two in sync: tokens.ts is the single source of
+ * truth that the contrast test reads; the `--*` variables below reproduce the
+ * same hex values for use in stylesheets. Token name `textPrimary` maps to
+ * `--text-primary`, `labGreen` to `--lab-green`, and so on.
+ *
+ * The theme is presentation-only and does not affect the core logic.
+ */
+:root {
+  /* Canonical theme tokens (mirror of src/theme/tokens.ts). */
+  --background: #0b0f0c;
+  --surface: #121a14;
+  --surface-raised: #182218;
+  --border: #2c3a2e;
+  --text-primary: #e8f5e9;
+  --text-secondary: #a9c4ae;
+  --lab-green: #39ff14;
+  --lab-green-deep: #1b7f3b;
+  --lab-purple: #b388ff;
+  --amber-accent: #ffb300;
+
+  /* Semantic aliases consumed by component styles. */
+  --text: var(--text-secondary);
+  --text-h: var(--text-primary);
+  --bg: var(--background);
+  --code-bg: var(--surface-raised);
+  --accent: var(--lab-green);
+  --accent-bg: rgba(57, 255, 20, 0.1);
+  --accent-border: rgba(57, 255, 20, 0.5);
+  --social-bg: rgba(24, 34, 24, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.5) 0 10px 15px -3px, rgba(0, 0, 0, 0.35) 0 4px 6px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: dark;
+  color: var(--text-primary);
+  background: var(--background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+  color: var(--text-primary);
+  background: var(--background);
+}
+
+#root {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+

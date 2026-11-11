@@ -1,0 +1,77 @@
+/*
+ * App layout for the FrankenData file-intake lab (task 19.1).
+ *
+ * Presentation-only composition styles for the top-level App shell: the header,
+ * the initialization status banners, the intake row (DropZone + DemoDataControl
+ * side by side, Req 13.1), the error region (above previews so it never
+ * obscures them, Req 9.3), and the preview region. All colors come from the
+ * shared theme tokens in index.css.
+ */
+
+#lab {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 40px 32px 64px;
+  text-align: left;
+  box-sizing: border-box;
+
+  @media (max-width: 1024px) {
+    padding: 24px 20px 48px;
+    gap: 20px;
+  }
+}
+
+.lab-header {
+  text-align: center;
+}
+
+.lab-title {
+  margin: 0 0 8px;
+  color: var(--lab-green);
+  text-shadow: 0 0 18px rgba(57, 255, 20, 0.35);
+}
+
+.lab-subtitle {
+  margin: 0 auto;
+  max-width: 48ch;
+  color: var(--text-secondary);
+}
+
+/* Initialization status banners (Summoning the lab… / error). */
+.lab-status {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 24px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.lab-status--loading {
+  border-color: var(--accent-border);
+  color: var(--lab-green);
+}
+
+.lab-status--error {
+  border-color: var(--amber-accent);
+  color: var(--amber-accent);
+  background: var(--surface-raised);
+}
+
+/* Intake row: DropZone and the demo control sit alongside each other (Req 13.1). */
+.lab-intake {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+.lab-intake .frankendata-dropzone-wrapper {
+  flex: 1 1 320px;
+}
+
+.lab-intake .frankendata-demo-control {
+  flex: 0 0 auto;
+}

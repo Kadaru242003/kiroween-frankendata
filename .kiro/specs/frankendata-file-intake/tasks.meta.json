@@ -1,0 +1,1077 @@
+{
+  "pbtResults": {
+    "4.2 Write property test for file size limit enforcement": {
+      "status": "passed",
+      "lastRunTimestamp": 1794358688335
+    },
+    "5.2 Write property test for CSV parsing fidelity": {
+      "status": "passed",
+      "lastRunTimestamp": 1794358698833
+    },
+    "3.2 Write property test for file type routing from extension": {
+      "status": "passed",
+      "lastRunTimestamp": 1794358702893
+    },
+    "7.4 Write property test for type inference total classification": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359360890
+    },
+    "7.6 Write property test for percent-to-decimal conversion": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359367170
+    },
+    "7.7 Write property test for number formatting round trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359424334
+    },
+    "7.11 Write property test for all-NullToken column infers string": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359658149
+    },
+    "7.9 Write property test for all-dates infer date": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359665659
+    },
+    "10.3 Write property test for row count preservation": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359923028
+    },
+    "10.5 Write property test for NullToken exclusion and NULL storage": {
+      "status": "passed",
+      "lastRunTimestamp": 1794359969896
+    },
+    "12.5 Write property test for load failure error names the file": {
+      "status": "passed",
+      "lastRunTimestamp": 1794360153245
+    }
+  },
+  "executionHistory": {
+    "1.1 Scaffold the React + Vite + TypeScript app and install dependencies": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357336948
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357343966
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357918117
+      }
+    ],
+    "1.2 Write the DuckDB-WASM initialization smoke test": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337078
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357921117
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358064880
+      }
+    ],
+    "2.1 Create shared type definitions and module interfaces": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337130
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357921965
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358065521
+      }
+    ],
+    "3.1 Implement `detectType`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337159
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358069101
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358254245
+      }
+    ],
+    "3.2 Write property test for file type routing from extension": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337221
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358589680
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358766300
+      }
+    ],
+    "4.1 Implement `checkSize`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337252
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358070435
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358255262
+      }
+    ],
+    "4.2 Write property test for file size limit enforcement": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337280
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358590632
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358765628
+      }
+    ],
+    "5.1 Implement `CsvParser` (PapaParse wrapper)": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337314
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358071397
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358256604
+      }
+    ],
+    "5.2 Write property test for CSV parsing fidelity": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337344
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358591362
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358764295
+      }
+    ],
+    "5.3 Write property tests for empty and unreadable CSV detection": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337368
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358776177
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358958877
+      }
+    ],
+    "6.1 Implement `XlsxParser` (SheetJS wrapper) with cell-value string normalization": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337398
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358072898
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358258081
+      }
+    ],
+    "6.2 Write property test for XLSX parsing fidelity": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337429
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358777613
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358960894
+      }
+    ],
+    "6.3 Write property tests for empty and unreadable XLSX detection": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337460
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358778444
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358957832
+      }
+    ],
+    "6.4 Write property test for Excel serial date conversion": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337488
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358779887
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358956407
+      }
+    ],
+    "6.5 Write property test for XLSX cell value string normalization": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337518
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358780533
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358960187
+      }
+    ],
+    "7.1 Implement per-value predicates": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337544
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358073622
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358258569
+      }
+    ],
+    "7.2 Implement `TypeInferenceLayer.infer` column classification": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337569
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358587259
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358763271
+      }
+    ],
+    "7.3 Implement value coercion helpers": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337596
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358588277
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358761879
+      }
+    ],
+    "7.4 Write property test for type inference total classification": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337628
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359280908
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359563548
+      }
+    ],
+    "7.5 Write property test for all-numbers infer number (incl. NullToken-mixed)": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337653
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359281931
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359564546
+      }
+    ],
+    "7.6 Write property test for percent-to-decimal conversion": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337682
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359283362
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359565936
+      }
+    ],
+    "7.7 Write property test for number formatting round trip": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337711
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359283934
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359566658
+      }
+    ],
+    "7.8 Write property test for all-booleans infer boolean": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337735
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359573019
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359708425
+      }
+    ],
+    "7.9 Write property test for all-dates infer date": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337764
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359574503
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359711696
+      }
+    ],
+    "7.10 Write property test for mixed or unparseable infer string": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337795
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359575415
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359709293
+      }
+    ],
+    "7.11 Write property test for all-NullToken column infers string": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337827
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359577446
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359710245
+      }
+    ],
+    "7.12 Write property test for inference never throws": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337851
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359576844
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359706982
+      }
+    ],
+    "7.13 Write property test for date normalization to ISO YYYY-MM-DD": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337880
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359712519
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359806110
+      }
+    ],
+    "8. Checkpoint - core logic tests pass": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337910
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360898510
+      }
+    ],
+    "9.1 Implement `NameSanitizer`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357337971
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358264314
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358582938
+      }
+    ],
+    "9.2 Write property test for table name derivation and sanitization": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338002
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358977565
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359272901
+      }
+    ],
+    "9.3 Write property test for table name uniqueness": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338029
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358978510
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359274413
+      }
+    ],
+    "9.4 Write property test for column name sanitization": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338059
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358979330
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359274964
+      }
+    ],
+    "10.1 Implement `DuckDBService` (init, typed table creation, insertion, fallback, queries)": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338088
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359279427
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359562310
+      }
+    ],
+    "10.2 Write property test for DuckDB table uses inferred types": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338113
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359810309
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360013177
+      }
+    ],
+    "10.3 Write property test for row count preservation": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338138
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359812531
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360014059
+      }
+    ],
+    "10.4 Write property test for string fallback on conversion failure": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338167
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359811594
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360015093
+      }
+    ],
+    "10.5 Write property test for NullToken exclusion and NULL storage": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338195
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359814676
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360016099
+      }
+    ],
+    "11. Checkpoint - core logic tests pass": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338217
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360900889
+      }
+    ],
+    "12.1 Implement `IntakeController` (per-file pipeline)": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338244
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359813945
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360011763
+      }
+    ],
+    "12.2 Implement `IntakeStore` (session state)": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338270
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358264894
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358582253
+      }
+    ],
+    "12.3 Write property test for accept all dropped files": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338299
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360021151
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360185395
+      }
+    ],
+    "12.4 Write property test for independent processing and failure isolation": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338328
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360022035
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360186011
+      }
+    ],
+    "12.5 Write property test for load failure error names the file": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338354
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360020329
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360183948
+      }
+    ],
+    "13. Checkpoint - all core logic tests pass": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338384
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360903243
+      }
+    ],
+    "14.1 Implement the lab theme and contrast color tokens": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338413
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360189724
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360353563
+      }
+    ],
+    "14.2 Style the DropZone as a lab intake port": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338436
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360536382
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360688011
+      }
+    ],
+    "14.3 Style the TablePreview with readable headers and separators": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338465
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360538192
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360686628
+      }
+    ],
+    "15.1 Implement `DropZone`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338488
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360359558
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360532741
+      }
+    ],
+    "16.1 Implement `TablePreview`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338517
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360358268
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360531794
+      }
+    ],
+    "17.1 Implement `ErrorDisplay`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338543
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360360216
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360530926
+      }
+    ],
+    "18.1 Implement `DemoDataLoader`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338569
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360190459
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360354061
+      }
+    ],
+    "18.2 Implement `DemoDataControl`": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338593
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360537260
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360688695
+      }
+    ],
+    "19.1 Wire the pipeline into the App": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338618
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360691793
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360837743
+      }
+    ],
+    "20. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794357338658
+      },
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360905659
+      }
+    ],
+    "1. Project foundation and DuckDB-WASM smoke test": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358064914
+      }
+    ],
+    "2. Define core types and interfaces": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358065555
+      }
+    ],
+    "4. Implement file size validation": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358765687
+      }
+    ],
+    "3. Implement file type detection": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358766344
+      }
+    ],
+    "5. Implement CSV parsing": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358958903
+      }
+    ],
+    "6. Implement XLSX parsing": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794358960952
+      }
+    ],
+    "9. Implement name sanitization": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359274994
+      }
+    ],
+    "7. Implement type inference and value coercion": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794359806183
+      }
+    ],
+    "10. Implement the DuckDB-WASM service": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360016133
+      }
+    ],
+    "12. Implement intake orchestration and session store": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360186043
+      }
+    ],
+    "17. Implement the ErrorDisplay UI": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360530952
+      }
+    ],
+    "16. Implement the TablePreview UI": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360531826
+      }
+    ],
+    "15. Implement the DropZone UI": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360532766
+      }
+    ],
+    "14. Apply the spooky mad-scientist visual theme": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360688084
+      }
+    ],
+    "18. Implement demo data": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360688727
+      }
+    ],
+    "19. Integration and wiring": [
+      {
+        "executionId": "66e188a8-8e64-4f26-adda-5efb01fbe6e0",
+        "chatSessionId": "sess_291e4506-0a2d-45cd-820f-db261b36b5fb",
+        "timestamp": 1794360837815
+      }
+    ]
+  }
+}

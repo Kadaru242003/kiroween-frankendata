@@ -1,0 +1,181 @@
+/*
+ * TablePreview styling (lab theme pass — task 14.3).
+ *
+ * Uses the canonical theme CSS variables from src/index.css (Req 12.3). This
+ * pass refines the baseline into the mad-scientist lab look:
+ *  - Sticky, readable headers (column name + inferred type) that stay pinned to
+ *    the top of the card's scroll region when the table body scrolls (Req 7.3,
+ *    7.4, 12.3). Header cells carry a solid themed background so body rows never
+ *    bleed through, plus a z-index so they sit above the cells.
+ *  - Visible column separators (border-right) and row separators (border-bottom)
+ *    so the tabular structure is legible against the dark surface (Req 12.3).
+ *  - High-contrast header/body text using the canonical text tokens (Req 7.2).
+ *
+ * Presentation-only: no component logic or props change here.
+ */
+
+.table-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.table-preview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-preview-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.table-preview-card__title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--text-h);
+}
+
+.table-preview-card__source {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.table-preview-card__rowcount {
+  margin: 0 0 0 auto;
+  color: var(--amber-accent);
+  font-size: 14px;
+  font-family: var(--mono);
+}
+
+/*
+ * The scroll region. Capping the height and allowing overflow on both axes is
+ * what makes the sticky header meaningful: when there are more than a handful
+ * of preview rows the body scrolls under the pinned header.
+ */
+.table-preview-card__scroll {
+  overflow: auto;
+  max-height: 420px;
+}
+
+.table-preview-card__table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+/* Visually hidden but available to assistive technology. */
+.table-preview-card__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * Sticky, readable headers (Req 7.3, 7.4, 12.3).
+ *
+ * `position: sticky; top: 0` pins each header cell to the top of the scroll
+ * region. A solid themed background keeps scrolling body rows from showing
+ * through, and the z-index lifts the header above the body cells. With
+ * `border-collapse: collapse` a bottom border on a sticky cell can be clipped
+ * as the body scrolls under it, so the header's bottom separator is drawn with
+ * an inset box-shadow (which scrolls with the pinned cell) while the vertical
+ * column separators remain real borders.
+ */
+.table-preview-card__th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  /* Solid background so body rows don't bleed through the pinned header. */
+  background: var(--surface-raised);
+  /* Visible column separators (Req 12.3). */
+  border-right: 1px solid var(--border);
+  /* Stable bottom separator that survives the sticky scroll. */
+  box-shadow: inset 0 -2px 0 0 var(--lab-green-deep);
+  white-space: nowrap;
+}
+
+.table-preview-card__th:last-child {
+  border-right: none;
+}
+
+/* Column name: high-contrast light tone against the header background (Req 7.2, 7.3). */
+.table-preview-card__col-name {
+  display: block;
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+/*
+ * Inferred column type (Req 7.4). The toxic lab green reads clearly against the
+ * raised surface and ties the preview into the mad-scientist palette; the mono
+ * font + uppercase treatment visually distinguishes the type from the name.
+ */
+.table-preview-card__col-type {
+  display: block;
+  margin-top: 3px;
+  color: var(--lab-green);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-preview-card__td {
+  padding: 7px 12px;
+  color: var(--text-primary);
+  /* Visible column separators (Req 12.3). */
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table-preview-card__td:last-child {
+  border-right: none;
+}
+
+/*
+ * Subtle zebra striping + hover highlight make individual rows easy to track
+ * across many columns against the dark surface (Req 12.3). Decoration only.
+ */
+.table-preview-card__tbody tr:nth-child(even) .table-preview-card__td {
+  background: var(--surface-raised);
+}
+
+.table-preview-card__tbody tr:hover .table-preview-card__td {
+  background: var(--accent-bg);
+}
+
+.table-preview-card__td--null {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.table-preview-card__empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+}
