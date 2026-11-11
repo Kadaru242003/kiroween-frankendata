@@ -39,7 +39,6 @@
 import type { MatchProposal, SampleValue, TableSample } from "./types";
 import {
   AI_PROXY_MAX_PAYLOAD_BYTES,
-  MATCH_DISPLAY_THRESHOLD,
   type AiCandidateMatch,
   type AiRequest,
   type AiSampleColumn,
@@ -54,6 +53,16 @@ export const MAX_SAMPLE_CHARS = 40;
 export const MAX_COLUMNS = 40;
 /** Max candidate matches included in the request. */
 export const MAX_CANDIDATES = 30;
+
+/**
+ * The WIDER candidate floor (enhancement): besides the already-visible
+ * matches (>= {@link MATCH_DISPLAY_THRESHOLD}), the client also sends
+ * sub-threshold candidates whose rule score is >= this floor AND whose types
+ * are compatible (`components.typeCompat > 0`), so the AI can DISCOVER a
+ * semantic match the rules scored below the display threshold. Candidates
+ * below this floor are never sent, so the AI can never resurrect them.
+ */
+export const AI_CANDIDATE_FLOOR = 0.25;
 
 /**
  * Read the `VITE_AI_ENABLED` build-time flag (design: "Dev-mode behavior and
@@ -127,8 +136,19 @@ export function budgetAiRequest(
 
   // 1 + 2. Eligible candidates, highest ruleConfidence first, capped to
   // MAX_CANDIDATES (so the drops are the lowest-confidence ones).
+  //
+  // Eligibility (enhancement — wider floor): a match is a candidate when its
+  // rule score is >= AI_CANDIDATE_FLOOR (0.25) AND its types are compatible
+  // (components.typeCompat > 0). This includes the already-visible matches
+  // (>= MATCH_DISPLAY_THRESHOLD, which necessarily have typeCompat > 0 since
+  // the hard gate drops typeCompat==0 pairs) AND the sub-threshold
+  // [0.25, 0.5) compatible-type ones the AI may DISCOVER. Below the floor,
+  // or type-incompatible, is never sent — so the AI cannot resurrect it.
   const eligible = matches
-    .filter((m) => m.confidence >= MATCH_DISPLAY_THRESHOLD)
+    .filter(
+      (m) =>
+        m.confidence >= AI_CANDIDATE_FLOOR && m.components.typeCompat > 0
+    )
     .slice()
     .sort((a, b) => {
       if (b.confidence !== a.confidence) {

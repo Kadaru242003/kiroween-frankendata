@@ -148,7 +148,7 @@ Gorzak,Swamp Wraith,High,yes
 /**
  * Mismatched file B — field observations of the same creatures.
  *
- * Headers: `monster_name`, `species`, `threat_level`, `hazardous` — cased and
+ * Headers: `monster_name`, `species`, `danger_level`, `hazardous` — cased and
  * separated differently from file A's headers, so cross-table matching bridges
  * them by similarity. `monster_name` normalizes to the same tokens as file A's
  * `Monster Name`, and its values overlap file A's, so the headline match is
@@ -157,8 +157,15 @@ Gorzak,Swamp Wraith,High,yes
  * duplicated once for `duplicate-rows` (1 duplicate row). The boolean
  * `hazardous` column (like file A's `Sedated`) must NOT match — the engine's
  * boolean hard-gate excludes it.
+ *
+ * `danger_level` is a deliberate AI-DISCOVERY story: it shares exactly one
+ * token (`level`) with monsters' `Threat_Level`, so the rules score lands at
+ * ~0.48 (nameSim ~0.38, over the 0.2 gate but under the 0.5 display
+ * threshold). Rules-only it stays UNMATCHED; the optional AI, which receives
+ * compatible candidates down to AI_CANDIDATE_FLOOR (0.25), can DISCOVER it
+ * from the shared High/Medium/Low values and lift it into view.
  */
-const MISMATCH_EXPERIMENTS_CSV = `monster_name,species,threat_level,hazardous
+const MISMATCH_EXPERIMENTS_CSV = `monster_name,species,danger_level,hazardous
 Gorzak,Swamp Wraith,High,true
 Mothra Jr.,Moth Titan,High,true
 Blinky,Three-Eyed Ooze,Low,false

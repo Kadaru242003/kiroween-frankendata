@@ -69,6 +69,14 @@ export interface MatchProposal {
   confidence: number; // 0..1 (Req 1.3)
   reason: string; // one line (plain text)
   source: ProposalSource; // "rules" unless AI refined it
+  /**
+   * True when this match was DISCOVERED by the AI: its rule score was below
+   * the display threshold and the bounded AI lift brought the final score to
+   * >= MATCH_DISPLAY_THRESHOLD. Used by the UI to show an "AI found this"
+   * chip. Absent/false for rules matches and for AI-refined matches that were
+   * already visible.
+   */
+  aiDiscovered?: boolean;
   // breakdown kept for the diff / debugging; deterministic
   components: { nameSim: number; typeCompat: number; valueOverlap: number };
 }
@@ -119,6 +127,15 @@ export interface UndoStep {
 // ── The deterministic engine ────────────────────────────────────────────────
 export interface RulesEngine {
   match(tables: TableSample[]): MatchProposal[];
+  /**
+   * The FULL scored set, including sub-display-threshold matches that
+   * survived the hard gates (typeCompat > 0, non-boolean). Used only to feed
+   * the AI the wider candidate floor (enhancement): the client may send
+   * compatible-type candidates with rule score >= AI_CANDIDATE_FLOOR so the
+   * AI can discover a semantic match the rules scored below the display
+   * threshold. `match` remains the >= threshold display set.
+   */
+  matchAll(tables: TableSample[]): MatchProposal[];
   /**
    * Produce per-table {@link CleaningProposal}s (Req 2.1–2.8).
    *

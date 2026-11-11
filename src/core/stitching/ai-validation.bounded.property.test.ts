@@ -58,9 +58,12 @@ import fc from "fast-check";
 import type { ColumnSchema, ColumnType, LoadedTable } from "../types";
 import {
   MAX_REASON_CHARS,
+  MAX_AI_DISCOVERY_LIFT,
   boundedConfidence,
+  discoveredConfidence,
   validateAiResponse,
 } from "./ai-validation";
+import { AI_CANDIDATE_FLOOR } from "./ai-budget";
 import { createFakeAiProvider } from "./ai-provider";
 import { createStitchController } from "./stitch-controller";
 import { StitchStore } from "./stitch-store";
@@ -88,7 +91,7 @@ const MAX_AI_ADJUSTMENT = 0.2;
 /** sent-set ids are all eligible by construction. */
 const sentId = (n: number): string => `sent-${n}`;
 
-/** Build a sent candidate match (all `>= MATCH_DISPLAY_THRESHOLD`). */
+/** Build a sent candidate match (rule score in `[AI_CANDIDATE_FLOOR, 1]`). */
 function sentMatch(id: string, confidence: number): MatchProposal {
   return {
     id,
@@ -101,14 +104,19 @@ function sentMatch(id: string, confidence: number): MatchProposal {
   };
 }
 
-/** 1..6 distinctly-identified sent candidates, each `>= 0.5`. */
+/**
+ * 1..6 distinctly-identified sent candidates whose rule scores STRADDLE the
+ * display threshold: anywhere in the eligible-to-send band
+ * `[AI_CANDIDATE_FLOOR, 1]`. Candidates below 0.5 are the DISCOVERED tier
+ * (positive-only +0.3 lift, reason required); >= 0.5 are the refine tier
+ * (symmetric ±0.2).
+ */
 const genSent: fc.Arbitrary<MatchProposal[]> = fc
   .integer({ min: 1, max: 6 })
   .chain((count) =>
     fc.tuple(
       ...Array.from({ length: count }, () =>
-        // A rule confidence anywhere in the eligible [0.5, 1] band.
-        fc.double({ min: MATCH_DISPLAY_THRESHOLD, max: 1, noNaN: true })
+        fc.double({ min: AI_CANDIDATE_FLOOR, max: 1, noNaN: true })
       )
     )
   )
@@ -217,8 +225,18 @@ function expectedMerge(
     if (!Number.isFinite(rec.confidence)) {
       continue; // step 4: non-finite rejected
     }
+    // Two-tier bound. Tier 2 (discovered: rule < 0.5) requires a non-empty
+    // trimmed reason and uses a positive-only +0.3 lift; tier 1 (>= 0.5)
+    // uses the symmetric ±0.2 nudge.
+    const isDiscovered = target.confidence < MATCH_DISPLAY_THRESHOLD;
+    if (isDiscovered && rec.reason.trim().length === 0) {
+      continue; // discovered lift with no evidence is ignored
+    }
+    const finalConfidence = isDiscovered
+      ? discoveredConfidence(target.confidence, rec.confidence)
+      : boundedConfidence(target.confidence, rec.confidence);
     applied.set(rec.id, {
-      confidence: boundedConfidence(target.confidence, rec.confidence),
+      confidence: finalConfidence,
       reason: rec.reason.slice(0, MAX_REASON_CHARS),
       source: "ai",
     });
@@ -263,14 +281,21 @@ describe("Property 12: AI merge is bounded, eligible-only, ignores invalid input
             expect(m.confidence).toBeLessThanOrEqual(1);
 
             if (exp) {
-              // Refined: EXACT bounded formula, truncated reason, source "ai".
+              // Refined: EXACT two-tier bounded formula, truncated reason, ai.
               expect(m.confidence).toBeCloseTo(exp.confidence, 10);
               expect(m.reason).toBe(exp.reason);
               expect(m.source).toBe("ai");
-              // Bounded adjustment: never more than ±0.2 from the rule score.
-              expect(Math.abs(m.confidence - rule.confidence)).toBeLessThanOrEqual(
-                MAX_AI_ADJUSTMENT + 1e-9
-              );
+              const delta = m.confidence - rule.confidence;
+              if (rule.confidence < MATCH_DISPLAY_THRESHOLD) {
+                // Tier 2 (discovered): delta in [0, +0.3] — never negative.
+                expect(delta).toBeGreaterThanOrEqual(-1e-9);
+                expect(delta).toBeLessThanOrEqual(MAX_AI_DISCOVERY_LIFT + 1e-9);
+              } else {
+                // Tier 1 (refine): delta in [-0.2, +0.2].
+                expect(Math.abs(delta)).toBeLessThanOrEqual(
+                  MAX_AI_ADJUSTMENT + 1e-9
+                );
+              }
               // Reason never exceeds the cap.
               expect(m.reason.length).toBeLessThanOrEqual(MAX_REASON_CHARS);
             } else {
@@ -423,9 +448,13 @@ function fakeSampleReader(result: TableSample[]): SampleReader {
   };
 }
 
-function fakeRulesEngine(matches: MatchProposal[]): RulesEngine {
+function fakeRulesEngine(
+  matches: MatchProposal[],
+  fullMatches?: MatchProposal[]
+): RulesEngine {
   return {
     match: () => matches,
+    matchAll: () => fullMatches ?? matches,
     clean: async (): Promise<CleaningProposal[]> => [],
   };
 }
@@ -482,8 +511,8 @@ function ctrlMatch(
   };
 }
 
-describe("Property 12 (controller): demote-not-resurrect across the 0.5 threshold", () => {
-  it("no AI response raises a hidden (<0.5) match into the displayed set", async () => {
+describe("Property 12 (controller): the AI cannot resurrect a below-floor match", () => {
+  it("no AI response raises a below-AI_CANDIDATE_FLOOR match into the displayed set", async () => {
     const { tables, samples } = twoTables();
 
     // Generate a set of matches straddling the threshold: each match has a
@@ -497,7 +526,11 @@ describe("Property 12 (controller): demote-not-resurrect across the 0.5 threshol
           visible: fc.boolean(),
           // A confidence on the correct side of the 0.5 threshold.
           vis: fc.double({ min: MATCH_DISPLAY_THRESHOLD, max: 1, noNaN: true }),
-          hid: fc.double({ min: 0, max: 0.4999, noNaN: true }),
+          // Hidden matches are placed BELOW the candidate floor, so they are
+          // never sent to the AI and can never be resurrected (the
+          // enhancement allows discovering [0.25, 0.5) matches, which is
+          // covered elsewhere; this property pins the hard below-floor rule).
+          hid: fc.double({ min: 0, max: AI_CANDIDATE_FLOOR - 0.001, noNaN: true }),
         }),
         {
           minLength: 2,
@@ -560,8 +593,8 @@ describe("Property 12 (controller): demote-not-resurrect across the 0.5 threshol
           const result = await controller.computeProposals();
           const displayedIds = new Set(result.matches.map((m) => m.id));
 
-          // Demote-not-resurrect: NO hidden (<0.5) match may appear displayed,
-          // no matter how favorable the AI response.
+          // Below-floor: NO match with rule < AI_CANDIDATE_FLOOR may appear
+          // displayed, no matter how favorable the AI response (never sent).
           for (const hiddenId of hiddenIds) {
             expect(displayedIds.has(hiddenId)).toBe(false);
           }

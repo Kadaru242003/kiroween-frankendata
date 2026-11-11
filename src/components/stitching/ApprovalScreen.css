@@ -322,3 +322,22 @@
   border-color: var(--lab-purple);
   color: var(--lab-purple);
 }
+
+/*
+ * "AI found this" chip (enhancement): shown next to the ai badge when the AI
+ * DISCOVERED a match the rules scored below the display threshold. Purple
+ * lab accent, filled to stand out as a highlight, same pill shape as the
+ * engine badge.
+ */
+.stitch-ai-found {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  border: 1px solid var(--lab-purple);
+  background: rgba(179, 136, 255, 0.15);
+  color: var(--lab-purple);
+}

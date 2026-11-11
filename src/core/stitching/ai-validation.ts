@@ -36,6 +36,7 @@
  * keep `source = "rules"`. Pure, framework-agnostic, deterministic.
  */
 
+import { MATCH_DISPLAY_THRESHOLD } from "./types";
 import type { MatchProposal } from "./types";
 
 /** Max characters kept from an AI `reason` (design: "Reason length"). */
@@ -43,6 +44,17 @@ export const MAX_REASON_CHARS = 200;
 
 /** Max absolute adjustment the AI may apply to a rule score (design). */
 export const MAX_AI_ADJUSTMENT = 0.2;
+
+/**
+ * Max POSITIVE lift the AI may apply to a DISCOVERED candidate — one whose
+ * rule score was below {@link MATCH_DISPLAY_THRESHOLD} (enhancement:
+ * two-tier bounded lift). For discovered candidates the adjustment is
+ * clamped to `[0, +0.3]` (never negative), so the AI can only PROMOTE a
+ * sub-threshold match, by at most +0.3. Since the starting rule score is
+ * < 0.5, the final can never reach HIGH_CONFIDENCE_THRESHOLD (0.85), so a
+ * discovered match is never auto-approved by "Approve all high-confidence".
+ */
+export const MAX_AI_DISCOVERY_LIFT = 0.3;
 
 /** Clamp a number to the inclusive range `[lo, hi]`. */
 function clamp(value: number, lo: number, hi: number): number {
@@ -72,6 +84,22 @@ export function boundedConfidence(
     -MAX_AI_ADJUSTMENT,
     MAX_AI_ADJUSTMENT
   );
+  return clamp(ruleConfidence + delta, 0, 1);
+}
+
+/**
+ * The POSITIVE-only bounded lift for a DISCOVERED candidate (rule score
+ * below {@link MATCH_DISPLAY_THRESHOLD}): the adjustment is clamped to
+ * `[0, +MAX_AI_DISCOVERY_LIFT]` so the AI can only promote (never demote) a
+ * sub-threshold match, and the result is clamped to [0, 1].
+ *
+ *   final = clamp(rule + clamp(ai − rule, 0, +0.3), 0, 1)
+ */
+export function discoveredConfidence(
+  ruleConfidence: number,
+  aiConfidence: number
+): number {
+  const delta = clamp(aiConfidence - ruleConfidence, 0, MAX_AI_DISCOVERY_LIFT);
   return clamp(ruleConfidence + delta, 0, 1);
 }
 
@@ -174,15 +202,31 @@ export function validateAiResponse(
     if (!Number.isFinite(refinement.confidence)) {
       continue;
     }
-    // Step 4 (cont.): bounded ±0.2 adjustment, clamped to [0, 1].
-    target.confidence = boundedConfidence(
-      target.confidence,
-      refinement.confidence
-    );
+    // The tier is decided by the SENT candidate's rule score. Tier 1
+    // (rule >= 0.5): the existing symmetric ±0.2 nudge. Tier 2 (rule < 0.5,
+    // AI-DISCOVERED): a positive-only lift of at most +0.3, and ONLY when the
+    // refinement carries a non-empty reason (a discovered match with no
+    // justification is treated as invalid for that candidate → keep the rule
+    // score, do not mark it ai).
+    const ruleConfidence = target.confidence;
+    const isDiscovered = ruleConfidence < MATCH_DISPLAY_THRESHOLD;
+    const trimmedReason = refinement.reason.trim();
+    if (isDiscovered && trimmedReason.length === 0) {
+      // Invalid discovery (no evidence) — leave the rule score untouched.
+      continue;
+    }
+    const finalConfidence = isDiscovered
+      ? discoveredConfidence(ruleConfidence, refinement.confidence)
+      : boundedConfidence(ruleConfidence, refinement.confidence);
+    target.confidence = finalConfidence;
     // Step 5: truncate the reason to the cap; step 6/7: scope + stored as-is.
     target.reason = refinement.reason.slice(0, MAX_REASON_CHARS);
     // Step 6: only confidence + reason change; mark the engine as AI (Req 6.8).
     target.source = "ai";
+    // Flag a genuine discovery: a sub-threshold rule score lifted to visible.
+    if (isDiscovered && finalConfidence >= MATCH_DISPLAY_THRESHOLD) {
+      target.aiDiscovered = true;
+    }
 
     appliedIds.add(refinement.id);
     anyApplied = true;

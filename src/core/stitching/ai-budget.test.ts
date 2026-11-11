@@ -20,6 +20,7 @@ import {
   budgetAiRequest,
   isAiEnabled,
   serializedByteLength,
+  AI_CANDIDATE_FLOOR,
 } from "./ai-budget";
 import {
   AI_PROXY_MAX_PAYLOAD_BYTES,
@@ -59,7 +60,8 @@ function match(
   rightTable: string,
   rightCol: string,
   confidence: number,
-  type: ColumnType = "string"
+  type: ColumnType = "string",
+  typeCompat = 1
 ): MatchProposal {
   return {
     id,
@@ -68,7 +70,7 @@ function match(
     confidence,
     reason: "r",
     source: "rules",
-    components: { nameSim: 1, typeCompat: 1, valueOverlap: 1 },
+    components: { nameSim: 1, typeCompat, valueOverlap: 1 },
   };
 }
 
@@ -88,9 +90,9 @@ describe("isAiEnabled", () => {
 });
 
 describe("budgetAiRequest — eligibility", () => {
-  it("skips the call when no match is at or above the display threshold", () => {
+  it("skips the call when no match is at or above the candidate floor", () => {
     const matches = [
-      match("m1", "a", "x", "b", "y", MATCH_DISPLAY_THRESHOLD - 0.01),
+      match("m1", "a", "x", "b", "y", AI_CANDIDATE_FLOOR - 0.01),
     ];
     const tables = [
       table("a", { x: { type: "string", values: ["v"] } }),
@@ -103,9 +105,10 @@ describe("budgetAiRequest — eligibility", () => {
     }
   });
 
-  it("includes only candidates >= the display threshold", () => {
+  it("sends compatible-type candidates in [floor, display) as well as >= display (wider floor)", () => {
     const matches = [
       match("hi", "a", "x", "b", "y", 0.9),
+      // Discovered tier: rule in [0.25, 0.5) with compatible types.
       match("lo", "a", "x2", "b", "y2", MATCH_DISPLAY_THRESHOLD - 0.001),
     ];
     const tables = [
@@ -121,8 +124,37 @@ describe("budgetAiRequest — eligibility", () => {
     const result = budgetAiRequest(matches, tables);
     expect(result.skip).toBe(false);
     if (!result.skip) {
-      expect(result.request.candidates.map((c) => c.id)).toEqual(["hi"]);
+      // Both sent, highest-confidence first.
+      expect(result.request.candidates.map((c) => c.id)).toEqual(["hi", "lo"]);
     }
+  });
+
+  it("does NOT send a sub-display candidate with incompatible types (typeCompat == 0)", () => {
+    const matches = [
+      // Rule 0.4 (>= floor) but types incompatible → must not be sent.
+      match("bad", "a", "x", "b", "y", 0.4, "string", 0),
+    ];
+    const tables = [
+      table("a", { x: { type: "string", values: ["v"] } }),
+      table("b", { y: { type: "string", values: ["v"] } }),
+    ];
+    const result = budgetAiRequest(matches, tables);
+    expect(result.skip).toBe(true);
+    if (result.skip) {
+      expect(result.reason).toBe("no-candidates");
+    }
+  });
+
+  it("does NOT send a candidate below the floor (no resurrection path)", () => {
+    const matches = [
+      match("tiny", "a", "x", "b", "y", AI_CANDIDATE_FLOOR - 0.05),
+    ];
+    const tables = [
+      table("a", { x: { type: "string", values: ["v"] } }),
+      table("b", { y: { type: "string", values: ["v"] } }),
+    ];
+    const result = budgetAiRequest(matches, tables);
+    expect(result.skip).toBe(true);
   });
 
   it("keeps the boundary candidate exactly at the display threshold", () => {

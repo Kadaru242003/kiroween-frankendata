@@ -23,10 +23,12 @@ import type { SampleReader, SampleSourceTable } from "./sample-reader";
 import type { StitchApplier } from "./stitch-applier";
 import {
   MATCH_DISPLAY_THRESHOLD,
+  HIGH_CONFIDENCE_THRESHOLD,
   type MatchProposal,
   type RulesEngine,
   type TableSample,
 } from "./types";
+import { selectHighConfidenceProposalIds } from "./plan-assembly";
 
 // ── Fakes ────────────────────────────────────────────────────────────────────
 
@@ -53,9 +55,15 @@ function fakeSampleReader(result: TableSample[]): SampleReader {
   };
 }
 
-function fakeRulesEngine(matches: MatchProposal[]): RulesEngine {
+function fakeRulesEngine(
+  matches: MatchProposal[],
+  fullMatches?: MatchProposal[]
+): RulesEngine {
   return {
     match: () => matches,
+    // The full scored set for the AI's wider candidate floor; defaults to the
+    // display matches when a test does not exercise sub-threshold discovery.
+    matchAll: () => fullMatches ?? matches,
     clean: async () => [],
   };
 }
@@ -103,6 +111,9 @@ interface Harness {
 
 function makeController(options: {
   matches: MatchProposal[];
+  // The full scored set (incl. sub-0.5 discovered candidates). Defaults to
+  // `matches` when a test does not exercise discovery.
+  fullMatches?: MatchProposal[];
   aiProvider?: ReturnType<typeof createFakeAiProvider>;
   aiEnabledFlag?: unknown;
 }): Harness {
@@ -113,7 +124,7 @@ function makeController(options: {
     getTables: () => tables,
     store,
     sampleReader: fakeSampleReader(SAMPLES),
-    rulesEngine: fakeRulesEngine(options.matches),
+    rulesEngine: fakeRulesEngine(options.matches, options.fullMatches),
     applier: NOOP_APPLIER,
     aiProvider: options.aiProvider,
     aiEnabledFlag: options.aiEnabledFlag,
@@ -272,5 +283,92 @@ describe("StitchController AI wiring — happy path merge", () => {
     expect(result.aiUsed).toBe(true);
     // Demoted below threshold → hidden from the display set.
     expect(result.matches).toHaveLength(0);
+  });
+});
+
+describe("StitchController AI wiring — AI discovery (wider floor + two-tier lift)", () => {
+  it("discovers a sub-0.5 candidate, lifts it to >= 0.5, marks aiDiscovered, source=ai", async () => {
+    // Rule 0.4 (discovered tier). The full set carries it; the display base
+    // does not (so it starts hidden). The AI lifts it by +0.3 → 0.7.
+    const discovered = match("disc", 0.4);
+    const ai = createFakeAiProvider({
+      behavior: {
+        kind: "respond",
+        response: {
+          refinements: [
+            { id: "disc", confidence: 1, reason: "shared High/Low values" },
+          ],
+        },
+      },
+    });
+    const { controller } = makeController({
+      matches: [], // nothing visible from the rules alone
+      fullMatches: [discovered],
+      aiProvider: ai,
+      aiEnabledFlag: "true",
+    });
+    const result = await controller.computeProposals();
+    expect(result.aiUsed).toBe(true);
+    expect(ai.calls).toHaveLength(1);
+    const disc = result.matches.find((m) => m.id === "disc");
+    expect(disc).toBeDefined();
+    expect(disc!.source).toBe("ai");
+    expect(disc!.aiDiscovered).toBe(true);
+    // +0.3 lift cap: 0.4 → 0.7 (clamp of ai−rule to +0.3).
+    expect(disc!.confidence).toBeCloseTo(0.7, 10);
+    expect(disc!.reason).toBe("shared High/Low values");
+  });
+
+  it("ignores a discovered lift that has NO reason (keeps it hidden)", async () => {
+    const discovered = match("disc", 0.4);
+    const ai = createFakeAiProvider({
+      behavior: {
+        kind: "respond",
+        response: {
+          // Empty reason → invalid for a discovered candidate → rule kept.
+          refinements: [{ id: "disc", confidence: 1, reason: "   " }],
+        },
+      },
+    });
+    const { controller } = makeController({
+      matches: [],
+      fullMatches: [discovered],
+      aiProvider: ai,
+      aiEnabledFlag: "true",
+    });
+    const result = await controller.computeProposals();
+    // The lift was rejected, so nothing surfaced and aiUsed stays false.
+    expect(result.aiUsed).toBe(false);
+    expect(result.matches.find((m) => m.id === "disc")).toBeUndefined();
+  });
+
+  it("a discovered match never reaches HIGH_CONFIDENCE_THRESHOLD (not auto-approvable)", async () => {
+    // Even a max-boost AI can only lift a 0.49 discovered match by +0.3 →
+    // 0.79 < 0.85, so "Approve all high-confidence" (>= 0.85) never selects it.
+    const discovered = match("disc", 0.49);
+    const ai = createFakeAiProvider({
+      behavior: {
+        kind: "respond",
+        response: {
+          refinements: [
+            { id: "disc", confidence: 1, reason: "values line up exactly" },
+          ],
+        },
+      },
+    });
+    const { controller } = makeController({
+      matches: [],
+      fullMatches: [discovered],
+      aiProvider: ai,
+      aiEnabledFlag: "true",
+    });
+    const result = await controller.computeProposals();
+    const disc = result.matches.find((m) => m.id === "disc")!;
+    expect(disc.aiDiscovered).toBe(true);
+    expect(disc.confidence).toBeLessThan(HIGH_CONFIDENCE_THRESHOLD);
+    // selectHighConfidenceProposalIds would NOT include it.
+    expect(
+      selectHighConfidenceProposalIds(result.matches).includes("disc")
+    ).toBe(false);
   });
 });

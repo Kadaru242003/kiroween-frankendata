@@ -81,7 +81,7 @@ export function MatchDiff({
   onReject,
   onRepair,
 }: MatchDiffProps): JSX.Element {
-  const { id, left, right, confidence, reason, source } = proposal;
+  const { id, left, right, confidence, reason, source, aiDiscovered } = proposal;
 
   // Candidate re-pair columns: every column in the right-hand table (Req 3.6 —
   // re-pair to a different column in the *other* table). The left column stays
@@ -99,6 +99,20 @@ export function MatchDiff({
       <header className="stitch-proposal__header">
         <h4 className="stitch-proposal__title">Column match</h4>
         <EngineBadge source={source} />
+        {/*
+          "AI found this" chip (enhancement): shown only when the AI
+          DISCOVERED this match — its rule score was below the display
+          threshold and the bounded lift brought it to visible. Fixed in-code
+          label, rendered as a plain text node.
+        */}
+        {aiDiscovered ? (
+          <span
+            className="stitch-ai-found"
+            aria-label="Discovered by AI"
+          >
+            AI found this
+          </span>
+        ) : null}
         <span className="stitch-proposal__confidence" aria-label="Confidence">
           {formatConfidence(confidence)}
         </span>

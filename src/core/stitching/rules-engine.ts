@@ -40,9 +40,15 @@ export function createRulesEngine(db: DuckDBService): RulesEngine {
     return matchTables(tables);
   }
 
+  function matchAll(tables: TableSample[]): MatchProposal[] {
+    // displayOnly = false → the full scored set (incl. sub-threshold matches
+    // that passed the hard gates), for the AI's wider candidate floor.
+    return matchTables(tables, false);
+  }
+
   function clean(tables: TableSample[]): Promise<CleaningProposal[]> {
     return cleanTables(db, tables);
   }
 
-  return { match, clean };
+  return { match, matchAll, clean };
 }

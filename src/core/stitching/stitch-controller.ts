@@ -238,25 +238,31 @@ export function createStitchController(
    * result is re-sorted into the deterministic display order.
    */
   async function refineMatches(
-    matches: MatchProposal[],
+    displayMatches: MatchProposal[],
+    fullMatches: MatchProposal[],
     samples: TableSample[]
   ): Promise<{ matches: MatchProposal[]; aiUsed: boolean }> {
     // Kill switch + absence: no provider or flag off → rules-only, no network.
     if (!aiProvider || !isAiEnabled(aiEnabledFlag)) {
-      return { matches, aiUsed: false };
+      return { matches: displayMatches, aiUsed: false };
     }
 
-    // Budget the request. A "skip" (no candidates / over byte budget) mirrors
-    // the normal fallback path: use the rules result, no error, no call.
-    const budget = budgetAiRequest(matches, samples);
+    // Budget the request from the FULL scored set (enhancement: the wider
+    // candidate floor sends compatible-type matches down to
+    // AI_CANDIDATE_FLOOR, so the AI can DISCOVER a sub-threshold match). A
+    // "skip" (no candidates / over byte budget) mirrors the normal fallback
+    // path: use the rules display result, no error, no call.
+    const budget = budgetAiRequest(fullMatches, samples);
     if (budget.skip) {
-      return { matches, aiUsed: false };
+      return { matches: displayMatches, aiUsed: false };
     }
 
     // The exact matches sent as candidates (same id set the request carries),
-    // so validation's eligibility check lines up with what the AI saw.
+    // drawn from the FULL set so sub-threshold discoveries are included. This
+    // is the eligible id set validation enforces (nothing below the floor was
+    // sent, so the AI can never resurrect it).
     const sentIds = new Set(budget.request.candidates.map((c) => c.id));
-    const sentMatches = matches.filter((m) => sentIds.has(m.id));
+    const sentMatches = fullMatches.filter((m) => sentIds.has(m.id));
 
     // Guaranteed rules fallback (Req 6.5, 6.6): any failure of refine() —
     // throw, reject, timeout (abort), non-200, or non-JSON body — is swallowed
@@ -265,21 +271,35 @@ export function createStitchController(
     try {
       body = await aiProvider.refine(budget.request);
     } catch {
-      return { matches, aiUsed: false };
+      return { matches: displayMatches, aiUsed: false };
     }
 
     // Validate + merge. A total-shape failure or all-dropped refinements yields
     // aiUsed = false and the rules matches unchanged.
     const { matches: merged, aiUsed } = validateAiResponse(body, sentMatches);
     if (!aiUsed) {
-      return { matches, aiUsed: false };
+      return { matches: displayMatches, aiUsed: false };
     }
 
-    // Re-assemble the display set: the AI can demote a visible match below the
-    // display threshold (hiding it) but never resurrect a hidden one (none were
-    // sent). Keep merged candidates >= threshold; every display match was sent,
-    // so there are no non-candidate matches to carry. Re-sort deterministically.
-    const refined = merged.filter((m) => m.confidence >= MATCH_DISPLAY_THRESHOLD);
+    // Re-assemble the display set from the merged (sent) candidates PLUS any
+    // display match that was NOT sent (e.g. dropped by the 30-candidate cap),
+    // deduped by id with the merged version winning. Then keep only matches
+    // >= the display threshold:
+    //   - a tier-1 match the AI demoted below 0.5 is hidden;
+    //   - a tier-2 (discovered) match the AI lifted to >= 0.5 now appears,
+    //     carrying aiDiscovered = true;
+    //   - a match the AI did not lift to >= 0.5 stays hidden.
+    // The AI can never resurrect a match below AI_CANDIDATE_FLOOR (never sent).
+    const byId = new Map<string, MatchProposal>();
+    for (const m of displayMatches) {
+      byId.set(m.id, m);
+    }
+    for (const m of merged) {
+      byId.set(m.id, m);
+    }
+    const refined = Array.from(byId.values()).filter(
+      (m) => m.confidence >= MATCH_DISPLAY_THRESHOLD
+    );
     refined.sort((a, b) => {
       if (b.confidence !== a.confidence) {
         return b.confidence - a.confidence;
@@ -320,12 +340,19 @@ export function createStitchController(
       tables.map((t) => toSampleSource(t))
     );
     const rulesMatches = rulesEngine.match(samples);
+    // The full scored set (incl. sub-threshold, gate-passing matches) feeds
+    // the AI's wider candidate floor; the display base stays `rulesMatches`.
+    const fullMatches = rulesEngine.matchAll(samples);
     const cleanings = await rulesEngine.clean(samples);
 
     // Optional AI refinement with a guaranteed rules fallback (Req 6.5, 6.6).
     // `refineMatches` never throws: any absence/failure/over-budget returns the
-    // rules matches unchanged with aiUsed = false.
-    const { matches, aiUsed } = await refineMatches(rulesMatches, samples);
+    // rules display matches unchanged with aiUsed = false.
+    const { matches, aiUsed } = await refineMatches(
+      rulesMatches,
+      fullMatches,
+      samples
+    );
 
     const proposals: ProposalSet = { matches, cleanings, aiUsed };
     store.setProposals(proposals, datasetVersion, isRecompute);

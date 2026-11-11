@@ -95,6 +95,7 @@ function fakeRulesEngine(
 ): RulesEngine {
   return {
     match: () => matches,
+    matchAll: () => matches,
     clean: async () => cleanings,
   };
 }
