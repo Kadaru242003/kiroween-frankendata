@@ -15,7 +15,7 @@ import type {
   ColumnType,
   ColumnSchema,
   LoadedTable,
-} from "../types";
+} from "../types.js";
 
 // ── Named constants (mirror requirements.md) ───────────────────────────────
 export const MATCH_DISPLAY_THRESHOLD = 0.5;

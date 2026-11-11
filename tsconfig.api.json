@@ -1,0 +1,18 @@
+{
+  "//": "Standalone type-check for the Vercel serverless function graph under REAL Node ESM resolution. The deployed function runs as native Node ESM, which requires explicit file extensions on relative imports; `nodenext` module + moduleResolution make tsc flag any EXTENSIONLESS relative import in this graph. Driven by `npm run check:api` (scripts/check-api.mjs), which overrides outDir to a temp dir OUTSIDE the repo and runs a Node ESM import smoke test of the emitted api/ai.js. NOT part of the Vite build (tsc -b) or vitest.",
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": ".",
+    "verbatimModuleSyntax": true
+  },
+  "include": ["api/ai.ts", "src/core/stitching/ai-proxy.ts", "src/core/stitching/types.ts", "src/core/types.ts"]
+}

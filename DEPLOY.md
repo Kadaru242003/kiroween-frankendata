@@ -43,6 +43,16 @@ app's DuckDB wiring and re-deploy. Modern browsers support the `eh` bundle; the
 
 ### Manual deploy steps
 
+0. **Pre-deploy: run `npm run check:api`.** The `/api/ai` function runs on
+   Vercel as native Node ESM, which — unlike Vite and vitest — requires
+   explicit file extensions on relative imports (`./types.js`, not
+   `./types`). A missing extension throws `ERR_MODULE_NOT_FOUND` at function
+   startup in production even though `npm run build` passes. `check:api`
+   type-checks the function's import graph with `--module nodenext`
+   `--moduleResolution nodenext` (which flags any extensionless relative
+   import) and then runs a Node ESM import smoke test of the emitted
+   `api/ai.js` in a temp dir, so this class of bug is caught before deploy.
+   It makes no network calls and does not invoke the handler.
 1. Create or log in to Vercel and import this repository.
 2. Confirm the build command / output directory above (Vercel usually detects
    Vite automatically).

@@ -30,7 +30,7 @@ import {
   type LlmClient,
   type LlmCompletionInput,
   type RedisClient,
-} from "../src/core/stitching/ai-proxy";
+} from "../src/core/stitching/ai-proxy.js";
 
 // A deliberately structural Request/Response typing so this file does not
 // depend on a specific `@vercel/node` version being installed. Vercel passes a

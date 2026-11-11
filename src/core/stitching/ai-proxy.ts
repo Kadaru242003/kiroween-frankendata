@@ -35,14 +35,14 @@ import {
   AI_PROXY_PER_CLIENT_LIMIT,
   AI_PROXY_DAILY_REQUEST_CAP,
   AI_PROXY_MAX_PAYLOAD_BYTES,
-} from "./types";
+} from "./types.js";
 import type {
   AiRequest,
   AiResponse,
   AiSampleColumn,
   AiCandidateMatch,
-} from "./types";
-import type { ColumnType } from "../types";
+} from "./types.js";
+import type { ColumnType } from "../types.js";
 
 // Re-export the pinned limits so the host entrypoint and tests import them from
 // one place (they are the single source of truth in types.ts).
