@@ -12,6 +12,279 @@
         "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
         "timestamp": 1794364201307
       }
+    ],
+    "2. Deployment config (agent-doable; you run the actual deploy by hand)": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364341703
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364344292
+      }
+    ],
+    "3. Stitching core types and named constants": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364353001
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364428708
+      }
+    ],
+    "4. SampleReader (deterministic, frequency-carrying)": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364431175
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364640524
+      }
+    ],
+    "5. Fuzzy name similarity": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364642654
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364787707
+      }
+    ],
+    "6. Match scoring with hard gates and damping": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794364789954
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794365018635
+      }
+    ],
+    "7. Cleaning rules engine": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794365020758
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794365626332
+      }
+    ],
+    "8.1 Cleaned copies (all identifiers via `quoteIdent`, all literals via `quoteString`)": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794365629172
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794366356779
+      }
+    ],
+    "8.2 Join chain": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794366359038
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367098687
+      }
+    ],
+    "8.3 Apply counter, undo, and fan-out reporting": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367102059
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367524307
+      }
+    ],
+    "8. StitchApplier: cleaned copies, join chain, undo": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367524381
+      }
+    ],
+    "9. StitchController and StitchStore (rules-only wiring)": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367526899
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367872129
+      }
+    ],
+    "10.1 **Property 1: Matching symmetry** — _Validates: 1.4, 5.2_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794367878761
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794368924246
+      }
+    ],
+    "10.2 **Property 2: Confidence score bounds** — _Validates: 1.3, 10.2, 11.4_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794368926785
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369027314
+      }
+    ],
+    "10.3 **Property 3: Type-incompatibility gate** (incl. boolean exclusion) — _Validates: 1.5_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369029696
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369153694
+      }
+    ],
+    "10.4 **Property 11: Rules-engine determinism** — _Validates: 5.2, 10.11_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369156111
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369357115
+      }
+    ],
+    "10.5 **Property 9: Below-threshold proposals never displayed** — _Validates: 1.6, 10.9_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369359380
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369516844
+      }
+    ],
+    "10. Required property tests — matching and scoring": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369516898
+      }
+    ],
+    "11.1 **Property 4: Cleaning idempotence** — _Validates: 2.8, 10.3_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369520076
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369856682
+      }
+    ],
+    "11.2 **Property 5: Apply never mutates originals** (DuckDB-backed) — _Validates: 4.1, 7.12, 10.4_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794369859138
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794370194843
+      }
+    ],
+    "11.3 **Property 6: Undo restores pre-apply state** (DuckDB-backed) — _Validates: 4.3, 10.5_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794370197312
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794370464955
+      }
+    ],
+    "11.4 **Property 8: LEFT JOIN row-count floor** (DuckDB-backed) — _Validates: 7.1, 10.8_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794370467317
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794371116624
+      }
+    ],
+    "11.5 **Property 13: Generated SQL is injection-safe under adversarial values** — _Validates: 4.1, escaping invariant_": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794371119136
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794372005820
+      }
+    ],
+    "11. Required property tests — cleaning and apply/undo": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794372005875
+      }
+    ],
+    "12. Checkpoint — rules engine green": [
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794372009944
+      },
+      {
+        "executionId": "4869d2a3-a6de-4617-85ed-51fba3495395",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794373936543
+      }
     ]
   }
 }

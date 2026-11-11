@@ -23,37 +23,37 @@ This plan is ordered so the **app works end to end on the rules engine as early 
   - Write a unit test: re-adding a same-name/same-rowcount table yields a strictly greater `loadId`
   - _Design: Staleness; Requirements 3.8_
 
-- [ ] 2. Deployment config (agent-doable; you run the actual deploy by hand)
+- [x] 2. Deployment config (agent-doable; you run the actual deploy by hand)
   - Add `vercel.json` (SPA rewrites, correct `Content-Type`/caching headers for `.wasm`)
   - If you report the 100 MB static limit is tight, adjust the build config to ship **only the `eh` bundle**
   - Write a short `DEPLOY.md` covering the Vercel setup, the WASM-size caveat, and the manual steps
   - _Note: this task produces config + docs only. The actual deploy and 100 MB verification are in "Manual Steps Required From You" and are done by you before any tasks run._
   - _Design: Serverless Host; Requirements 11 (hosting constraints)_
 
-- [ ] 3. Stitching core types and named constants
+- [x] 3. Stitching core types and named constants
   - Create `src/core/stitching/types.ts` (or `src/core/stitch-types.ts`) defining: `ColumnRef`, `ProposalSource`, `MatchProposal`, `CleaningKind`, `CleaningProposal`, `Proposal`, `ApprovalDecision`, `StitchPlan`, `StitchedTable`, `UndoStep`, `SampleValue`, `TableSample`, `ProposalSet`, `RulesEngine`, `StitchController`, and the `AiProvider`/`AiRequest`/`AiResponse`/`AiRefinement`/`AiSampleColumn`/`AiCandidateMatch` interfaces, exactly as in the design
   - Define named constants: `MATCH_DISPLAY_THRESHOLD = 0.5`, `HIGH_CONFIDENCE_THRESHOLD = 0.85`, `AI_REQUEST_TIMEOUT_MS = 8000`, `MAX_SAMPLE_VALUES_PER_COLUMN = 200`, `AI_PROXY_PER_CLIENT_LIMIT = 20`, `AI_PROXY_DAILY_REQUEST_CAP = 500`, `AI_PROXY_MAX_PAYLOAD_BYTES = 20480`
   - Define the `ColumnType` compatibility matrix (with hard-zero entries)
   - _Design: Module Interfaces, Named Constants, Type compatibility matrix; Requirements 1, 2, 3, 4, 6, 11_
 
-- [ ] 4. SampleReader (deterministic, frequency-carrying)
+- [x] 4. SampleReader (deterministic, frequency-carrying)
   - Implement `SampleReader` reading, per column, `SELECT col AS value, COUNT(*) AS n FROM t GROUP BY col ORDER BY n DESC, value ASC LIMIT 200` via `DuckDBService.query`
   - Return `TableSample`s with `SampleValue[]` (value + count), NULLs excluded from matching sets, applying the global tie-break (count desc, then value asc)
   - _Design: SampleReader query (determinism); Requirements 2.9, 5.2_
 
-- [ ] 5. Fuzzy name similarity
+- [x] 5. Fuzzy name similarity
   - Implement deterministic name normalization (NFKC, lowercase, token split on non-alphanumeric + camel/snake boundaries)
   - Implement `nameSim(a,b)` = `0.6·Jaccard(tokens) + 0.4·(1 − normalizedLevenshtein(joined))`, clamped to `[0,1]`, symmetric
   - _Design: Name normalization, nameSim; Requirements 1.2, 1.4_
 
-- [ ] 6. Match scoring with hard gates and damping
+- [x] 6. Match scoring with hard gates and damping
   - Implement `typeCompat` (matrix lookup), `valueOverlap` = overlap-coefficient over normalized sample sets × `min(1, min(|SA|,|SB|)/10)` small-set damping
   - Apply hard gates before scoring (symmetric): type-incompatible, **either column boolean**, `nameSim < 0.2`
   - Compute `confidence = 0.50·nameSim + 0.20·typeCompat + 0.30·valueOverlap`; keep the full set internally, expose only `≥ MATCH_DISPLAY_THRESHOLD`
   - Implement `RulesEngine.match(tables)` producing symmetric, deduplicated `MatchProposal`s with one-line reasons and `components`
   - _Design: Hard gates, valueOverlap damping, Final confidence; Requirements 1.1–1.6, 5.2, 5.3_
 
-- [ ] 7. Cleaning rules engine
+- [x] 7. Cleaning rules engine
   - Implement `RulesEngine.clean(tables)` producing `CleaningProposal`s:
     - whitespace (trim + collapse only, never case) and case-only (only when same value appears in differing casings → most-frequent form)
     - category-standardize via value folding (case/whitespace/punctuation) + equal-folded clustering + optional normalized-Levenshtein ≥ 0.9 merge; canonical = most-frequent surface form (ties lexicographic); build `variantMap`
@@ -61,39 +61,39 @@ This plan is ordered so the **app works end to end on the rules engine as early 
   - Each proposal carries before/after + one-line reason; all transforms idempotent by construction
   - _Design: Cleaning rules; Requirements 2.1–2.8_
 
-- [ ] 8. StitchApplier: cleaned copies, join chain, undo
-  - [ ] 8.1 Cleaned copies (all identifiers via `quoteIdent`, all literals via `quoteString`)
+- [x] 8. StitchApplier: cleaned copies, join chain, undo
+  - [x] 8.1 Cleaned copies (all identifiers via `quoteIdent`, all literals via `quoteString`)
     - Create `stitch_<n>_clean_<name>` via explicit typed DDL: whitespace (trim/collapse) and case `CASE` maps, category `CASE` maps to canonical literals, outliers `is_outlier BOOLEAN` via `quantile_cont` Tukey fences over the full column, duplicate-rows keep-first via `row_number() OVER (PARTITION BY <normalized exprs> ORDER BY rowid)=1`
     - _Design: Apply (cleaned copies), escaping; Requirements 2.4, 2.5, 2.6, 4.1_
-  - [ ] 8.2 Join chain
+  - [x] 8.2 Join chain
     - Create `stitch_<n>_result`: anchor = most rows (overridable), LEFT JOIN remaining tables in descending approved-match confidence; default join key = highest-confidence approved match per pair; non-key matches as same-meaning columns; key column once using anchor's name; collision → prefix source table name; keys compared post-cleaning
     - _Design: Apply (join chain); Requirements 7.1, 7.3, 7.4, 7.5, 7.6, 7.8, 7.10_
-  - [ ] 8.3 Apply counter, undo, and fan-out reporting
+  - [x] 8.3 Apply counter, undo, and fan-out reporting
     - Per-session apply counter `n` embedded in every created name; record `UndoStep { createdTableNames }`; `undo()` drops exactly those tables; compute and return the many-to-many before/after row counts for the UI to warn/cancel
     - _Design: Table naming, Undo; Requirements 4.1, 4.2, 4.3, 4.4, 7.9, 7.12_
 
-- [ ] 9. StitchController and StitchStore (rules-only wiring)
+- [x] 9. StitchController and StitchStore (rules-only wiring)
   - Implement `StitchStore` (session-only: `ProposalSet`, `ApprovalDecision`s, active `StitchPlan`, `StitchedTable`, pending `UndoStep`)
   - Implement `StitchController.computeProposals()` (SampleReader → RulesEngine; AI left as a no-op injection point for now), `applyPlan()`, `undo()`
   - Implement `datasetVersion` from sorted `loadId`s; on change, discard proposals/decisions, recompute, flag "recomputed" for the UI
   - Build the `StitchedTable` descriptor from `information_schema` + `getRowCount`
   - _Design: StitchController, ProposalSet lifecycle/staleness; Requirements 3.4, 3.5, 3.8, 5.1, 5.4, 7.11_
 
-- [ ] 10. Required property tests — matching and scoring
-  - [ ] 10.1 **Property 1: Matching symmetry** — _Validates: 1.4, 5.2_
-  - [ ] 10.2 **Property 2: Confidence score bounds** — _Validates: 1.3, 10.2, 11.4_
-  - [ ] 10.3 **Property 3: Type-incompatibility gate** (incl. boolean exclusion) — _Validates: 1.5_
-  - [ ] 10.4 **Property 11: Rules-engine determinism** — _Validates: 5.2, 10.11_
-  - [ ] 10.5 **Property 9: Below-threshold proposals never displayed** — _Validates: 1.6, 10.9_
+- [x] 10. Required property tests — matching and scoring
+  - [x] 10.1 **Property 1: Matching symmetry** — _Validates: 1.4, 5.2_
+  - [x] 10.2 **Property 2: Confidence score bounds** — _Validates: 1.3, 10.2, 11.4_
+  - [x] 10.3 **Property 3: Type-incompatibility gate** (incl. boolean exclusion) — _Validates: 1.5_
+  - [x] 10.4 **Property 11: Rules-engine determinism** — _Validates: 5.2, 10.11_
+  - [x] 10.5 **Property 9: Below-threshold proposals never displayed** — _Validates: 1.6, 10.9_
 
-- [ ] 11. Required property tests — cleaning and apply/undo
-  - [ ] 11.1 **Property 4: Cleaning idempotence** — _Validates: 2.8, 10.3_
-  - [ ] 11.2 **Property 5: Apply never mutates originals** (DuckDB-backed) — _Validates: 4.1, 7.12, 10.4_
-  - [ ] 11.3 **Property 6: Undo restores pre-apply state** (DuckDB-backed) — _Validates: 4.3, 10.5_
-  - [ ] 11.4 **Property 8: LEFT JOIN row-count floor** (DuckDB-backed) — _Validates: 7.1, 10.8_
-  - [ ] 11.5 **Property 13: Generated SQL is injection-safe under adversarial values** — _Validates: 4.1, escaping invariant_
+- [x] 11. Required property tests — cleaning and apply/undo
+  - [x] 11.1 **Property 4: Cleaning idempotence** — _Validates: 2.8, 10.3_
+  - [x] 11.2 **Property 5: Apply never mutates originals** (DuckDB-backed) — _Validates: 4.1, 7.12, 10.4_
+  - [x] 11.3 **Property 6: Undo restores pre-apply state** (DuckDB-backed) — _Validates: 4.3, 10.5_
+  - [x] 11.4 **Property 8: LEFT JOIN row-count floor** (DuckDB-backed) — _Validates: 7.1, 10.8_
+  - [x] 11.5 **Property 13: Generated SQL is injection-safe under adversarial values** — _Validates: 4.1, escaping invariant_
 
-- [ ] 12. Checkpoint — rules engine green
+- [x] 12. Checkpoint — rules engine green
   - Run `npm test`, `npm run lint`, `npm run build`; fix any failures before proceeding
 
 - [ ] 13. Approval screen and stitching-table UI
