@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "SQL validator safety guard",
+  "description": "Fires when the SQL safety validator (src/core/chat/sql-validator.ts) is edited, asking the agent to run its unit and property tests and confirm the read-only, forbidden-keyword, and file/network table-function checks were not weakened. Scoped to a single safety-critical file so it only runs on a genuine edit to that file.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/core/chat/sql-validator.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "src/core/chat/sql-validator.ts was edited. Run its tests: the unit tests in src/core/chat/sql-validator.test.ts and the property tests src/core/chat/sql-validator.forbidden.property.test.ts and src/core/chat/sql-validator.limit.property.test.ts. Then review the diff and confirm that NONE of the safety checks were weakened: the single read-only SELECT/WITH rule, the whole-word forbidden-keyword rejection, the file/network table-function rejection, the table-position and allowlist rules, and the LIMIT enforcement. Report pass or fail and flag any weakening. Do not modify any files."
+  }
+}

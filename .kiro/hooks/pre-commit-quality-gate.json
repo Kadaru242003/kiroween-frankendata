@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Pre-commit quality gate",
+  "description": "Manually runs the standard quality gate (build, lint, and the full test suite) on demand and summarizes whether the change is ready to commit. This hook is user-triggered only: it fires solely when you click its button in the Kiro Agent Hooks panel. It has no automatic trigger, so it never runs on its own or consumes credits unattended.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the pre-commit quality gate from the workspace root: `npm run build`, then `npm run lint`, then `npm test` (which already passes vitest --run). Report a concise PASS or FAIL summary for each step, and name the first failure if any step fails. Do not modify any files."
+  }
+}

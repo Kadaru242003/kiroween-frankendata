@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Check serverless API graph",
+  "description": "Manually runs `npm run check:api` on demand to verify the Vercel serverless function graph resolves under real Node ESM rules (nodenext type-check plus a (req, res) import smoke test). This hook is user-triggered only: it fires solely when you click its button in the Kiro Agent Hooks panel. It has no automatic trigger, so it never runs on its own or consumes credits unattended.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run `npm run check:api` from the workspace root and report whether it passed or failed, including the first error if it failed. Do not modify any files."
+  }
+}
