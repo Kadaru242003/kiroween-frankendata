@@ -129,20 +129,20 @@ const DEMO_DATASETS: readonly DemoDataset[] = [
  * `duplicate-rows` (2 duplicate rows).
  */
 const MISMATCH_MONSTERS_CSV = `Monster Name,Species,Threat Level,Sedated
-Gorzak,swamp-wraith,High,yes
+Gorzak,Swamp Wraith,High,yes
 Mothra Jr.,Moth Titan,High,no
-Blinky,three eyed ooze,Low,yes
+Blinky,Three-Eyed Ooze,Low,yes
 Snarl,Cave Howler,High,no
-Wisp,Swamp Wraith,Low,no
+Wisp,swamp  wraith,Low,no
 Grond,Rock Golem,Medium,yes
-Vex,Moth Titan,High,no
+Vex,moth titan,High,no
 Thornak,Cave Howler,Medium,yes
-Bellow,ROCK GOLEM,High,no
+Bellow,Rock Golem,High,no
 Drip,Three-Eyed Ooze,Low,yes
-Marrow,Rock Golem,High,no
+Marrow,Bone Shambler,High,no
 Fizz,Swamp Wraith,Low,yes
-Gorzak,swamp-wraith,High,yes
-Gorzak,swamp-wraith,High,yes
+Gorzak,Swamp Wraith,High,yes
+Gorzak,Swamp Wraith,High,yes
 `;
 
 /**
@@ -166,10 +166,10 @@ Snarl,Cave Howler,High,true
 Wisp,swamp wraith,Low,false
 Grond,Rock Golem,Medium,true
 Vex,Moth Titan,High,false
-Thornak,Cave Howler,Medium,true
-Bellow,rock golem,High,false
-Drip,Three-Eyed Ooze,Low,true
-Marrow,rock golem,High,false
+Thornak,cave howler,Medium,true
+Bellow,Rock Golem,High,false
+Drip,three-eyed ooze,Low,true
+Marrow,Bone Shambler,High,false
 Fizz,Swamp Wraith,Low,false
 Blinky,Three-Eyed Ooze,Low,false
 `;

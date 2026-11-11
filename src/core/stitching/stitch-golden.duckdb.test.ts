@@ -309,6 +309,8 @@ describe("Golden example — apply all approved proposals (Design: Apply; Req 4.
   let fanOutAnchor = 0;
   let fanOutResult = 0;
   let fannedOut = true;
+  let resultColumns: string[] = [];
+  let resultRows: Record<string, unknown>[] = [];
 
   beforeAll(async () => {
     ({ adapter, dispose } = await createNodeAdapter());
@@ -355,6 +357,13 @@ describe("Golden example — apply all approved proposals (Design: Apply; Req 4.
     fanOutAnchor = fanOut.anchorRowCount;
     fanOutResult = fanOut.resultRowCount;
     fannedOut = fanOut.fannedOut;
+
+    // Capture the stitched result's column names (in order) and all rows so
+    // the row-by-row category-agreement assertion can run on real data.
+    resultColumns = stitched.schema.map((c) => c.name);
+    resultRows = await service.query<Record<string, unknown>>(
+      `SELECT * FROM ${stitched.tableName}`,
+    );
   });
 
   afterAll(() => {
@@ -370,5 +379,23 @@ describe("Golden example — apply all approved proposals (Design: Apply; Req 4.
     expect(fanOutAnchor).toBe(12);
     expect(fanOutResult).toBe(12);
     expect(fannedOut).toBe(false);
+  });
+
+  it("has consistent Species/species_1 and Threat_Level/threat_level_1 on every row (item 3)", () => {
+    // Both files standardize each category to the SAME Title-Case canonical,
+    // so after approving every cleanup the two same-meaning columns in the
+    // joined result agree exactly, row by row. DuckDB disambiguates the
+    // case-insensitively-duplicate experiments columns with a `_1` suffix.
+    expect(resultColumns).toContain("Species");
+    expect(resultColumns).toContain("species_1");
+    expect(resultColumns).toContain("Threat_Level");
+    expect(resultColumns).toContain("threat_level_1");
+    expect(resultRows).toHaveLength(12);
+    for (const row of resultRows) {
+      expect(String(row["Species"])).toBe(String(row["species_1"]));
+      expect(String(row["Threat_Level"])).toBe(
+        String(row["threat_level_1"]),
+      );
+    }
   });
 });

@@ -50,6 +50,11 @@ import {
   canStartStitching,
 } from './components/stitching/StitchEntryPoint'
 import {
+  selectedTableNames as computeSelectedTableNames,
+  pruneUnchecked,
+  toggleUnchecked,
+} from './components/stitching/table-selection'
+import {
   JoinControls,
   type JoinControlsTable,
 } from './components/stitching/JoinControls'
@@ -147,16 +152,16 @@ function App() {
   // JoinControls (anchor + per-pair join keys). null until confirm; cleared on
   // undo. Nothing is applied to DuckDB until the user hits "Apply & stitch".
   const [workingPlan, setWorkingPlan] = useState<StitchPlan | null>(null)
-  // The set of table names checked for stitching (item 1). All loaded
-  // tables are checked by default, including ones loaded later; the effect
-  // below adds new table names to the set and keeps the module-level holder
-  // (read by the controller's selectTable filter) in sync.
-  const [selectedTableNames, setSelectedTableNames] = useState<
+  // Stitching table selection (item 1). We track the names the user has
+  // EXPLICITLY UNCHECKED rather than the checked set: a table is checked iff
+  // it is loaded and NOT in this set. This makes "all tables checked by
+  // default, including ones loaded later" the natural zero-state (an empty
+  // set) with no per-arrival bookkeeping — so it is robust under React
+  // StrictMode's double effect invocation (the old `seen`-set effect could
+  // misfire and leave freshly-loaded tables unchecked).
+  const [uncheckedTableNames, setUncheckedTableNames] = useState<
     ReadonlySet<string>
   >(() => new Set())
-  // Names we've already accounted for, so the sync effect only auto-checks
-  // genuinely new tables (never undoing an explicit uncheck).
-  const seenTableNamesRef = useRef<Set<string>>(new Set())
 
   // Initialize DuckDB + controller once on mount. The module-level singleton
   // promise makes this safe under StrictMode's double-invoke.
@@ -181,33 +186,27 @@ function App() {
 
   const stack = status.phase === 'ready' ? status.stack : null
 
-  // Keep the checked-table set in sync with the loaded tables (item 1):
-  //   - a NEWLY loaded table starts checked;
-  //   - a user's explicit uncheck is preserved across later loads;
-  //   - a table that is no longer loaded is dropped from the set.
-  // `seenTableNamesRef` records which names we've already accounted for so
-  // we only auto-check genuinely new arrivals, never re-check an uncheck.
+  // Prune unchecked entries whose table is no longer loaded, so a removed-
+  // then-reloaded table comes back checked. This is idempotent, so running
+  // it twice under StrictMode is harmless.
   useEffect(() => {
-    const loaded = tables.map((t) => t.tableName)
-    const loadedSet = new Set(loaded)
-    setSelectedTableNames((prev) => {
-      const next = new Set<string>()
-      for (const name of loaded) {
-        const isNew = !seenTableNamesRef.current.has(name)
-        // New arrival → checked; otherwise keep its current checked state.
-        if (isNew || prev.has(name)) {
-          next.add(name)
-        }
-      }
-      return next
-    })
-    seenTableNamesRef.current = loadedSet
+    const loadedNames = tables.map((t) => t.tableName)
+    setUncheckedTableNames((prev) => pruneUnchecked(prev, loadedNames))
   }, [tables])
 
-  // Mirror the selection to the module-level holder the controller reads.
+  // Mirror the derived checked set to the module-level holder the
+  // controller's selectTable filter reads. Keyed on the stable sorted name
+  // list so it only updates when the checked membership actually changes.
+  const selectedNamesKey = tables
+    .map((t) => t.tableName)
+    .filter((name) => !uncheckedTableNames.has(name))
+    .sort()
+    .join('\u0000')
   useEffect(() => {
-    selectedTableNamesHolder = selectedTableNames
-  }, [selectedTableNames])
+    selectedTableNamesHolder = new Set(
+      selectedNamesKey.length === 0 ? [] : selectedNamesKey.split('\u0000'),
+    )
+  }, [selectedNamesKey])
 
   const handleFiles = useCallback(
     (files: File[]) => {
@@ -240,32 +239,27 @@ function App() {
   }, [stack])
 
   const canStitch = shouldShowStitchEntry(tables.length)
-  // Number of tables checked for stitching, and whether that is enough to
-  // start (>= 2). The entry button is disabled otherwise (item 1).
-  const selectedCount = tables.reduce(
-    (n, t) => (selectedTableNames.has(t.tableName) ? n + 1 : n),
-    0,
+  // The subset of loaded tables CHECKED for stitching: loaded minus the
+  // explicitly-unchecked set (item 1). Used by the entry-point checkboxes,
+  // the enable rule, and to scope the approval UI's re-pair targets / anchor
+  // options to what the controller proposed over.
+  const selectedTables = tables.filter(
+    (t) => !uncheckedTableNames.has(t.tableName),
   )
+  const selectedTableNames: ReadonlySet<string> = computeSelectedTableNames(
+    tables.map((t) => t.tableName),
+    uncheckedTableNames,
+  )
+  const selectedCount = selectedTables.length
   const canStartStitch = canStartStitching(selectedCount)
-  // The subset of loaded tables checked for stitching, so the approval UI's
-  // re-pair targets and anchor options match what the controller proposed
-  // over (item 1).
-  const selectedTables = tables.filter((t) =>
-    selectedTableNames.has(t.tableName),
-  )
 
-  // Toggle a table's participation in stitching (item 1).
+  // Toggle a table's participation in stitching (item 1). Checking removes
+  // the name from the unchecked set; unchecking adds it.
   const handleToggleTable = useCallback(
     (tableName: string, checked: boolean) => {
-      setSelectedTableNames((prev) => {
-        const next = new Set(prev)
-        if (checked) {
-          next.add(tableName)
-        } else {
-          next.delete(tableName)
-        }
-        return next
-      })
+      setUncheckedTableNames((prev) =>
+        toggleUnchecked(prev, tableName, checked),
+      )
     },
     [],
   )

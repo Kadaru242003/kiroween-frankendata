@@ -83,45 +83,55 @@ export function StitchEntryPoint({
   const canStart = canStartStitching(selectedCount);
 
   return (
-    <section className="lab-stitch-entry" aria-label="Stitching">
-      <fieldset className="lab-stitch-entry__tables">
-        <legend className="lab-stitch-entry__legend">
-          Tables to stitch
-        </legend>
-        <ul className="lab-stitch-entry__list">
-          {tables.map((t) => {
-            const checked = selectedTableNames.has(t.tableName);
-            return (
-              <li key={t.tableName} className="lab-stitch-entry__item">
-                <label className="lab-stitch-entry__label">
-                  <input
-                    type="checkbox"
-                    className="lab-stitch-entry__checkbox"
-                    checked={checked}
-                    onChange={(e) => onToggleTable(t.tableName, e.target.checked)}
-                  />
-                  <span className="lab-stitch-entry__table-name">
-                    {t.tableName}
-                  </span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </fieldset>
-      <button
-        type="button"
-        className="lab-stitch-entry__button"
-        onClick={onOpen}
-        disabled={!canStart}
-      >
-        Stitch tables
-      </button>
-      {!canStart ? (
-        <p className="lab-stitch-entry__hint">
-          Check at least two tables to stitch.
-        </p>
-      ) : null}
+    <section
+      className="lab-stitch-entry"
+      aria-label="Stitching"
+      role="group"
+      aria-labelledby="lab-stitch-entry-heading"
+    >
+      <h3 id="lab-stitch-entry-heading" className="lab-stitch-entry__heading">
+        Tables to stitch
+      </h3>
+      <div className="lab-stitch-entry__chips">
+        {tables.map((t) => {
+          const checked = selectedTableNames.has(t.tableName);
+          return (
+            <label
+              key={t.tableName}
+              className={
+                checked
+                  ? "lab-stitch-entry__chip lab-stitch-entry__chip--checked"
+                  : "lab-stitch-entry__chip"
+              }
+            >
+              <input
+                type="checkbox"
+                className="lab-stitch-entry__checkbox"
+                checked={checked}
+                onChange={(e) => onToggleTable(t.tableName, e.target.checked)}
+              />
+              <span className="lab-stitch-entry__table-name">
+                {t.tableName}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="lab-stitch-entry__actions">
+        <button
+          type="button"
+          className="lab-stitch-entry__button"
+          onClick={onOpen}
+          disabled={!canStart}
+        >
+          Stitch tables
+        </button>
+        {!canStart ? (
+          <p className="lab-stitch-entry__hint">
+            Check at least two tables to stitch.
+          </p>
+        ) : null}
+      </div>
     </section>
   );
 }
