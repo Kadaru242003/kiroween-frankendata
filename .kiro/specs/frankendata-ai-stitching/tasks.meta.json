@@ -376,6 +376,97 @@
         "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
         "timestamp": 1794376316031
       }
+    ],
+    "19. AiProvider interface, payload budgeting, and client validation": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794382089822
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794382757356
+      }
+    ],
+    "20.1 **Property 7: AI failure falls back to rules** (FakeAiProvider throws/times out) — _Validates: 6.5, 6.6, 10.6_": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794382760806
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794383966869
+      }
+    ],
+    "20.2 **Property 12: AI refinement is bounded, eligible-only, ignores invalid input** (bounds ±0.2, demote-not-resurrect, out-of-range/overlong/duplicate-id handling) — _Validates: 11.4, 11.5, 10.12, 6.5, 6.6_": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794383970197
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794402377151
+      }
+    ],
+    "20. Required property tests — AI refinement and fallback": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794402377231
+      }
+    ],
+    "21. Serverless AiProxy at `/api/ai` (env-driven provider/model)": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794402380751
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794403423058
+      }
+    ],
+    "22. Proxy route config and env documentation (agent-doable)": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794403425766
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794404016607
+      }
+    ],
+    "23. Kiro feature showcase: hook + steering update": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794404019182
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794404376891
+      }
+    ],
+    "25. Final checkpoint": [
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794404380753
+      },
+      {
+        "executionId": "19bf0e47-1182-478b-9093-b4f528833aa9",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794404732289
+      }
     ]
   }
 }

@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Run test suite",
+  "description": "Manually runs the full Vitest suite (npm test, already --run) on demand. This hook is user-triggered only: it fires solely when you click its button in the Kiro Agent Hooks panel. It has no automatic trigger — it never runs on file save, on any agent event, or on a schedule — so it cannot fire on its own or consume credits unattended.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the project's full test suite by executing `npm test` (which already passes vitest --run) from the workspace root. Report the pass/fail summary. Do not modify any files."
+  }
+}

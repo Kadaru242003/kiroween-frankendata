@@ -125,31 +125,31 @@ This plan is ordered so the **app works end to end on the rules engine as early 
 - [x] 18. Checkpoint — rules-only app works end to end
   - Run `npm test`, `npm run lint`, `npm run build`; manually confirm load → propose → approve → apply → preview → undo all work offline with the demo dataset
 
-- [ ] 19. AiProvider interface, payload budgeting, and client validation
+- [x] 19. AiProvider interface, payload budgeting, and client validation
   - Implement `ProxyAiProvider` (fetch `/api/ai`, `AI_REQUEST_TIMEOUT_MS` timeout) and a `FakeAiProvider` for tests
   - Implement client payload budgeting: only candidates ≥ `MATCH_DISPLAY_THRESHOLD`, ≤ 5 samples/column × 40 chars, ≤ 40 columns, ≤ 30 candidates (drop lowest-confidence first); skip the call silently if over `AI_PROXY_MAX_PAYLOAD_BYTES` or if `VITE_AI_ENABLED` is off
   - Implement `validateAiResponse`: shape check, known+eligible ids only, duplicate id → first wins, bounded adjustment `clamp(rule + clamp(ai−rule, ±0.2), 0, 1)`, reason ≤ 200 chars, scope to score/reason only, plain-text
   - Wire into `StitchController` so any failure/absence falls back to the rules result with `aiUsed=false`
   - _Design: AiProvider, payload budgeting, score bounding, validation steps, dev-mode flag; Requirements 6.1–6.8, 11.4, 11.5, 11.6_
 
-- [ ] 20. Required property tests — AI refinement and fallback
-  - [ ] 20.1 **Property 7: AI failure falls back to rules** (FakeAiProvider throws/times out) — _Validates: 6.5, 6.6, 10.6_
-  - [ ] 20.2 **Property 12: AI refinement is bounded, eligible-only, ignores invalid input** (bounds ±0.2, demote-not-resurrect, out-of-range/overlong/duplicate-id handling) — _Validates: 11.4, 11.5, 10.12, 6.5, 6.6_
+- [x] 20. Required property tests — AI refinement and fallback
+  - [x] 20.1 **Property 7: AI failure falls back to rules** (FakeAiProvider throws/times out) — _Validates: 6.5, 6.6, 10.6_
+  - [x] 20.2 **Property 12: AI refinement is bounded, eligible-only, ignores invalid input** (bounds ±0.2, demote-not-resurrect, out-of-range/overlong/duplicate-id handling) — _Validates: 11.4, 11.5, 10.12, 6.5, 6.6_
 
-- [ ] 21. Serverless AiProxy at `/api/ai` (env-driven provider/model)
+- [x] 21. Serverless AiProxy at `/api/ai` (env-driven provider/model)
   - Implement the Vercel Function: request-schema validation (reject unknown fields/oversized arrays), payload-size check (`AI_PROXY_MAX_PAYLOAD_BYTES`), Origin courtesy check, per-client limit (IP-hash key) + global daily cap via Upstash Redis, fail-closed to the "unavailable" status if Redis is unreachable
   - Drive **provider and model from environment variables** (no hard-coded model); build the server-side prompt (names/values declared untrusted, JSON-only, low `max_tokens`); never log `SampleValues`
   - Proxy unit tests over the handler using the pinned constants and a mocked upstream/Redis (no real network)
   - _Design: Proxy responsibilities, LLM provider/cost, fail-closed; Requirements 6.3, 11.1, 11.2_
 
-- [ ] 22. Proxy route config and env documentation (agent-doable)
+- [x] 22. Proxy route config and env documentation (agent-doable)
   - Add the `/api/ai` route config to `vercel.json` / project structure so the function is wired
   - Add `.env.example` listing **every** variable: `AI_PROVIDER`, `AI_MODEL`, the LLM provider API key (e.g. `OPENAI_API_KEY`), `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `IP_HASH_SALT`, `VITE_AI_ENABLED`
   - Extend `DEPLOY.md` with the proxy setup and the env-var meanings
   - _Note: config + docs only. Provisioning Upstash, setting the env vars, the provider-side budget limit, and the `/api/ai` end-to-end smoke test are in "Manual Steps Required From You" and are done by you._
   - _Design: Serverless Host, env-driven provider; Requirements 6.3, 11.1_
 
-- [ ] 23. Kiro feature showcase: hook + steering update
+- [x] 23. Kiro feature showcase: hook + steering update
   - Add a **manually triggered** `.kiro/hooks/<id>.json` hook (`userTriggered`, e.g. "Run test suite" → `npm test`) via the hook tooling, so it never fires automatically or consumes credits on its own
   - Update steering docs (`.kiro/steering/structure.md` and `tech.md`) to describe the stitching module layout, the `/api/ai` proxy + env vars, and the deterministic-engine/offline-fallback rule
   - _Note: showcases Kiro hooks + steering_
@@ -159,7 +159,7 @@ This plan is ordered so the **app works end to end on the rules engine as early 
   - [ ]* 24.2 Contrast test (≥ 4.5:1) over the theme token pairs used by the approval screen
   - _Design: Visual theme; Requirements 9.1, 9.2, 9.3_
 
-- [ ] 25. Final checkpoint
+- [x] 25. Final checkpoint
   - Run `npm test`, `npm run lint`, `npm run build`; confirm all 13 properties + the golden test pass and the deployed app works both with AI on and with `VITE_AI_ENABLED` off
 
 ## Notes

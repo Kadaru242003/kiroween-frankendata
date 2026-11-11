@@ -38,6 +38,7 @@ import {
   createStitchController,
   type LoadedTablesProvider,
 } from './core/stitching/stitch-controller'
+import { createProxyAiProvider } from './core/stitching/ai-provider'
 import type { StitchController, StitchPlan } from './core/stitching/types'
 import { useStitchStore } from './core/stitching/stitch-store'
 import {
@@ -117,8 +118,16 @@ function getLabStack(): Promise<LabStack> {
         store: intakeStore,
       })
       // Feature 2 stitching stack, wired to the same DuckDB instance and reading
-      // the live loaded-table set from the intake store. Rules-only (no AI
-      // provider injected) per task 13.
+      // the live loaded-table set from the intake store.
+      //
+      // AI wiring (task 22): the production ProxyAiProvider talks to the
+      // same-origin `/api/ai` serverless proxy, gated by the VITE_AI_ENABLED
+      // build-time flag. With the flag unset or "false" (the default, and the
+      // only possibility under `vite dev` where `/api/ai` does not exist), the
+      // controller runs rules-only and NEVER attempts a network call — it
+      // short-circuits on the flag before ever touching the provider. With the
+      // flag "true" it calls the ProxyAiProvider, and any failure (timeout,
+      // non-200, network error, invalid body) falls back to the rules result.
       const stitchStore = new StitchStore()
       const getTables: LoadedTablesProvider = () =>
         intakeStore.getState().tables
@@ -126,6 +135,8 @@ function getLabStack(): Promise<LabStack> {
         db: duckDBService,
         getTables,
         store: stitchStore,
+        aiProvider: createProxyAiProvider(),
+        aiEnabledFlag: import.meta.env.VITE_AI_ENABLED,
         // Only the CHECKED tables participate (item 1). The filter reads the
         // module-level selection the App keeps in sync with its React state.
         selectTable: (t) => isTableSelectedForStitching(t.tableName),

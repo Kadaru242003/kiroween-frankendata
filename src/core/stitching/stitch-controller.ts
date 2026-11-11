@@ -58,13 +58,18 @@ import {
   type StitchApplyResult,
 } from "./stitch-applier";
 import type { StitchStore } from "./stitch-store";
-import type {
-  AiProvider,
-  ProposalSet,
-  RulesEngine,
-  StitchController,
-  StitchPlan,
-  StitchedTable,
+import { budgetAiRequest, isAiEnabled } from "./ai-budget";
+import { validateAiResponse } from "./ai-validation";
+import {
+  MATCH_DISPLAY_THRESHOLD,
+  type AiProvider,
+  type MatchProposal,
+  type ProposalSet,
+  type RulesEngine,
+  type StitchController,
+  type StitchPlan,
+  type StitchedTable,
+  type TableSample,
 } from "./types";
 
 /** Source of the currently-loaded tables (the intake store's snapshot). */
@@ -86,11 +91,22 @@ export interface StitchControllerOptions {
   rulesEngine?: RulesEngine;
   applier?: StitchApplier;
   /**
-   * Optional AI provider (task 19). When absent — the default for this task —
-   * the controller runs rules-only and never attempts a network call; the
-   * resulting {@link ProposalSet} has `aiUsed = false`.
+   * Optional AI provider (task 19). When absent, the controller runs rules-only
+   * and never attempts a network call; the resulting {@link ProposalSet} has
+   * `aiUsed = false`. When present, the controller budgets a request from the
+   * rules matches, calls `refine`, validates the response, and merges bounded
+   * refinements — but any failure/absence/over-budget falls back to the exact
+   * rules result (`aiUsed = false`), so the app never depends on the AI.
    */
   aiProvider?: AiProvider;
+  /**
+   * The `VITE_AI_ENABLED` build-time flag value (design: "Dev-mode behavior and
+   * feature flag"). AI is attempted ONLY when this is the string `"true"` AND an
+   * {@link aiProvider} is injected; otherwise the controller runs rules-only
+   * with no network attempt. Injected for testability — production passes
+   * `import.meta.env.VITE_AI_ENABLED`.
+   */
+  aiEnabledFlag?: unknown;
   /**
    * Optional table-selection filter (polish batch 2, item 1). When provided,
    * `computeProposals` proposes matches/cleanups over ONLY the tables for which
@@ -197,14 +213,88 @@ export function createStitchController(
   const rulesEngine = options.rulesEngine ?? createRulesEngine(db);
   const applier = options.applier ?? createStitchApplier(db);
   const aiProvider = options.aiProvider;
+  const aiEnabledFlag = options.aiEnabledFlag;
   const selectTable = options.selectTable;
 
   /**
+   * Optionally refine the rules matches via the injected {@link AiProvider}
+   * (design: "Client request payload budgeting", "Response validation steps",
+   * guaranteed rules fallback). Returns the (possibly) refined, display-ordered
+   * matches plus whether the AI was actually used.
+   *
+   * Every exit except a fully-successful, validated refinement returns the
+   * ORIGINAL rules matches unchanged with `aiUsed = false`:
+   *   - AI disabled (`VITE_AI_ENABLED` not `"true"`) or no provider injected;
+   *   - budgeting decides there are no candidates or the body is over the byte
+   *     budget (skips the call silently);
+   *   - `refine` throws/rejects/times out, or returns an unparseable/mis-shaped
+   *     body;
+   *   - validation drops every refinement.
+   *
+   * On success, the validated refinements are merged into the sent matches
+   * (bounded ±0.2 confidence, truncated reason, `source = "ai"`); any match the
+   * AI demoted below {@link MATCH_DISPLAY_THRESHOLD} is hidden, and non-candidate
+   * rules matches (none, since all display matches are sent) are preserved. The
+   * result is re-sorted into the deterministic display order.
+   */
+  async function refineMatches(
+    matches: MatchProposal[],
+    samples: TableSample[]
+  ): Promise<{ matches: MatchProposal[]; aiUsed: boolean }> {
+    // Kill switch + absence: no provider or flag off → rules-only, no network.
+    if (!aiProvider || !isAiEnabled(aiEnabledFlag)) {
+      return { matches, aiUsed: false };
+    }
+
+    // Budget the request. A "skip" (no candidates / over byte budget) mirrors
+    // the normal fallback path: use the rules result, no error, no call.
+    const budget = budgetAiRequest(matches, samples);
+    if (budget.skip) {
+      return { matches, aiUsed: false };
+    }
+
+    // The exact matches sent as candidates (same id set the request carries),
+    // so validation's eligibility check lines up with what the AI saw.
+    const sentIds = new Set(budget.request.candidates.map((c) => c.id));
+    const sentMatches = matches.filter((m) => sentIds.has(m.id));
+
+    // Guaranteed rules fallback (Req 6.5, 6.6): any failure of refine() —
+    // throw, reject, timeout (abort), non-200, or non-JSON body — is swallowed
+    // and the deterministic result is used unchanged.
+    let body: unknown;
+    try {
+      body = await aiProvider.refine(budget.request);
+    } catch {
+      return { matches, aiUsed: false };
+    }
+
+    // Validate + merge. A total-shape failure or all-dropped refinements yields
+    // aiUsed = false and the rules matches unchanged.
+    const { matches: merged, aiUsed } = validateAiResponse(body, sentMatches);
+    if (!aiUsed) {
+      return { matches, aiUsed: false };
+    }
+
+    // Re-assemble the display set: the AI can demote a visible match below the
+    // display threshold (hiding it) but never resurrect a hidden one (none were
+    // sent). Keep merged candidates >= threshold; every display match was sent,
+    // so there are no non-candidate matches to carry. Re-sort deterministically.
+    const refined = merged.filter((m) => m.confidence >= MATCH_DISPLAY_THRESHOLD);
+    refined.sort((a, b) => {
+      if (b.confidence !== a.confidence) {
+        return b.confidence - a.confidence;
+      }
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+    return { matches: refined, aiUsed: true };
+  }
+
+  /**
    * Read samples, run the rules engine (match + clean), optionally refine via
-   * the injected {@link AiProvider} (no-op in this task — always falls back to
-   * the rules result), and store the resulting {@link ProposalSet}. On a
-   * dataset-set change since the last compute, the stored proposals/decisions
-   * are discarded first and the store is flagged `recomputed` (Req 3.8).
+   * the injected {@link AiProvider} (with a guaranteed rules fallback), and
+   * store the resulting {@link ProposalSet}. On a dataset-set change since the
+   * last compute, the stored proposals/decisions are discarded first and the
+   * store is flagged `recomputed` (Req 3.8).
    */
   async function computeProposals(): Promise<ProposalSet> {
     const allTables = getTables();
@@ -229,28 +319,13 @@ export function createStitchController(
     const samples = await sampleReader.readTables(
       tables.map((t) => toSampleSource(t))
     );
-    const matches = rulesEngine.match(samples);
+    const rulesMatches = rulesEngine.match(samples);
     const cleanings = await rulesEngine.clean(samples);
 
-    // AI refinement seam (task 19). With no provider injected we run rules-only
-    // and never touch the network; aiUsed stays false. When a provider IS
-    // injected later, any failure/absence must still fall back to this exact
-    // rules result — task 19 wraps the refine() call in that guarantee.
-    let aiUsed = false;
-    if (aiProvider) {
-      try {
-        // Placeholder seam: task 19 builds the budgeted AiRequest from `matches`
-        // + `samples`, calls `aiProvider.refine(...)`, validates the response,
-        // and merges bounded refinements into `matches`. Until then there is no
-        // request to make, so we leave the rules result unchanged.
-        void aiProvider;
-        aiUsed = false;
-      } catch {
-        // Guaranteed rules fallback (Req 6.5, 6.6): any AI failure is swallowed
-        // and the deterministic result is used unchanged.
-        aiUsed = false;
-      }
-    }
+    // Optional AI refinement with a guaranteed rules fallback (Req 6.5, 6.6).
+    // `refineMatches` never throws: any absence/failure/over-budget returns the
+    // rules matches unchanged with aiUsed = false.
+    const { matches, aiUsed } = await refineMatches(rulesMatches, samples);
 
     const proposals: ProposalSet = { matches, cleanings, aiUsed };
     store.setProposals(proposals, datasetVersion, isRecompute);
