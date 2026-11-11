@@ -38,6 +38,26 @@ describe('ErrorDisplay', () => {
     expect(screen.getByText('The file is empty.')).toBeInTheDocument()
   })
 
+  it('shows a friendly message for a corrupt .xlsx (e.g. a renamed text file)', () => {
+    const errors: IntakeError[] = [
+      {
+        sourceFileName: 'notreally.xlsx',
+        stage: 'parsing',
+        message:
+          'File "notreally.xlsx" could not be read; it may be corrupt or not a valid XLSX workbook: zip file read error.',
+        kind: 'corrupt-file',
+      },
+    ]
+
+    render(<ErrorDisplay errors={errors} />)
+
+    // The raw parser detail is replaced by a clear, friendly sentence.
+    expect(
+      screen.getByText("This doesn't look like a valid .xlsx file.")
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/zip file read error/i)).toBeNull()
+  })
+
   it('exposes an accessible region so errors are announced (Req 9.3)', () => {
     const errors: IntakeError[] = [
       {

@@ -52,9 +52,9 @@ export interface AskTheLabPanelProps {
 export const ASK_SUBMIT_LABEL = "Ask";
 export const ASK_PLACEHOLDER = "Ask a question about your tables…";
 export const AI_UNAVAILABLE_MESSAGE =
-  "The lab's AI is unavailable right now. Try one of the starter questions below — they run without AI.";
+  "The lab's AI is unavailable right now. Try one of the starter questions below: they run without AI.";
 export const PRIVACY_NOTE =
-  "Your data stays in the browser. When AI is on, it sees only column names and a few sample values — never your full rows.";
+  "Your data stays in the browser. When AI is on, it sees only column names and a few sample values, never your full rows.";
 
 export function AskTheLabPanel({
   controller,
@@ -170,7 +170,7 @@ export function AskTheLabPanel({
 
       {!aiAvailable ? (
         <p className="ask-panel__ai-note">
-          AI is off — starter questions still work.
+          AI is off, starter questions still work.
         </p>
       ) : null}
 

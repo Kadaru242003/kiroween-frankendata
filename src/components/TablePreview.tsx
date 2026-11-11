@@ -84,7 +84,7 @@ function TablePreviewCard({ table, previewRows }: TablePreviewData) {
       <div className="table-preview-card__scroll">
         <table className="table-preview-card__table">
           <caption className="table-preview-card__caption">
-            {`Table ${tableName} — showing ${shownRowCount} of ${rowCountLabel(
+            {`Table ${tableName}, showing ${shownRowCount} of ${rowCountLabel(
               rowCount,
             )}`}
           </caption>

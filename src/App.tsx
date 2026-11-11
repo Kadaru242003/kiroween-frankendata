@@ -544,6 +544,7 @@ function App() {
                 label={LOAD_MISMATCHED_DEMO_LABEL}
                 caption="Two files with different headers, ready to stitch"
                 alreadyLoaded={loadedDemos.has('mismatched')}
+                tag="Start here"
               />
             </div>
             {/*
@@ -823,6 +824,29 @@ function StitchStage({
 }: StitchStageProps) {
   const { stitchedTable, fanOut } = useStitchStore(store)
   const applied = stitchedTable !== null
+  const resultRef = useRef<HTMLElement | null>(null)
+
+  // On a successful stitch, smoothly scroll the result into view (instant when
+  // the user prefers reduced motion). Keyed on the stitched table name so it
+  // runs once per apply, not on every re-render.
+  const stitchedName = stitchedTable?.tableName ?? null
+  useEffect(() => {
+    if (stitchedName === null) {
+      return
+    }
+    const node = resultRef.current
+    if (node === null) {
+      return
+    }
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    node.scrollIntoView({
+      behavior: prefersReduced ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }, [stitchedName])
 
   return (
     <div className="lab-stitch__join">
@@ -838,7 +862,8 @@ function StitchStage({
       />
       {stitchedTable !== null ? (
         <section
-          className="lab-stitch__result"
+          ref={resultRef}
+          className="lab-stitch__result lab-stitch__result--alive"
           aria-label="Stitched result preview"
         >
           <h3 className="lab-stitch__result-title">Stitched result</h3>

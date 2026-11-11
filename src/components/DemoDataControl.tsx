@@ -66,6 +66,12 @@ export interface DemoDataControlProps {
    * idempotent demo load). Cleared when the lab is reset.
    */
   alreadyLoaded?: boolean;
+  /**
+   * Optional short tag shown above the button (plain text), for example
+   * "Start here" to point first-time users at the recommended demo. The button
+   * label itself is unchanged.
+   */
+  tag?: string;
 }
 
 /**
@@ -78,6 +84,7 @@ export function DemoDataControl({
   label = LOAD_DEMO_DATA_LABEL,
   caption,
   alreadyLoaded = false,
+  tag,
 }: DemoDataControlProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   // A ref mirror of the loading flag so rapid clicks are rejected synchronously,
@@ -109,6 +116,9 @@ export function DemoDataControl({
 
   return (
     <div className="frankendata-demo-control">
+      {tag ? (
+        <span className="frankendata-demo-control__tag">{tag}</span>
+      ) : null}
       <button
         type="button"
         className="frankendata-demo-control__button"

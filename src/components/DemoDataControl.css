@@ -8,6 +8,7 @@
  */
 .frankendata-demo-control {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
@@ -39,4 +40,19 @@
 .frankendata-demo-control__button:disabled {
   cursor: progress;
   opacity: 0.65;
+}
+
+/* "Start here" style tag pointing first-time users at the recommended demo. */
+.frankendata-demo-control__tag {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--amber-accent);
+  border-radius: 999px;
+  background: rgba(255, 179, 0, 0.12);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }

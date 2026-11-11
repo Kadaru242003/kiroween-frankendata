@@ -22,6 +22,20 @@ export interface ErrorDisplayProps {
  * When there are no errors, nothing is rendered — the component does not show
  * an empty panel.
  */
+/**
+ * Friendly, user-facing message for an intake error. For a corrupt or
+ * unreadable `.xlsx` file (for example a renamed text file), show a clear
+ * sentence instead of the raw SheetJS parser detail. All other errors keep
+ * their existing message.
+ */
+export function friendlyMessage(error: IntakeError): string {
+  const isXlsx = error.sourceFileName.toLowerCase().endsWith('.xlsx')
+  if (error.kind === 'corrupt-file' && isXlsx) {
+    return "This doesn't look like a valid .xlsx file."
+  }
+  return error.message
+}
+
 export function ErrorDisplay({ errors }: ErrorDisplayProps) {
   if (errors.length === 0) {
     return null
@@ -46,7 +60,7 @@ export function ErrorDisplay({ errors }: ErrorDisplayProps) {
               </span>
               <span className="error-display__kind">{error.kind}</span>
             </div>
-            <p className="error-display__message">{error.message}</p>
+            <p className="error-display__message">{friendlyMessage(error)}</p>
           </li>
         ))}
       </ul>
