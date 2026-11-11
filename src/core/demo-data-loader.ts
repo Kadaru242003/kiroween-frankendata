@@ -118,12 +118,15 @@ const DEMO_DATASETS: readonly DemoDataset[] = [
  * Mismatched file A — the containment roster of captured creatures.
  *
  * Headers: `Monster Name`, `Species`, `Threat Level`, `Sedated`. Shares its
- * creature names with {@link MISMATCH_EXPERIMENTS_CSV} (via that file's `name`
- * column) so `Monster Name` ↔ `name` matches on both the fuzzy name and the
- * value overlap. The `Species` column carries inconsistent spellings/casing/
- * whitespace of the same categories (`swamp-wraith`, `Swamp Wraith`,
- * `swamp  wraith`) for `category-standardize`, and the last two rows are an
- * exact duplicate of the Gorzak row for `duplicate-rows`.
+ * creature names with {@link MISMATCH_EXPERIMENTS_CSV} (via that file's
+ * `monster_name` column) so `Monster Name` ↔ `monster_name` matches on both
+ * the fuzzy name (identical tokens) AND full value overlap over 12 distinct
+ * names — driving the headline match's confidence to high-confidence so
+ * "Approve all high-confidence" is enabled. The `Species` column carries
+ * inconsistent spellings/casing/whitespace of the same categories
+ * (`swamp-wraith`, `Swamp Wraith`, `swamp  wraith`) for `category-standardize`,
+ * and the last two rows are exact duplicates of the Gorzak row for
+ * `duplicate-rows` (2 duplicate rows).
  */
 const MISMATCH_MONSTERS_CSV = `Monster Name,Species,Threat Level,Sedated
 Gorzak,swamp-wraith,High,yes
@@ -132,6 +135,12 @@ Blinky,three eyed ooze,Low,yes
 Snarl,cave-howler,HIGH,no
 Wisp,swamp  wraith,low,no
 Grond,Rock Golem,medium,yes
+Vex,Moth Titan,High,no
+Thornak,cave howler,Medium,yes
+Bellow,ROCK GOLEM,high,no
+Drip,three-eyed-ooze,Low,yes
+Marrow,bone-shambler,High,no
+Fizz,Swamp Wraith,low,yes
 Gorzak,swamp-wraith,High,yes
 Gorzak,swamp-wraith,High,yes
 `;
@@ -139,20 +148,29 @@ Gorzak,swamp-wraith,High,yes
 /**
  * Mismatched file B — field observations of the same creatures.
  *
- * Headers: `name`, `creature_type`, `threat`, `hazardous` — all different from
- * file A's headers, so cross-table matching has to bridge them by similarity,
- * not exact equality. The `name` values overlap file A's `Monster Name` values.
- * `creature_type` repeats the same messy species spellings (`Swamp Wraith`,
+ * Headers: `monster_name`, `species`, `threat_level`, `hazardous` — cased and
+ * separated differently from file A's headers, so cross-table matching bridges
+ * them by similarity. `monster_name` normalizes to the same tokens as file A's
+ * `Monster Name`, and its values overlap file A's, so the headline match is
+ * high-confidence. `species` repeats the same messy spellings (`Swamp Wraith`,
  * `swamp wraith`) for `category-standardize`, and the Blinky observation is
- * duplicated for `duplicate-rows`.
+ * duplicated once for `duplicate-rows` (1 duplicate row). The boolean
+ * `hazardous` column (like file A's `Sedated`) must NOT match — the engine's
+ * boolean hard-gate excludes it.
  */
-const MISMATCH_EXPERIMENTS_CSV = `name,creature_type,threat,hazardous
+const MISMATCH_EXPERIMENTS_CSV = `monster_name,species,threat_level,hazardous
 Gorzak,Swamp Wraith,High,true
 Mothra Jr.,moth titan,High,true
 Blinky,Three-Eyed Ooze,Low,false
 Snarl,Cave Howler,High,true
 Wisp,swamp wraith,Low,false
 Grond,rock golem,Medium,true
+Vex,moth  titan,High,false
+Thornak,Cave Howler,Medium,true
+Bellow,rock golem,High,false
+Drip,Three-Eyed Ooze,Low,true
+Marrow,Bone Shambler,High,false
+Fizz,swamp wraith,Low,false
 Blinky,Three-Eyed Ooze,Low,false
 `;
 

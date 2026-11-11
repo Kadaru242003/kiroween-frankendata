@@ -103,7 +103,16 @@ export function createIntakeController(
       // collide receive a unique numeric suffix (Req 6.3). This spans the whole
       // intake call, which is why sanitization happens here rather than per file
       // in isolation.
-      const existingTableNames: string[] = [];
+      //
+      // Seed it with the names of tables ALREADY loaded in previous intake
+      // calls (read from the session store, which mirrors the DuckDB catalog),
+      // so a second load of a file whose name sanitizes to an already-taken
+      // table name gets the usual numeric suffix (e.g. `monsters_2`) instead of
+      // colliding with the existing DuckDB table ("Catalog Error: Table with
+      // name monsters already exists").
+      const existingTableNames: string[] = store
+        .getState()
+        .tables.map((t) => t.tableName);
 
       // Process files sequentially. Each file's pipeline is isolated in its own
       // try/catch so one failure never stops the others (Req 1.4, 9.2). Order is

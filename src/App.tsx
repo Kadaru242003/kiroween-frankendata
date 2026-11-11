@@ -293,16 +293,22 @@ function App() {
         <>
           <section className="lab-intake" aria-label="File intake">
             <DropZone onFiles={handleFiles} />
-            <DemoDataControl onLoadDemo={handleLoadDemo} />
-            {/*
-              Second demo action: the mismatched stitching dataset (Req 8.4).
-              Routes through the identical intake pipeline; its two tables make
-              the stitching stage reachable.
-            */}
-            <DemoDataControl
-              onLoadDemo={handleLoadMismatchedDemo}
-              label={LOAD_MISMATCHED_DEMO_LABEL}
-            />
+            <div className="lab-intake__demos">
+              <DemoDataControl
+                onLoadDemo={handleLoadDemo}
+                caption="Three messy lab files, typed automatically"
+              />
+              {/*
+                Second demo action: the mismatched stitching dataset (Req 8.4).
+                Routes through the identical intake pipeline; its two tables make
+                the stitching stage reachable.
+              */}
+              <DemoDataControl
+                onLoadDemo={handleLoadMismatchedDemo}
+                label={LOAD_MISMATCHED_DEMO_LABEL}
+                caption="Two files with different headers, ready to stitch"
+              />
+            </div>
           </section>
 
           <ErrorDisplay errors={[...errors]} />

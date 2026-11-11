@@ -60,20 +60,47 @@
   background: var(--surface-raised);
 }
 
-/* Intake row: DropZone and the demo control sit alongside each other (Req 13.1). */
+/*
+ * Intake column: the DropZone and the two demo buttons stack as one centered
+ * column directly under the title, instead of the drop zone sitting left of
+ * center with the buttons floating to the right.
+ */
 .lab-intake {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .lab-intake .frankendata-dropzone-wrapper {
-  flex: 1 1 320px;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* The two demo buttons sit side by side beneath the drop zone, centered. */
+.lab-intake__demos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .lab-intake .frankendata-demo-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex: 0 0 auto;
+}
+
+/* One-line caption under each demo button (keeps the lab theme). */
+.frankendata-demo-control__caption {
+  margin: 6px 0 0;
+  max-width: 220px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 /*

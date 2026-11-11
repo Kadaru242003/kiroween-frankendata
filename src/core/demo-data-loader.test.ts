@@ -127,7 +127,7 @@ describe("BundledDemoDataLoader.loadMismatched (Req 8.1–8.4)", () => {
     // collapse whitespace). A category is "inconsistent" when one folded form
     // has two or more distinct raw surface forms.
     const speciesColA = parsedA.header.findIndex((h) => /species/i.test(h));
-    const speciesColB = parsedB.header.findIndex((h) => /creature/i.test(h));
+    const speciesColB = parsedB.header.findIndex((h) => /species/i.test(h));
     const rawValues = [
       ...parsedA.rows.map((r) => r[speciesColA]),
       ...parsedB.rows.map((r) => r[speciesColB]),

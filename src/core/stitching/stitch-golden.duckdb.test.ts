@@ -32,11 +32,12 @@
  * occurrences unsuffixed and suffixes later collisions (`monsters_2`, …). We
  * load the MISMATCHED dataset first so its tables keep the clean `monsters` /
  * `experiments` names the design's golden assertion refers to
- * (`monsters."Monster Name"` ↔ `experiments.name`); the three Feature-1 demo
+ * (`monsters."Monster Name"` ↔ `experiments.monster_name`); the three Feature-1 demo
  * files then land as `monsters_2`, `experiments_2`, `lab_inventory`.
  *
  * Column names are sanitized case-PRESERVING (`Monster Name` → `Monster_Name`,
- * `Species` → `Species`, `name` → `name`, `hazardous` → `hazardous`), while
+ * `Species` → `Species`, `monster_name` → `monster_name`, `hazardous` →
+ * `hazardous`), while
  * table names are lowercased.
  *
  * ## Environment note (same pattern as stitch-controller.duckdb.test.ts)
@@ -67,6 +68,7 @@ import { demoDataLoader } from "../demo-data-loader";
 import { IntakeStore } from "../../state/intake-store";
 import { StitchStore } from "./stitch-store";
 import { createStitchController } from "./stitch-controller";
+import { HIGH_CONFIDENCE_THRESHOLD } from "./types";
 import type { MatchProposal, ProposalSet } from "./types";
 
 const require = createRequire(import.meta.url);
@@ -214,19 +216,43 @@ describe("Golden example — real pipeline stitching regression (Design: Golden 
     dispose?.();
   });
 
-  it("surfaces the EXPECTED match monsters.\"Monster Name\" ↔ experiments.name (Req 1.2)", () => {
-    // Bridges deliberately different headers via fuzzy name + value overlap.
+  it("surfaces the EXPECTED headline match monsters.\"Monster Name\" ↔ experiments.monster_name at HIGH confidence (Req 1.2, 3.3)", () => {
+    // Bridges differently-cased headers (Monster Name ↔ monster_name) that
+    // normalize to the same tokens, so nameSim = 1; with 12 distinct names
+    // overlapping on both sides the value-overlap damping is lifted, so the
+    // confidence clears HIGH_CONFIDENCE_THRESHOLD — which is what enables the
+    // approval screen's "Approve all high-confidence" action.
     const match = findMatch(
       matches,
       { table: "monsters", column: "Monster_Name" },
-      { table: "experiments", column: "name" },
+      { table: "experiments", column: "monster_name" },
     );
     expect(match).toBeDefined();
-    // It is displayed (≥ MATCH_DISPLAY_THRESHOLD) and a confident, real match:
-    // the two columns share nearly all creature-name values.
-    expect(match!.confidence).toBeGreaterThanOrEqual(0.5);
+    expect(match!.confidence).toBeGreaterThanOrEqual(HIGH_CONFIDENCE_THRESHOLD);
     expect(match!.components.valueOverlap).toBeGreaterThan(0);
     expect(typeof match!.reason).toBe("string");
+    expect(match!.source).toBe("rules");
+  });
+
+  it("surfaces the species pair monsters.Species ↔ experiments.species above threshold (Req 1.2)", () => {
+    const match = findMatch(
+      matches,
+      { table: "monsters", column: "Species" },
+      { table: "experiments", column: "species" },
+    );
+    expect(match).toBeDefined();
+    expect(match!.confidence).toBeGreaterThan(0.5);
+    expect(match!.source).toBe("rules");
+  });
+
+  it("surfaces the threat pair monsters.\"Threat Level\" ↔ experiments.threat_level above threshold (Req 1.2)", () => {
+    const match = findMatch(
+      matches,
+      { table: "monsters", column: "Threat_Level" },
+      { table: "experiments", column: "threat_level" },
+    );
+    expect(match).toBeDefined();
+    expect(match!.confidence).toBeGreaterThan(0.5);
     expect(match!.source).toBe("rules");
   });
 

@@ -60,9 +60,46 @@ const KIND_TITLE: Record<CleaningKind, string> = {
 };
 
 /**
+ * A `before`/`after` payload shaped as a row-count snapshot, used by the
+ * `duplicate-rows` proposal (`{ rowCount }`).
+ */
+function isRowCountValue(value: unknown): value is { rowCount: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "rowCount" in value &&
+    typeof (value as { rowCount: unknown }).rowCount === "number"
+  );
+}
+
+/**
+ * A `before`/`after` payload shaped as an outlier-flag snapshot, used by the
+ * `outliers` proposal (`{ outliersFlagged, nonNull }`).
+ */
+function isOutlierValue(value: unknown): value is { outliersFlagged: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "outliersFlagged" in value &&
+    typeof (value as { outliersFlagged: unknown }).outliersFlagged === "number"
+  );
+}
+
+/** A human-friendly "N row" / "N rows" count label (plain text). */
+function rowCountLabel(n: number): string {
+  return `${n.toLocaleString()} ${n === 1 ? "row" : "rows"}`;
+}
+
+/**
  * Render an arbitrary representative `before`/`after` value as a plain string.
- * The engine stores these as `unknown`; we stringify defensively so the output
- * is always a plain text node (never markup).
+ *
+ * The engine stores these as `unknown`. Row-based proposals carry a structured
+ * payload rather than a scalar: `duplicate-rows` uses `{ rowCount }` and
+ * `outliers` uses `{ outliersFlagged, nonNull }`. Those are turned into a
+ * readable count label (e.g. "8 rows", "2 flagged") instead of the useless
+ * "[object Object]" that `String({...})` would produce. Everything else is
+ * stringified defensively so the output is always a plain text node (never
+ * markup).
  */
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -71,7 +108,33 @@ function formatValue(value: unknown): string {
   if (typeof value === "string") {
     return value;
   }
+  if (isRowCountValue(value)) {
+    return rowCountLabel(value.rowCount);
+  }
+  if (isOutlierValue(value)) {
+    const n = value.outliersFlagged;
+    return `${n.toLocaleString()} flagged`;
+  }
   return String(value);
+}
+
+/**
+ * The middle-dot marker substituted for each literal space so leading,
+ * trailing, and repeated spaces in whitespace/case diffs stay visible even
+ * though the browser would otherwise collapse them (Req 2.1 presentation).
+ * Purely a display transform — the underlying proposal value is never changed.
+ */
+const SPACE_MARKER = "\u00B7"; // ·
+
+/**
+ * Render a whitespace/case value so its spaces are visible: each space becomes
+ * a middle dot and the surrounding span uses `white-space: pre` (see
+ * `.stitch-diff__value--whitespace` in ApprovalScreen.css). The returned string
+ * is still a plain text node — only the glyph shown for a space changes, not
+ * the stored value.
+ */
+function makeWhitespaceVisible(display: string): string {
+  return display.replace(/ /g, SPACE_MARKER);
 }
 
 /** The column/row target label for the proposal (plain text). */
@@ -94,6 +157,21 @@ export function CleaningDiff({
 }: CleaningDiffProps): JSX.Element {
   const { id, kind, before, after, reason, canonical } = proposal;
   const isCategory = kind === "category-standardize";
+  // Whitespace/case diffs need their spaces made visible (Req 4): render each
+  // space as a middle dot inside a `white-space: pre` span so leading/trailing/
+  // repeated spaces are not collapsed by the browser.
+  const isWhitespace = kind === "whitespace-case";
+  const beforeDisplay = formatValue(before);
+  const afterDisplay = formatValue(after);
+  const beforeText = isWhitespace
+    ? makeWhitespaceVisible(beforeDisplay)
+    : beforeDisplay;
+  const afterText = isWhitespace
+    ? makeWhitespaceVisible(afterDisplay)
+    : afterDisplay;
+  const valueClassName = isWhitespace
+    ? "stitch-diff__value stitch-diff__value--whitespace"
+    : "stitch-diff__value";
 
   // Local draft of the canonical value so typing feels immediate; it is
   // committed up to the screen on blur / Enter. Kept in sync if the proposal's
@@ -132,14 +210,14 @@ export function CleaningDiff({
       <div className="stitch-diff">
         <div className="stitch-diff__side stitch-diff__side--before">
           <span className="stitch-diff__label">Before</span>
-          <span className="stitch-diff__value">{formatValue(before)}</span>
+          <span className={valueClassName}>{beforeText}</span>
         </div>
         <span className="stitch-diff__arrow" aria-hidden="true">
           →
         </span>
         <div className="stitch-diff__side stitch-diff__side--after">
           <span className="stitch-diff__label">After</span>
-          <span className="stitch-diff__value">{formatValue(after)}</span>
+          <span className={valueClassName}>{afterText}</span>
         </div>
       </div>
 

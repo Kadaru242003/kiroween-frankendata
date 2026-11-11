@@ -106,6 +106,37 @@ describe("JoinControls", () => {
     expect(anchor.value).toBe("monsters");
   });
 
+  it("anchor label shows the CLEANED row count when a duplicate-rows cleaning is approved (item 3)", () => {
+    // monsters starts at 100 rows; an approved duplicate-rows cleaning will
+    // dedupe it to 94 before the join reads it. The anchor option must show 94
+    // (the count the join actually uses, matching the fan-out "Before"), not
+    // the raw 100. The anchor override still lists every table.
+    const p = plan({
+      approvedCleanings: [
+        {
+          id: "clean:duplicate-rows:monsters",
+          target: { tableName: "monsters" },
+          kind: "duplicate-rows",
+          before: { rowCount: 100 },
+          after: { rowCount: 94 },
+          reason: "Remove 6 duplicate rows from monsters (100 \u2192 94 rows).",
+        },
+      ],
+    });
+    renderControls(p, null, false);
+
+    const anchor = screen.getByLabelText("Anchor table") as HTMLSelectElement;
+    const options = within(anchor).getAllByRole(
+      "option"
+    ) as HTMLOptionElement[];
+    const monstersOption = options.find((o) => o.value === "monsters")!;
+    const experimentsOption = options.find((o) => o.value === "experiments")!;
+    expect(monstersOption.textContent).toContain("94 rows");
+    expect(monstersOption.textContent).not.toContain("100 rows");
+    // A table with no approved cleaning still shows its raw count.
+    expect(experimentsOption.textContent).toContain("40 rows");
+  });
+
   it("changing the anchor reports the new table (Req 7.2)", () => {
     renderControls(plan(), null, false);
     const anchor = screen.getByLabelText("Anchor table");

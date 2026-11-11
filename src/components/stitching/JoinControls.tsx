@@ -96,6 +96,43 @@ function rowLabel(n: number): string {
 }
 
 /**
+ * A `before`/`after` cleaning payload shaped as a row-count snapshot
+ * (`duplicate-rows` proposals carry `{ rowCount }`).
+ */
+function isRowCountValue(value: unknown): value is { rowCount: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "rowCount" in value &&
+    typeof (value as { rowCount: unknown }).rowCount === "number"
+  );
+}
+
+/**
+ * The row count the LEFT JOIN will actually read for a table: when the plan
+ * approves a `duplicate-rows` cleaning for that table, the join reads the
+ * deduped cleaned copy, so the effective count is that proposal's `after`
+ * row count — not the raw {@link JoinControlsTable.rowCount}. This keeps the
+ * anchor label consistent with the fan-out "Before" count (Req 7.9), while the
+ * anchor override still works because this is a pure per-table lookup.
+ */
+function effectiveRowCount(
+  plan: StitchPlan,
+  table: JoinControlsTable
+): number {
+  for (const cleaning of plan.approvedCleanings) {
+    if (
+      cleaning.kind === "duplicate-rows" &&
+      cleaning.target.tableName === table.tableName &&
+      isRowCountValue(cleaning.after)
+    ) {
+      return cleaning.after.rowCount;
+    }
+  }
+  return table.rowCount;
+}
+
+/**
  * A short label for a match's column pairing, e.g.
  * `monsters."Monster Name" ↔ experiments.name`.
  */
@@ -191,7 +228,7 @@ export function JoinControls({
           >
             {tables.map((t) => (
               <option key={t.tableName} value={t.tableName}>
-                {t.tableName} ({rowLabel(t.rowCount)})
+                {t.tableName} ({rowLabel(effectiveRowCount(plan, t))})
               </option>
             ))}
           </select>

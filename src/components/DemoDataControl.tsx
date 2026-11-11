@@ -52,6 +52,11 @@ export interface DemoDataControlProps {
    * same presentational component.
    */
   label?: string;
+  /**
+   * Optional one-line caption shown beneath the button describing what the
+   * dataset is (plain text). Omitted when not provided.
+   */
+  caption?: string;
 }
 
 /**
@@ -62,6 +67,7 @@ export interface DemoDataControlProps {
 export function DemoDataControl({
   onLoadDemo,
   label = LOAD_DEMO_DATA_LABEL,
+  caption,
 }: DemoDataControlProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   // A ref mirror of the loading flag so rapid clicks are rejected synchronously,
@@ -96,6 +102,9 @@ export function DemoDataControl({
       >
         {isLoading ? LOAD_DEMO_DATA_LOADING_LABEL : label}
       </button>
+      {caption ? (
+        <p className="frankendata-demo-control__caption">{caption}</p>
+      ) : null}
     </div>
   );
 }

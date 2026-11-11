@@ -200,6 +200,16 @@
   word-break: break-word;
 }
 
+/*
+ * Whitespace/case diffs render each space as a middle dot and keep it literal
+ * so leading, trailing, and repeated spaces stay visible (Req 4). The marker
+ * glyph is dimmed so the real characters still read clearly.
+ */
+.stitch-diff__value--whitespace {
+  white-space: pre;
+  word-break: break-all;
+}
+
 .stitch-diff__type {
   color: var(--lab-green);
   font-family: var(--mono);
