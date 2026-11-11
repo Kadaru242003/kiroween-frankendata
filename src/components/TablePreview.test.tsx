@@ -13,6 +13,7 @@ import { TablePreview, type TablePreviewData } from './TablePreview'
 
 function makeTable(overrides: Partial<LoadedTable> = {}): LoadedTable {
   return {
+    loadId: 1,
     tableName: 'sales_2024',
     sourceFileName: 'Sales 2024.csv',
     schema: [

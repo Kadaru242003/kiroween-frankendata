@@ -71,6 +71,9 @@ class RecordingDuckDBService implements DuckDBService {
   ): Promise<LoadedTable> {
     this.createTableCalls.push(tableName);
     return {
+      // loadId is a 0 placeholder; IntakeStore.addTable stamps the real
+      // per-session value. Not asserted here.
+      loadId: 0,
       tableName,
       // The controller overwrites sourceFileName with the real file name, so
       // the value here is irrelevant to the assertions.

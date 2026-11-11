@@ -49,6 +49,16 @@ export class IntakeStore {
   private readonly listeners = new Set<Listener>();
 
   /**
+   * Per-session monotonically increasing source for {@link LoadedTable.loadId}.
+   * Starts at 0; `addTable` pre-increments it so the first loaded table gets
+   * `loadId === 1`. It is never decremented or reset — not even by
+   * {@link IntakeStore.reset} — so ids are never reused within a session and a
+   * re-dropped identical file always receives a strictly greater id (Feature 2
+   * staleness, Req 3.8).
+   */
+  private nextLoadId = 0;
+
+  /**
    * Return the current immutable state snapshot. The same reference is returned
    * until the next mutation, satisfying the stable-snapshot contract of
    * `useSyncExternalStore`.
@@ -68,10 +78,20 @@ export class IntakeStore {
     };
   };
 
-  /** Append a successfully loaded table and notify subscribers. */
+  /**
+   * Append a successfully loaded table and notify subscribers.
+   *
+   * The store is the authoritative source of {@link LoadedTable.loadId}: it
+   * stamps the next value from its per-session sequence onto the stored table,
+   * overwriting any `loadId` the caller may have set. This guarantees ids are
+   * monotonically increasing and never reused, so re-adding a table with the
+   * same `sourceFileName` and `rowCount` still yields a strictly greater id
+   * (Feature 2 staleness, Req 3.8).
+   */
   addTable(table: LoadedTable): void {
+    const stamped: LoadedTable = { ...table, loadId: ++this.nextLoadId };
     this.state = Object.freeze({
-      tables: Object.freeze([...this.state.tables, table]),
+      tables: Object.freeze([...this.state.tables, stamped]),
       errors: this.state.errors,
     });
     this.emit();

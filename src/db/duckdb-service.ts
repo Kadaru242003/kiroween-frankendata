@@ -289,6 +289,11 @@ async function loadTable(
   }
 
   return {
+    // The service is not the source of loadId; IntakeStore.addTable stamps the
+    // authoritative per-session value (Feature 2 staleness, Req 3.8). We emit a
+    // 0 placeholder here so the returned LoadedTable is well-typed before the
+    // store assigns the real id.
+    loadId: 0,
     tableName,
     sourceFileName: tableName,
     schema: effectiveSchema,

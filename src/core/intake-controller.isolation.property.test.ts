@@ -98,6 +98,9 @@ function createFakeDuckDBService(): DuckDBService {
       rows: CellValue[][]
     ): Promise<LoadedTable> {
       return {
+        // loadId is a 0 placeholder; IntakeStore.addTable stamps the real
+        // per-session value. Mirror the real service's behavior.
+        loadId: 0,
         tableName,
         // The controller overwrites sourceFileName with the real file name, so
         // the value here is irrelevant; mirror the real service's behavior.

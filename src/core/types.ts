@@ -39,6 +39,18 @@ export interface ParsedFile {
 
 /** A successfully loaded table. */
 export interface LoadedTable {
+  /**
+   * A monotonically increasing id assigned to this table at intake time
+   * (Feature 2 staleness, Req 3.8). The id comes from a per-session sequence
+   * owned by {@link IntakeStore}: every table added gets the next value, and
+   * values are never reused. Because the id is assigned per `addTable` call —
+   * not derived from the file's contents — re-dropping the *same* file (same
+   * `sourceFileName` and `rowCount`) still yields a strictly greater `loadId`.
+   * Feature 2's `StitchController` derives a `datasetVersion` from the sorted
+   * set of current `loadId`s so a re-dropped identical file still invalidates
+   * cached proposals (the name+rowCount signature alone would not).
+   */
+  loadId: number;
   /** Valid, unique DuckDB identifier derived from sourceFileName. */
   tableName: string;
   sourceFileName: string;

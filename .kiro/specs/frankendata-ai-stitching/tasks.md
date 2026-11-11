@@ -15,7 +15,7 @@ This plan is ordered so the **app works end to end on the rules engine as early 
 
 ## Tasks
 
-- [ ] 1. Prerequisite: add `loadId` to Feature 1 `LoadedTable` and store
+- [x] 1. Prerequisite: add `loadId` to Feature 1 `LoadedTable` and store
   - Add a monotonically increasing `loadId: number` to the `LoadedTable` interface in `src/core/types.ts`
   - Assign the next `loadId` when a table is added to `IntakeStore` (sequence per session, never reused), so a re-dropped file with the same name and row count still gets a fresh id
   - Update `DuckDBService.createTable` / the intake pipeline so produced `LoadedTable`s carry the id
