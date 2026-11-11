@@ -90,15 +90,31 @@ export function MatchDiff({
   const repairOptions = rightTable?.schema ?? [];
 
   const selectId = `match-repair-${id}`;
+  const decisionClass =
+    decision === "approved" || decision === "edited"
+      ? " stitch-proposal--approved"
+      : decision === "rejected"
+        ? " stitch-proposal--rejected"
+        : "";
 
   return (
     <article
-      className="stitch-proposal stitch-proposal--match"
+      className={`stitch-proposal stitch-proposal--match${decisionClass}`}
       aria-label={`Match proposal ${left.columnName} to ${right.columnName}`}
     >
       <header className="stitch-proposal__header">
         <h4 className="stitch-proposal__title">Column match</h4>
         <EngineBadge source={source} />
+        {decision === "approved" || decision === "edited" ? (
+          <span className="stitch-proposal__badge stitch-proposal__badge--approved">
+            Approved
+          </span>
+        ) : null}
+        {decision === "rejected" ? (
+          <span className="stitch-proposal__badge stitch-proposal__badge--rejected">
+            Rejected
+          </span>
+        ) : null}
         {/*
           "AI found this" chip (enhancement): shown only when the AI
           DISCOVERED this match — its rule score was below the display

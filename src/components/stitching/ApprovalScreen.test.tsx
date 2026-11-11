@@ -299,4 +299,84 @@ describe("ApprovalScreen", () => {
     expect(store.getDecision(low.id)?.decision).toBe("approved");
   });
 
+  it("shows live progress and an aria-live status when Approve all is clicked (items 1, 2)", () => {
+    const match = highMatch();
+    const cleaning = categoryCleaning();
+    const store = seedStore({
+      matches: [match],
+      cleanings: [cleaning],
+      aiUsed: false,
+    });
+    render(
+      <ApprovalScreen store={store} tables={tables} onConfirm={onConfirm} />
+    );
+
+    // Progress starts at 0 of 2.
+    expect(screen.getByText("0 of 2 approved")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Approve all suggestions" })
+    );
+
+    // Progress updates immediately, and the status reports the real count.
+    expect(screen.getByText("2 of 2 approved")).toBeInTheDocument();
+    expect(screen.getByText("Approved 2 suggestions")).toBeInTheDocument();
+
+    // Clicking again approves nothing new.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Approve all suggestions" })
+    );
+    expect(screen.getByText("Nothing new to approve")).toBeInTheDocument();
+  });
+
+  it("shows an Approved badge and pressed state on an approved card (item 3)", () => {
+    const match = highMatch();
+    const store = seedStore({ matches: [match], cleanings: [], aiUsed: false });
+    render(
+      <ApprovalScreen store={store} tables={tables} onConfirm={onConfirm} />
+    );
+    const card = screen.getByRole("article", { name: /Match proposal/ });
+    const approveButton = within(card).getByRole("button", { name: "Approve" });
+
+    // Pending: no badge, not pressed.
+    expect(within(card).queryByText("Approved")).toBeNull();
+    expect(approveButton).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(approveButton);
+
+    // Approved: badge shown, button reads as pressed.
+    expect(within(card).getByText("Approved")).toBeInTheDocument();
+    expect(approveButton).toHaveAttribute("aria-pressed", "true");
+
+    // Rejecting switches the badge and the pressed state.
+    fireEvent.click(within(card).getByRole("button", { name: "Reject" }));
+    expect(within(card).getByText("Rejected")).toBeInTheDocument();
+    expect(
+      within(card).getByRole("button", { name: "Reject" })
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("disables the stitch button with a reason until something is approved (item 1)", () => {
+    const match = highMatch();
+    const store = seedStore({ matches: [match], cleanings: [], aiUsed: false });
+    render(
+      <ApprovalScreen store={store} tables={tables} onConfirm={onConfirm} />
+    );
+
+    const stitchButton = screen.getByRole("button", { name: /Confirm/ });
+    expect(stitchButton).toBeDisabled();
+    expect(
+      screen.getByText("Approve a match or cleanup first")
+    ).toBeInTheDocument();
+
+    // After approving, the button enables and the reason disappears.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Approve all suggestions" })
+    );
+    expect(stitchButton).toBeEnabled();
+    expect(
+      screen.queryByText("Approve a match or cleanup first")
+    ).toBeNull();
+  });
+
 });

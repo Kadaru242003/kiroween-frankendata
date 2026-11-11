@@ -10,7 +10,7 @@ Built for the Kiroween 2026 hackathon, Frankenstein category: a mad-scientist la
 
 1. Click **Reset lab** (if any tables are already loaded) to start clean.
 2. Click **Load mismatched demo** to load two files that describe the same creatures with different headers.
-3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch** to build the cleaned, deduplicated, joined `stitch_1_result` table. Use **Undo stitch** to reverse it.
+3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch**. In the Join panel that appears, click **Apply & stitch** to build the cleaned, deduplicated, joined `stitch_1_result` table. Use **Undo stitch** to reverse it.
 4. In **Ask the Lab**, ask: "which species is most common?"
 5. You get back Swamp Wraith with a count of 3, answered from the cleaned stitch result, plus the generated SQL and a CSV export. Then click the starter question "How many rows per Species in stitch_1_result?" to get a bar chart.
 

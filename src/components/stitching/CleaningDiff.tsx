@@ -255,20 +255,37 @@ export function CleaningDiff({
     }
   }
 
+  const decisionClass =
+    decision === "approved" || decision === "edited"
+      ? " stitch-proposal--approved"
+      : decision === "rejected"
+        ? " stitch-proposal--rejected"
+        : "";
+
   return (
     <article
-      className="stitch-proposal stitch-proposal--cleaning"
+      className={`stitch-proposal stitch-proposal--cleaning${decisionClass}`}
       aria-label={`Cleaning proposal ${KIND_TITLE[kind]} on ${targetLabel(proposal)}`}
     >
       <header className="stitch-proposal__header">
         <h4 className="stitch-proposal__title">{KIND_TITLE[kind]}</h4>
         {/*
           Cleaning proposals are always produced by the deterministic rules
-          engine — only MatchProposals carry a `source` and can be AI-refined
+          engine, and only MatchProposals carry a `source` and can be AI-refined
           (design: AiProvider "Refine EXISTING matches only"). So the engine
           badge here is fixed to "rules" (Req 6.8).
         */}
         <EngineBadge source="rules" />
+        {decision === "approved" || decision === "edited" ? (
+          <span className="stitch-proposal__badge stitch-proposal__badge--approved">
+            Approved
+          </span>
+        ) : null}
+        {decision === "rejected" ? (
+          <span className="stitch-proposal__badge stitch-proposal__badge--rejected">
+            Rejected
+          </span>
+        ) : null}
         <span className="stitch-proposal__target">{targetLabel(proposal)}</span>
       </header>
 

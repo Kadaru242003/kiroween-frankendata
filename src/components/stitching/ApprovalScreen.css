@@ -44,10 +44,48 @@
   font-size: 14px;
 }
 
-.approval-screen__toolbar {
+/*
+ * Sticky action bar: stays at the top of the viewport while the user scrolls
+ * the stitching screen, so the bulk-approve and stitch actions are always
+ * reachable. Solid background, subtle bottom border, above the card content.
+ * Wraps on narrow screens so nothing overflows.
+ */
+.approval-screen__actionbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+
+.approval-screen__actionbar-group {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.approval-screen__progress {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.approval-screen__reason {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.approval-screen__status {
+  margin: 0;
+  min-width: 1px;
+  color: var(--lab-green);
+  font-size: 13px;
 }
 
 .approval-screen__bulk,
@@ -340,4 +378,45 @@
   border: 1px solid var(--lab-purple);
   background: rgba(179, 136, 255, 0.15);
   color: var(--lab-purple);
+}
+
+/*
+ * Per-card decision states (item 3). Approved: a green left border so the card
+ * reads as accepted at a glance. Rejected: a dimmed look. These add only a
+ * border color and opacity, so card layout widths are unchanged.
+ */
+.stitch-proposal--approved {
+  border-left: 3px solid var(--lab-green);
+}
+
+.stitch-proposal--rejected {
+  opacity: 0.55;
+}
+
+.stitch-proposal__badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.stitch-proposal__badge--approved {
+  border: 1px solid var(--lab-green);
+  background: var(--accent-bg);
+  color: var(--text-primary);
+}
+
+.stitch-proposal__badge--rejected {
+  border: 1px solid var(--amber-accent);
+  background: rgba(255, 179, 0, 0.12);
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stitch-proposal,
+  .stitch-proposal__action {
+    transition: none;
+  }
 }
