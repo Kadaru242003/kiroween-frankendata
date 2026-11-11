@@ -1,14 +1,17 @@
 /**
  * Vercel serverless function for the FrankenData AiProxy (Feature 2, task 21).
  *
- * This file is the ONLY place that touches the host runtime, the real Upstash
- * REST API, the real LLM provider `fetch`, and `process.env`. It is intentionally
- * thin: it decodes the incoming request, constructs the real {@link RedisClient}
- * and {@link LlmClient}, reads ALL configuration (provider, model, API key,
- * Upstash credentials, IP-hash salt, allowed origins) from `process.env` at
- * runtime, and delegates every decision to the framework-agnostic
- * {@link handleAiProxyRequest} in `src/core/stitching/ai-proxy.ts` (unit-tested
- * with mocked Redis + mocked upstream).
+ * This file is a THIN host entrypoint: it decodes the incoming Node `(req, res)`
+ * request, constructs the real {@link RedisClient} and {@link LlmClient}, reads
+ * ALL configuration from `process.env` at runtime, and delegates every decision
+ * to the framework-agnostic {@link handleAiProxyRequest} in
+ * `src/core/stitching/ai-proxy.ts`.
+ *
+ * The Node adapter plumbing (body streaming with a hard byte cap, the Upstash
+ * REST Redis client, the OpenAI-compatible LLM client, and the header helpers)
+ * is SHARED with `api/sql.ts` via `api/_shared.ts` (Feature 3, task 8). That
+ * extraction is a pure refactor — this entrypoint's observable behavior is
+ * unchanged.
  *
  * Secrets:
  *   - The LLM API key is read from `process.env` ONLY here, lives server-side,
@@ -19,9 +22,6 @@
  * Fail-closed: if the Upstash credentials or required env are missing, the
  * injected clients reject, and the core handler returns the "unavailable"
  * status without ever calling the LLM upstream.
- *
- * Note: `.env.example`, `vercel.json` routing, and `DEPLOY.md` are task 22, not
- * this file.
  */
 
 import {
@@ -29,184 +29,17 @@ import {
   AI_PROXY_MAX_PAYLOAD_BYTES,
   type AiProxyEnv,
   type LlmClient,
-  type LlmCompletionInput,
   type RedisClient,
 } from "../src/core/stitching/ai-proxy.js";
-
-// Deliberately structural Node-style request/response typings so this file
-// does not depend on a specific `@vercel/node` version being installed.
-// Vercel's Node.js runtime invokes the default export as `(req, res)` where
-// `req` is a Node IncomingMessage-like readable stream (NOT a web `Request`,
-// so it has no `.text()`), and `res` is a ServerResponse-like writable.
-interface NodeLikeRequest {
-  method?: string;
-  headers: Record<string, string | string[] | undefined>;
-  // Readable-stream event surface — enough to accumulate the raw body.
-  on(event: "data", listener: (chunk: Buffer | string) => void): unknown;
-  on(event: "end", listener: () => void): unknown;
-  on(event: "error", listener: (err: Error) => void): unknown;
-  // Optional: lets us stop reading an oversized stream early.
-  destroy?(error?: Error): void;
-}
-
-interface NodeLikeResponse {
-  statusCode: number;
-  setHeader(name: string, value: string): unknown;
-  end(body?: string): unknown;
-}
-
-/** Read a single request header, coalescing the array form to its first value. */
-function header(
-  headers: Record<string, string | string[] | undefined>,
-  name: string,
-): string | undefined {
-  const raw = headers[name.toLowerCase()];
-  if (Array.isArray(raw)) return raw[0];
-  return raw ?? undefined;
-}
-
-/** Extract a best-effort client IP from the standard proxy headers. */
-function clientIpFrom(
-  headers: Record<string, string | string[] | undefined>,
-): string | undefined {
-  const xff = header(headers, "x-forwarded-for");
-  if (xff) {
-    // First entry is the original client.
-    const first = xff.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return header(headers, "x-real-ip");
-}
-
-/**
- * Read the raw request body from the Node stream into a UTF-8 string, with a
- * HARD byte cap. As soon as the accumulated bytes exceed `maxBytes` we stop
- * reading, destroy the stream, and signal `overLimit` — so a malicious or
- * buggy client can never make us buffer unbounded input. The cap equals the
- * proxy's payload limit; the core handler also re-checks the exact byte
- * length, so behavior (413) is identical whether the body is slightly or
- * massively over the limit.
- */
-function readBodyCapped(
-  req: NodeLikeRequest,
-  maxBytes: number,
-): Promise<{ overLimit: true } | { overLimit: false; body: string }> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let total = 0;
-    let settled = false;
-
-    const finish = (
-      value: { overLimit: true } | { overLimit: false; body: string },
-    ) => {
-      if (settled) return;
-      settled = true;
-      resolve(value);
-    };
-
-    req.on("data", (chunk: Buffer | string) => {
-      if (settled) return;
-      const buf =
-        typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk;
-      total += buf.length;
-      if (total > maxBytes) {
-        // Stop buffering immediately and tear down the stream.
-        try {
-          req.destroy?.();
-        } catch {
-          /* best-effort */
-        }
-        finish({ overLimit: true });
-        return;
-      }
-      chunks.push(buf);
-    });
-    req.on("end", () => {
-      finish({ overLimit: false, body: Buffer.concat(chunks).toString("utf8") });
-    });
-    req.on("error", (e: Error) => {
-      if (settled) return;
-      settled = true;
-      reject(e);
-    });
-  });
-}
-
-/**
- * Build the Upstash REST Redis client. Uses the REST API (`/incr/<key>` then
- * `/expire/<key>/<ttl>/NX`) so there is no TCP driver dependency. Any non-OK
- * response or network error rejects, which the core handler turns into a
- * fail-closed "unavailable" (no upstream call).
- */
-function makeUpstashRedis(restUrl: string, restToken: string): RedisClient {
-  async function cmd(path: string): Promise<unknown> {
-    const res = await fetch(`${restUrl}/${path}`, {
-      headers: { Authorization: `Bearer ${restToken}` },
-    });
-    if (!res.ok) {
-      throw new Error(`Upstash REST error ${res.status}`);
-    }
-    const json = (await res.json()) as { result?: unknown; error?: string };
-    if (json.error) throw new Error(json.error);
-    return json.result;
-  }
-
-  return {
-    async incrWithTtl(key: string, ttlSeconds: number): Promise<number> {
-      const encoded = encodeURIComponent(key);
-      const result = await cmd(`incr/${encoded}`);
-      const count = Number(result);
-      if (!Number.isFinite(count)) {
-        throw new Error("Upstash INCR returned a non-numeric result");
-      }
-      // Only the first creation needs a TTL; `EXPIRE ... NX` is a no-op after.
-      if (count === 1) {
-        await cmd(`expire/${encoded}/${ttlSeconds}/NX`);
-      }
-      return count;
-    },
-  };
-}
-
-/**
- * Build the LLM client for the configured provider. The API key is read here
- * from env and never leaves the server. Currently wires the OpenAI-compatible
- * Chat Completions shape (used by OpenAI and many compatible providers); the
- * MODEL is passed through from env — never hard-coded.
- */
-function makeLlmClient(apiKey: string, baseUrl: string): LlmClient {
-  return {
-    async complete(input: LlmCompletionInput): Promise<string> {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: input.model,
-          max_tokens: input.maxOutputTokens,
-          temperature: 0,
-          messages: [
-            { role: "system", content: input.systemPrompt },
-            { role: "user", content: input.userPrompt },
-          ],
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(`LLM upstream error ${res.status}`);
-      }
-      const json = (await res.json()) as {
-        choices?: { message?: { content?: string } }[];
-      };
-      const content = json.choices?.[0]?.message?.content;
-      if (typeof content !== "string") {
-        throw new Error("LLM upstream returned no content");
-      }
-      return content;
-    },
-  };
-}
+import {
+  clientIpFrom,
+  header,
+  makeLlmClient,
+  makeUpstashRedis,
+  readBodyCapped,
+  type NodeLikeRequest,
+  type NodeLikeResponse,
+} from "./_shared.js";
 
 /**
  * Vercel Node.js runtime entrypoint. Invoked as `(req, res)` with a Node

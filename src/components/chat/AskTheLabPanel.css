@@ -1,0 +1,153 @@
+/*
+ * AskTheLabPanel styling (Feature 3, task 6).
+ *
+ * Presentation-only. Uses ONLY the canonical lab-theme CSS variables from
+ * src/index.css, matching the stitching "table" card look (bordered surface,
+ * lab-green accents) so the panel reads as part of the same lab.
+ */
+
+.ask-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.ask-panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ask-panel__title {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 20px;
+}
+
+.ask-panel__subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.ask-panel__privacy {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ask-panel__form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ask-panel__input {
+  flex: 1 1 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.ask-panel__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ask-panel__submit {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ask-panel__submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ask-panel__history,
+.ask-panel__history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ask-panel__history {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.ask-panel__history-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ask-panel__history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ask-panel__history-item {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ask-panel__history-item:hover:not(:disabled) {
+  color: var(--text-h);
+  border-color: var(--accent);
+}
+
+.ask-panel__ai-note,
+.ask-panel__loading {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ask-panel__outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ask-panel__message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.ask-panel__message--error {
+  border-color: var(--amber-accent);
+}

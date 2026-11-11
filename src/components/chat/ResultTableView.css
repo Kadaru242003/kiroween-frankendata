@@ -1,0 +1,84 @@
+/*
+ * ResultTableView styling (Feature 3, task 6).
+ *
+ * Presentation-only. Uses ONLY the canonical lab-theme CSS variables from
+ * src/index.css. Mirrors the TablePreview card look (readable headers, visible
+ * column separators) so the result reads like the rest of the lab.
+ */
+
+.ask-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.ask-result__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ask-result__note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ask-result__download {
+  padding: 6px 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ask-result__download:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ask-result__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.ask-result__table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.ask-result__th,
+.ask-result__td {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ask-result__thead {
+  background: var(--surface-raised);
+}
+
+.ask-result__th {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.ask-result__td {
+  color: var(--text-primary);
+}
+
+.ask-result__empty {
+  padding: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}

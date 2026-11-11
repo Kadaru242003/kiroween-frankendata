@@ -59,7 +59,32 @@ import {
   JoinControls,
   type JoinControlsTable,
 } from './components/stitching/JoinControls'
+import {
+  createAskController,
+  type AskController,
+  type QueryExecResult,
+} from './core/chat/ask-controller'
+import { buildQueryableTables } from './core/chat/queryable-tables'
+import { generateStarterChips, type StarterChip } from './core/chat/starter-questions'
+import { createProxySqlProvider } from './core/chat/sql-provider'
+import {
+  buildSchemaSummary,
+  type SchemaSourceTable,
+} from './core/chat/schema-builder'
+import { createSampleReader } from './core/stitching/sample-reader'
+import type { QueryableTable } from './core/chat/types'
+import { AskStore } from './state/ask-store'
+import { AskTheLabPanel } from './components/chat/AskTheLabPanel'
 import './App.css'
+
+/**
+ * Whether the LLM path is available to "Ask the Lab". The production
+ * SqlProvider (ProxySqlProvider → `/api/sql`) is wired in task 9; until then no
+ * provider is passed, so free-form questions resolve to "AI unavailable" with
+ * NO network request regardless of the flag. The flag is still read so the UI
+ * note is accurate once the provider lands.
+ */
+const ASK_AI_AVAILABLE = import.meta.env.VITE_AI_ENABLED === 'true'
 
 /** The number of rows fetched per table for the preview (Req 7.2). */
 const PREVIEW_ROW_LIMIT = 20
@@ -79,7 +104,27 @@ interface LabStack {
   stitchStore: StitchStore
   /** Rules-only orchestration for the stitching stage (Feature 2). */
   stitchController: StitchController
+  /** The "Ask the Lab" controller, wired to the real DuckDB QueryRunner. */
+  askController: AskController
+  /** Session-only state for the Ask the Lab panel (history + outcome). */
+  askStore: AskStore
 }
+
+/**
+ * The names of the tables "Ask the Lab" may currently query, held at module
+ * scope so the {@link AskController}'s `getQueryableTableNames` — built once in
+ * {@link getLabStack} — always reads the latest set the App maintains in React
+ * state (the live intake tables plus the present `stitch_*` tables). Starts
+ * empty; the panel region keeps it in sync.
+ */
+let queryableTableNamesHolder: readonly string[] = []
+
+/**
+ * The current queryable tables WITH their row counts, used by the Ask the Lab
+ * schema builder (the LLM path). Kept in sync by the panel region alongside
+ * {@link queryableTableNamesHolder}. Empty until the first refresh.
+ */
+let queryableSchemaSourceHolder: readonly SchemaSourceTable[] = []
 
 /**
  * Module-level singleton promise for initializing the DuckDB service and
@@ -141,7 +186,42 @@ function getLabStack(): Promise<LabStack> {
         // module-level selection the App keeps in sync with its React state.
         selectTable: (t) => isTableSelectedForStitching(t.tableName),
       })
-      return { duckDBService, controller, stitchStore, stitchController }
+      // Feature 3 "Ask the Lab" stack, wired to the SAME DuckDB instance via a
+      // real QueryRunner. No SqlProvider is passed yet (ProxySqlProvider is
+      // task 9), so `ask` resolves to `ai-unavailable` for free-form questions
+      // and never makes a network call; starter chips run directly.
+      const askStore = new AskStore()
+      const runQuery = async (sql: string): Promise<QueryExecResult> => {
+        const rows = await duckDBService.query<Record<string, unknown>>(sql)
+        // DuckDB preserves SELECT order in each row object's key order; derive
+        // the columns from the first row (empty result → no columns).
+        const columns = rows.length > 0 ? Object.keys(rows[0]) : []
+        return { columns, rows }
+      }
+      // The LLM path is wired ONLY when VITE_AI_ENABLED === "true": the
+      // ProxySqlProvider posts to the same-origin `/api/sql`, and the schema
+      // builder reads bounded samples via the Feature 2 SampleReader. With the
+      // flag off, no provider/buildSchema is passed, so `ask` returns
+      // `ai-unavailable` and never makes a network call (the AI-off path).
+      const sampleReader = createSampleReader(duckDBService)
+      const askController = createAskController({
+        getQueryableTableNames: () => [...queryableTableNamesHolder],
+        runQuery,
+        aiEnabled: ASK_AI_AVAILABLE,
+        provider: ASK_AI_AVAILABLE ? createProxySqlProvider() : undefined,
+        buildSchema: ASK_AI_AVAILABLE
+          ? () => buildSchemaSummary(sampleReader, [...queryableSchemaSourceHolder])
+          : undefined,
+      })
+
+      return {
+        duckDBService,
+        controller,
+        stitchStore,
+        stitchController,
+        askController,
+        askStore,
+      }
     })()
   }
   return labStackPromise
@@ -456,6 +536,20 @@ function App() {
             </section>
           ) : null}
 
+          {/*
+            Ask the Lab panel: rendered below the stitching UI, shown only when
+            at least one queryable table exists (Req 1.1). It refreshes its
+            queryable-table list + starter chips when the loaded tables change
+            or a stitch is applied/undone (keyed on the stitched table).
+          */}
+          <AskPanelRegion
+            loadedTables={tables}
+            duckDBService={status.stack.duckDBService}
+            askController={status.stack.askController}
+            askStore={status.stack.askStore}
+            stitchStore={status.stack.stitchStore}
+          />
+
           <TablePreviewRegion
             tables={tables}
             duckDBService={status.stack.duckDBService}
@@ -463,6 +557,100 @@ function App() {
         </>
       ) : null}
     </main>
+  )
+}
+
+/** Props for {@link AskPanelRegion}. */
+interface AskPanelRegionProps {
+  loadedTables: readonly LoadedTable[]
+  duckDBService: DuckDBService
+  askController: AskController
+  askStore: AskStore
+  stitchStore: StitchStore
+}
+
+/**
+ * Builds the queryable-table list (intake tables + present `stitch_*` tables)
+ * and the deterministic starter chips, keeping them in sync as tables change
+ * or a stitch is applied/undone, then renders {@link AskTheLabPanel} once at
+ * least one queryable table exists (Req 1.1).
+ *
+ * The queryable table NAMES are mirrored into the module-level holder the
+ * AskController reads, so the SqlValidator always allowlists the current set.
+ */
+function AskPanelRegion({
+  loadedTables,
+  duckDBService,
+  askController,
+  askStore,
+  stitchStore,
+}: AskPanelRegionProps) {
+  const [queryable, setQueryable] = useState<QueryableTable[]>([])
+  const [chips, setChips] = useState<StarterChip[]>([])
+  // The applied stitched table (or null) — changes on apply/undo and triggers
+  // a refresh so stitch_* tables enter/leave the queryable set.
+  const { stitchedTable } = useStitchStore(stitchStore)
+  const runIdRef = useRef(0)
+
+  useEffect(() => {
+    const runId = ++runIdRef.current
+    let cancelled = false
+    void (async () => {
+      try {
+        const tables = await buildQueryableTables(duckDBService, loadedTables)
+        const generated = await generateStarterChips(duckDBService, tables)
+        // Row counts for the schema builder (LLM path). Intake tables carry a
+        // known count; stitch_* tables are counted via DuckDB. A count failure
+        // defaults to 0, which only affects sample budgeting, not safety.
+        const loadedCounts = new Map(
+          loadedTables.map((t) => [t.tableName, t.rowCount]),
+        )
+        const schemaSources: SchemaSourceTable[] = await Promise.all(
+          tables.map(async (t) => {
+            let rowCount = loadedCounts.get(t.tableName) ?? 0
+            if (!loadedCounts.has(t.tableName)) {
+              try {
+                rowCount = await duckDBService.getRowCount(t.tableName)
+              } catch {
+                rowCount = 0
+              }
+            }
+            return { ...t, rowCount }
+          }),
+        )
+        if (cancelled || runId !== runIdRef.current) return
+        queryableTableNamesHolder = tables.map((t) => t.tableName)
+        queryableSchemaSourceHolder = schemaSources
+        setQueryable(tables)
+        setChips(generated)
+      } catch {
+        // A refresh failure must not break the lab; keep the prior view.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // `stitchedTable` is a refresh trigger (apply/undo); loadedTables covers
+    // intake changes.
+  }, [loadedTables, duckDBService, stitchedTable])
+
+  // Keep the outcome fresh: if the queryable set empties, clear any stale
+  // outcome so the (now-hidden) panel does not retain old results.
+  useEffect(() => {
+    if (queryable.length === 0) askStore.clearOutcome()
+  }, [queryable.length, askStore])
+
+  if (queryable.length === 0) return null
+
+  return (
+    <section className="lab-ask" aria-label="Ask the Lab">
+      <AskTheLabPanel
+        controller={askController}
+        store={askStore}
+        chips={chips}
+        aiAvailable={ASK_AI_AVAILABLE}
+      />
+    </section>
   )
 }
 

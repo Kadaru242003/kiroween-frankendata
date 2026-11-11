@@ -1,0 +1,46 @@
+/*
+ * StarterChips styling (Feature 3, task 6). Presentation-only; canonical
+ * lab-theme variables from src/index.css.
+ */
+
+.ask-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.ask-chips__label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ask-chips__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ask-chips__chip {
+  padding: 6px 12px;
+  border: 1px solid var(--lab-purple);
+  border-radius: 999px;
+  background: rgba(179, 136, 255, 0.1);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ask-chips__chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.ask-chips__chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

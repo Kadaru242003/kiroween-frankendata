@@ -1,0 +1,59 @@
+/*
+ * SqlBlock styling (Feature 3, task 6).
+ *
+ * Presentation-only. Uses ONLY the canonical lab-theme CSS variables defined in
+ * src/index.css (mirrors of src/theme/tokens.ts) — no new color primitives.
+ */
+
+.ask-sql {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.ask-sql__explanation {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.ask-sql__code-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ask-sql__code {
+  margin: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--text-h);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ask-sql__copy {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ask-sql__copy:hover {
+  border-color: var(--accent);
+}

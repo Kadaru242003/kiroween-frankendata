@@ -14,5 +14,5 @@
     "rootDir": ".",
     "verbatimModuleSyntax": true
   },
-  "include": ["api/ai.ts", "src/core/stitching/ai-proxy.ts", "src/core/stitching/types.ts", "src/core/types.ts"]
+  "include": ["api/ai.ts", "api/sql.ts", "api/_shared.ts", "src/core/stitching/ai-proxy.ts", "src/core/stitching/types.ts", "src/core/chat/sql-proxy.ts", "src/core/chat/types.ts", "src/core/types.ts"]
 }

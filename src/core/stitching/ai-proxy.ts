@@ -287,7 +287,7 @@ export function validateAiRequestSchema(
  * runtimes and in jsdom/node test env via `globalThis.crypto`). Injectable via
  * {@link AiProxyDeps.sha256Hex}.
  */
-async function defaultSha256Hex(input: string): Promise<string> {
+export async function defaultSha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
   const digest = await globalThis.crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
@@ -297,12 +297,12 @@ async function defaultSha256Hex(input: string): Promise<string> {
 
 // ── Bucket keys (hour for per-client, day for global) ───────────────────────
 
-function hourBucket(nowMs: number): string {
+export function hourBucket(nowMs: number): string {
   // Floor to the hour in UTC, as an epoch-hour integer.
   return String(Math.floor(nowMs / 3_600_000));
 }
 
-function dayBucket(nowMs: number): string {
+export function dayBucket(nowMs: number): string {
   // Floor to the day in UTC, as an epoch-day integer.
   return String(Math.floor(nowMs / 86_400_000));
 }
@@ -354,7 +354,7 @@ export function buildUserPrompt(request: AiRequest): string {
 
 // ── Origin courtesy check ───────────────────────────────────────────────────
 
-function originAllowed(origin: string | undefined, allowList: string): boolean {
+export function originAllowed(origin: string | undefined, allowList: string): boolean {
   const allowed = allowList
     .split(",")
     .map((s) => s.trim())

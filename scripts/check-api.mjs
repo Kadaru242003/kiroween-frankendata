@@ -120,6 +120,56 @@ try {
       "without throwing (no req.text crash)."
   );
 
+  // ── Stage 4: same ESM import + (req, res) smoke for api/sql.js ─────────────
+  // The SqlProxy entrypoint (Feature 3) shares the Node adapter via
+  // api/_shared.ts and must resolve + run under the same real Node ESM rules.
+  const sqlEntry = join(outDir, "api", "sql.js");
+  if (!existsSync(sqlEntry)) {
+    fail(`expected emitted entry not found: ${sqlEntry}`);
+  }
+  console.log(
+    "check:api → Node ESM import smoke test of the emitted api/sql.js " +
+      "(load only; no handler call, no network)…"
+  );
+  const sqlMod = await import(pathToFileURL(sqlEntry).href);
+  if (typeof sqlMod.default !== "function") {
+    fail("emitted api/sql.js loaded but has no default handler export");
+  }
+  console.log("  ✓ emitted api/sql.js imported cleanly (no ERR_MODULE_NOT_FOUND).");
+
+  console.log(
+    "check:api → Node (req, res) invocation smoke test for api/sql.js " +
+      "(body \"{}\"; expects 400 or 503, no throw, no network)…"
+  );
+  const sqlReq = Object.assign(Readable.from([Buffer.from("{}", "utf8")]), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+  });
+  let sqlStatus = 0;
+  let sqlEnded = false;
+  const sqlRes = {
+    statusCode: 0,
+    setHeader() {},
+    end() {
+      sqlStatus = this.statusCode;
+      sqlEnded = true;
+    },
+  };
+  await sqlMod.default(sqlReq, sqlRes);
+  if (!sqlEnded) {
+    fail("api/sql handler returned without writing a response (res.end not called)");
+  }
+  if (sqlStatus !== 400 && sqlStatus !== 503) {
+    fail(
+      `api/sql handler responded with unexpected status ${sqlStatus} ` +
+        "(expected 400 schema or 503 fail-closed)"
+    );
+  }
+  console.log(
+    `  ✓ api/sql handler invoked as (req, res) and responded ${sqlStatus} ` +
+      "without throwing (no req.text crash)."
+  );
+
   rmSync(outDir, { recursive: true, force: true });
   console.log("\n✓ check:api PASSED");
 } catch (err) {
