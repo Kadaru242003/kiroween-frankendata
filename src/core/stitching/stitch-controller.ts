@@ -259,7 +259,7 @@ export function createStitchController(
       db,
       result.resultTableName
     );
-    store.setApplied(stitchedTable, result.undoStep);
+    store.setApplied(stitchedTable, result.undoStep, result.fanOut);
     return stitchedTable;
   }
 

@@ -1,0 +1,204 @@
+/*
+ * JoinControls styling (Feature 2, task 14).
+ *
+ * Presentation-only. Uses ONLY the canonical lab-theme CSS variables defined in
+ * src/index.css (mirrors of src/theme/tokens.ts) — no new color primitives are
+ * introduced here, matching the ApprovalScreen baseline.
+ */
+
+.join-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.join-controls__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.join-controls__title {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 18px;
+}
+
+.join-controls__subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.join-controls__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.join-controls__join-type {
+  padding: 6px 12px;
+  border: 1px solid var(--lab-green-deep);
+  border-radius: 999px;
+  color: var(--lab-green);
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.join-controls__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.join-controls__field-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.join-controls__select {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.join-controls__select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.join-controls__keys {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.join-controls__keys-title {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 15px;
+}
+
+.join-controls__keys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.join-controls__key {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.join-controls__key-single {
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.join-controls__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.join-controls__apply,
+.join-controls__undo {
+  font: inherit;
+  padding: 8px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.join-controls__apply {
+  border-color: var(--lab-green);
+  background: var(--surface-raised);
+}
+
+.join-controls__apply:hover:not(:disabled),
+.join-controls__undo:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-border) inset;
+}
+
+.join-controls__apply:focus-visible,
+.join-controls__undo:focus-visible,
+.join-controls__warning-cancel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.join-controls__apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ── Many-to-many fan-out warning (Req 7.9) ───────────────────────────────── */
+
+.join-controls__warning {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--amber-accent);
+  border-radius: 8px;
+  background: rgba(255, 179, 0, 0.1);
+}
+
+.join-controls__warning-title {
+  margin: 0;
+  color: var(--amber-accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.join-controls__warning-counts {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.join-controls__warning-help {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.join-controls__warning-cancel {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 14px;
+  border: 1px solid var(--amber-accent);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+}

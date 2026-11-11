@@ -25,6 +25,8 @@
  * has no React dependency so the controller and its tests use it headlessly.
  */
 
+import { useSyncExternalStore } from "react";
+import type { FanOutCounts } from "./stitch-applier";
 import type {
   ApprovalDecision,
   ProposalSet,
@@ -57,6 +59,13 @@ export interface StitchState {
   /** The pending undo step, or `null` when there is nothing to undo. */
   readonly pendingUndo: UndoStep | null;
   /**
+   * The many-to-many fan-out counts for the most recent apply (Req 7.9), or
+   * `null` before any apply / after undo. The {@link JoinControls} reads this
+   * to warn — with the before (cleaned anchor input) / after (result) row
+   * counts — and offer a cancel when {@link FanOutCounts.fannedOut} is `true`.
+   */
+  readonly fanOut: FanOutCounts | null;
+  /**
    * `true` immediately after the controller discarded and recomputed proposals
    * because the loaded-table set changed, so the UI can show a "proposals
    * recomputed" notice (Req 3.8). The UI acknowledges it via
@@ -76,6 +85,7 @@ const EMPTY_STATE: StitchState = Object.freeze({
   plan: null,
   stitchedTable: null,
   pendingUndo: null,
+  fanOut: null,
   recomputed: false,
 });
 
@@ -159,28 +169,35 @@ export class StitchStore {
   }
 
   /**
-   * Record a successful apply: the created {@link StitchedTable} descriptor and
-   * the pending {@link UndoStep} to undo it (Req 4.2, 7.11).
+   * Record a successful apply: the created {@link StitchedTable} descriptor, the
+   * pending {@link UndoStep} to undo it (Req 4.2, 7.11), and the fan-out counts
+   * for the many-to-many warning (Req 7.9).
    */
-  setApplied(stitchedTable: StitchedTable, pendingUndo: UndoStep): void {
+  setApplied(
+    stitchedTable: StitchedTable,
+    pendingUndo: UndoStep,
+    fanOut: FanOutCounts
+  ): void {
     this.state = Object.freeze({
       ...this.state,
       stitchedTable,
       pendingUndo,
+      fanOut,
     });
     this.emit();
   }
 
   /**
-   * Clear the applied result after an undo: drop the stitched table descriptor
-   * and the pending undo step (Req 4.3). Proposals and decisions are left intact
-   * so the user can adjust and re-apply.
+   * Clear the applied result after an undo: drop the stitched table descriptor,
+   * the pending undo step, and the fan-out counts (Req 4.3). Proposals and
+   * decisions are left intact so the user can adjust and re-apply.
    */
   clearApplied(): void {
     this.state = Object.freeze({
       ...this.state,
       stitchedTable: null,
       pendingUndo: null,
+      fanOut: null,
     });
     this.emit();
   }
@@ -228,4 +245,15 @@ export class StitchStore {
       listener();
     }
   }
+}
+
+/**
+ * React hook that subscribes a component to a {@link StitchStore} and returns
+ * its current immutable snapshot, re-rendering only when the snapshot reference
+ * changes. Unlike the intake store there is no app-wide singleton — the
+ * stitching stack (controller + store) is created in {@link
+ * import("../../App").default}, so the store is always passed in explicitly.
+ */
+export function useStitchStore(store: StitchStore): StitchState {
+  return useSyncExternalStore(store.subscribe, store.getState);
 }

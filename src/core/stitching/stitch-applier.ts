@@ -1117,9 +1117,18 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
 
     // 5. Fan-out counts (Req 7.9): the anchor row count before vs. the result
     //    row count after. The anchor is the first logical table in joinOrder.
+    //    The "before" count MUST be the row count of the table the LEFT JOIN
+    //    actually READS — the cleaned anchor copy (`stitch_<n>_clean_<anchor>`)
+    //    when the anchor had approved cleanings, or the original otherwise —
+    //    not the pre-cleaning `LoadedTable.rowCount`. A cleaning such as an
+    //    approved duplicate-rows dedupe can SHRINK the anchor, so reading back
+    //    the cleaned-input row count via `getRowCount(readTableName)` keeps
+    //    `fannedOut` an honest comparison against the rows that fed the join.
     const anchorTableName = joined.joinOrder[0];
     const anchor = joinInputs.find((t) => t.tableName === anchorTableName);
-    const anchorRowCount = anchor?.rowCount ?? 0;
+    const anchorRowCount = anchor
+      ? await db.getRowCount(anchor.readTableName)
+      : 0;
     const resultRowCount = await db.getRowCount(joined.tableName);
     const fanOut: FanOutCounts = {
       anchorRowCount,

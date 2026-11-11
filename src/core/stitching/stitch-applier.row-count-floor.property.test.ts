@@ -43,11 +43,18 @@
  * for the anchor, and cleaning can change the anchor's row count BEFORE the
  * join even starts — a `duplicate-rows` dedupe removes rows. So the LEFT JOIN
  * floor is relative to that cleaned input, not the pre-cleaning original
- * `LoadedTable.rowCount` (which the applier reports as `fanOut.anchorRowCount`
- * purely as a UI warning heuristic). Comparing the result against the original
- * would spuriously "fail" whenever an approved dedupe shrank the anchor — which
- * is not a join dropping rows. This test therefore compares against the real
+ * `LoadedTable.rowCount`. Comparing the result against the original would
+ * spuriously "fail" whenever an approved dedupe shrank the anchor — which is
+ * not a join dropping rows. This test therefore compares against the real
  * left-side input the join reads.
+ *
+ * The applier now reports `fanOut.anchorRowCount` as exactly that real
+ * cleaned-input row count (it reads back `getRowCount(anchor.readTableName)` —
+ * the cleaned anchor copy when cleaned, the original otherwise), so the floor
+ * holds against the applier's OWN reported numbers unconditionally too, not
+ * just the independently re-read ones. Earlier this test could only assert the
+ * floor on the applier's numbers when no cleaning touched the anchor, because
+ * the applier then reported the pre-cleaning original; that caveat is now gone.
  *
  * Both the DEFAULT anchor (most rows) and the OVERRIDE path (plan supplies an
  * explicit `anchorTableName`) are exercised: the generator sometimes leaves the
@@ -488,33 +495,26 @@ describe("Property 8: LEFT JOIN row-count floor (DuckDB-backed)", () => {
           // many-to-many fan-out only ADDS rows (Req 7.1, Req 10.8).
           expect(resultRowCount).toBeGreaterThanOrEqual(anchorInputRowCount);
 
-          // Cross-check the applier's own fan-out report where it is a real
-          // invariant: its reported result count matches the independently
-          // re-read DuckDB count, and `fannedOut` is set iff the reported
-          // result strictly exceeds the reported anchor count (Req 7.9 — the
-          // UI warning derivation).
+          // Cross-check the applier's own fan-out report: its reported result
+          // count matches the independently re-read DuckDB count, and
+          // `fannedOut` is set iff the reported result strictly exceeds the
+          // reported anchor count (Req 7.9 — the UI warning derivation).
           //
-          // NOTE: we do NOT assert `resultRowCount >= anchorRowCount` on the
-          // applier's own fan-out numbers. Its `anchorRowCount` is the
-          // PRE-CLEANING original `LoadedTable.rowCount` (a UI warning
-          // heuristic), so when an approved `duplicate-rows` dedupe shrinks the
-          // anchor the reported result can legitimately sit below it. That is
-          // not the LEFT JOIN dropping rows — the real join floor, asserted
-          // above against the cleaned left-side input, is what Property 8
-          // (Req 7.1, 10.8) guarantees.
+          // The applier now reports `anchorRowCount` as the REAL cleaned-input
+          // count (`getRowCount(anchor.readTableName)` — the cleaned anchor
+          // copy when cleaned, the original otherwise), i.e. the exact table
+          // the LEFT JOIN reads. So its reported anchor count equals the
+          // independently re-read left-side input count UNCONDITIONALLY, and
+          // the LEFT JOIN floor (Req 7.1, 10.8) holds against the applier's own
+          // reported numbers — not just when no cleaning touched the anchor.
           expect(result.fanOut.resultRowCount).toBe(resultRowCount);
+          expect(result.fanOut.anchorRowCount).toBe(anchorInputRowCount);
+          expect(result.fanOut.resultRowCount).toBeGreaterThanOrEqual(
+            result.fanOut.anchorRowCount,
+          );
           expect(result.fanOut.fannedOut).toBe(
             result.fanOut.resultRowCount > result.fanOut.anchorRowCount,
           );
-          if (anchorReadTableName === anchorTableName) {
-            // No cleaning changed the anchor input: the applier's reported
-            // anchor count equals the real left-side input count, so the floor
-            // holds against the applier's reported numbers too.
-            expect(result.fanOut.anchorRowCount).toBe(anchorInputRowCount);
-            expect(result.fanOut.resultRowCount).toBeGreaterThanOrEqual(
-              result.fanOut.anchorRowCount,
-            );
-          }
         } finally {
           dispose();
         }

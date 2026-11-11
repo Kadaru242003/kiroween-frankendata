@@ -53,6 +53,8 @@ const stitched: StitchedTable = {
 
 const undoStep: UndoStep = { createdTableNames: ["stitch_1_result"] };
 
+const fanOut = { anchorRowCount: 3, resultRowCount: 3, fannedOut: false };
+
 describe("StitchStore", () => {
   it("starts empty", () => {
     const store = new StitchStore();
@@ -128,13 +130,15 @@ describe("StitchStore", () => {
     const store = new StitchStore();
     const set = proposalSet();
     store.setProposals(set, "1", false);
-    store.setApplied(stitched, undoStep);
+    store.setApplied(stitched, undoStep, fanOut);
     expect(store.getState().stitchedTable).toBe(stitched);
     expect(store.getState().pendingUndo).toBe(undoStep);
+    expect(store.getState().fanOut).toBe(fanOut);
 
     store.clearApplied();
     expect(store.getState().stitchedTable).toBeNull();
     expect(store.getState().pendingUndo).toBeNull();
+    expect(store.getState().fanOut).toBeNull();
     // Proposals survive an undo so the user can re-apply.
     expect(store.getState().proposals).toBe(set);
   });
@@ -155,7 +159,7 @@ describe("StitchStore", () => {
     const store = new StitchStore();
     store.setProposals(proposalSet(), "1", false);
     store.setDecision(decision("match:a.x=b.y"));
-    store.setApplied(stitched, undoStep);
+    store.setApplied(stitched, undoStep, fanOut);
 
     store.discardProposals();
     const s = store.getState();
@@ -170,13 +174,14 @@ describe("StitchStore", () => {
   it("reset returns to the empty state", () => {
     const store = new StitchStore();
     store.setProposals(proposalSet(), "1", true);
-    store.setApplied(stitched, undoStep);
+    store.setApplied(stitched, undoStep, fanOut);
     store.reset();
     const s = store.getState();
     expect(s.datasetVersion).toBeNull();
     expect(s.proposals).toBeNull();
     expect(s.stitchedTable).toBeNull();
     expect(s.pendingUndo).toBeNull();
+    expect(s.fanOut).toBeNull();
     expect(s.recomputed).toBe(false);
   });
 });

@@ -358,6 +358,62 @@ describe("StitchApplier lifecycle over a real DuckDB", () => {
     expect(r.fanOut.fannedOut).toBe(true);
   });
 
+  it("computes the fan-out 'before' from the CLEANED anchor input, not the original rowCount (Req 7.9)", async () => {
+    // An approved duplicate-rows dedupe SHRINKS the anchor: 4 raw rows collapse
+    // to 2 distinct (post-normalization) rows. The LEFT JOIN reads the cleaned
+    // copy (2 rows), so the fan-out 'before' figure MUST be the deduped count
+    // (2) — the row count of the table the join actually reads — NOT the
+    // pre-cleaning LoadedTable.rowCount (4). `fannedOut` is computed against
+    // that corrected base.
+    const service = createDuckDBService(adapter);
+    const a = uniqueName("dedup");
+    const b = uniqueName("db");
+    const aSchema: ColumnSchema[] = [{ name: "id", type: "string" }];
+    const bSchema: ColumnSchema[] = [
+      { name: "id", type: "string" },
+      { name: "v", type: "string" },
+    ];
+    // 4 anchor rows, but only two distinct ids once deduped (1 and 2 each
+    // appear twice). After keep-first dedupe the cleaned anchor has 2 rows.
+    await service.createTable(a, aSchema, [["1"], ["1"], ["2"], ["2"]]);
+    // b matches each id exactly once → one-to-one against the deduped anchor.
+    await service.createTable(b, bSchema, [
+      ["1", "x"],
+      ["2", "y"],
+    ]);
+
+    const applier = createStitchApplier(service);
+    const plan: StitchPlan = {
+      anchorTableName: a,
+      joinKeysByPair: {},
+      approvedMatches: [match(ref(a, "id"), ref(b, "id"), 0.9)],
+      approvedCleanings: [
+        {
+          id: "dedupe-a",
+          target: { tableName: a },
+          kind: "duplicate-rows",
+          before: 4,
+          after: 2,
+          reason: "dupes",
+        },
+      ],
+    };
+    // NOTE: the LoadedTable row count is the ORIGINAL 4 — the applier must NOT
+    // use it for the fan-out 'before'.
+    const r = await applier.apply(plan, [
+      loaded(a, aSchema, 4),
+      loaded(b, bSchema, 2),
+    ]);
+
+    // Sanity: the cleaned anchor copy really has 2 rows (dedup shrank it).
+    expect(await service.getRowCount(`stitch_1_clean_${a}`)).toBe(2);
+    // The fan-out 'before' is the deduped (cleaned) anchor count, not 4.
+    expect(r.fanOut.anchorRowCount).toBe(2);
+    // One-to-one against the deduped anchor → result is 2 rows, no fan-out.
+    expect(r.fanOut.resultRowCount).toBe(2);
+    expect(r.fanOut.fannedOut).toBe(false);
+  });
+
   it("reports no fan-out for a one-to-one join (Req 7.9)", async () => {
     const service = createDuckDBService(adapter);
     const a = uniqueName("oa");

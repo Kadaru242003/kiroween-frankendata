@@ -45,6 +45,13 @@ export interface DemoDataControlProps {
    * control shows a loading/disabled state until it settles.
    */
   onLoadDemo: () => void | Promise<void>;
+  /**
+   * Optional idle label / accessible name for the button. Defaults to
+   * {@link LOAD_DEMO_DATA_LABEL}. The App renders a second control with a
+   * distinct label for the mismatched stitching dataset (Req 8.4), reusing this
+   * same presentational component.
+   */
+  label?: string;
 }
 
 /**
@@ -52,7 +59,10 @@ export interface DemoDataControlProps {
  * intent via {@link DemoDataControlProps.onLoadDemo} and manages its own
  * transient loading state, nothing more.
  */
-export function DemoDataControl({ onLoadDemo }: DemoDataControlProps): JSX.Element {
+export function DemoDataControl({
+  onLoadDemo,
+  label = LOAD_DEMO_DATA_LABEL,
+}: DemoDataControlProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   // A ref mirror of the loading flag so rapid clicks are rejected synchronously,
   // before React has re-rendered with the disabled button (double-click guard).
@@ -84,7 +94,7 @@ export function DemoDataControl({ onLoadDemo }: DemoDataControlProps): JSX.Eleme
         disabled={isLoading}
         aria-busy={isLoading}
       >
-        {isLoading ? LOAD_DEMO_DATA_LOADING_LABEL : LOAD_DEMO_DATA_LABEL}
+        {isLoading ? LOAD_DEMO_DATA_LOADING_LABEL : label}
       </button>
     </div>
   );

@@ -96,33 +96,33 @@ This plan is ordered so the **app works end to end on the rules engine as early 
 - [x] 12. Checkpoint — rules engine green
   - Run `npm test`, `npm run lint`, `npm run build`; fix any failures before proceeding
 
-- [ ] 13. Approval screen and stitching-table UI
+- [x] 13. Approval screen and stitching-table UI
   - Implement `ApprovalScreen` listing match (≥ threshold) and cleaning proposals as before/after diffs, with per-proposal approve/reject/edit and "approve all high-confidence" (uses `HIGH_CONFIDENCE_THRESHOLD`)
   - Implement `MatchDiff`/`CleaningDiff`: edit a match = re-pair to a different column in the other table; edit a category proposal = change canonical value; render all proposal/AI text as plain text
   - Per-proposal engine badge (`rules`/`ai`); assemble `StitchPlan` applied only on confirm
   - Mount the `ApprovalScreen` in `App` with a visible "Stitch" entry point **only when two or more tables are loaded**; hide it otherwise
   - _Design: UI Layer, edit semantics; Requirements 3.1, 3.2, 3.3, 3.5, 3.6, 3.7, 6.8_
 
-- [ ] 14. Join controls and stitched-result preview
+- [x] 14. Join controls and stitched-result preview
   - Implement `JoinControls`: show join type (LEFT JOIN) + anchor, allow changing anchor and picking a different approved match as the per-pair key; show many-to-many warning with before/after row counts and a cancel action
   - On apply, create the stitched table and render it with the existing `TablePreview`; wire undo control
   - _Design: JoinControls, Apply; Requirements 7.2, 7.4, 7.9, 7.11_
 
-- [ ] 15. Required property/UI tests — approval behavior
-  - [ ] 15.1 **Property 10: Approve-all-high-confidence selects exactly the ≥ threshold set** — _Validates: 3.3, 10.10_
-  - [ ] 15.2 Staleness integration test: changing the `LoadedTable` set discards decisions, recomputes, and surfaces the notice — _Validates: 3.8_
+- [x] 15. Required property/UI tests — approval behavior
+  - [x] 15.1 **Property 10: Approve-all-high-confidence selects exactly the ≥ threshold set** — _Validates: 3.3, 10.10_
+  - [x] 15.2 Staleness integration test: changing the `LoadedTable` set discards decisions, recomputes, and surfaces the notice — _Validates: 3.8_
 
-- [ ] 16. Second mismatched demo dataset
+- [x] 16. Second mismatched demo dataset
   - Add a second bundled demo dataset (≥ 2 mismatched files) to the existing `DemoDataLoader`: same entities with different headers, inconsistent category spellings, and some duplicate rows; no network access
   - Route it through the existing intake + stitching pipeline
   - _Design: Golden example, demo; Requirements 8.1–8.4_
 
-- [ ] 17. Golden example match test (required)
+- [x] 17. Golden example match test (required)
   - Load the three Feature 1 demo files **plus** the new mismatched dataset through the real pipeline; assert expected matches present (e.g. `monsters."Monster Name"` ↔ `experiments.name`) and known bogus ones absent (e.g. `sedated` ↔ `hazardous`)
   - Assert proposals are produced in under 2 seconds
   - _Design: Golden example (regression anchor); Requirements 1.2, 1.5, 8.5_
 
-- [ ] 18. Checkpoint — rules-only app works end to end
+- [x] 18. Checkpoint — rules-only app works end to end
   - Run `npm test`, `npm run lint`, `npm run build`; manually confirm load → propose → approve → apply → preview → undo all work offline with the demo dataset
 
 - [ ] 19. AiProvider interface, payload budgeting, and client validation

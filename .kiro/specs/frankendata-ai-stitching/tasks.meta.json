@@ -285,6 +285,97 @@
         "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
         "timestamp": 1794373936543
       }
+    ],
+    "13. Approval screen and stitching-table UI": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794374095814
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794374620577
+      }
+    ],
+    "14. Join controls and stitched-result preview": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794374622813
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375124917
+      }
+    ],
+    "15.1 **Property 10: Approve-all-high-confidence selects exactly the ≥ threshold set** — _Validates: 3.3, 10.10_": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375127551
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375251950
+      }
+    ],
+    "15.2 Staleness integration test: changing the `LoadedTable` set discards decisions, recomputes, and surfaces the notice — _Validates: 3.8_": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375254616
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375397100
+      }
+    ],
+    "15. Required property/UI tests — approval behavior": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375397182
+      }
+    ],
+    "16. Second mismatched demo dataset": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375399840
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375667795
+      }
+    ],
+    "17. Golden example match test (required)": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375670064
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375835117
+      }
+    ],
+    "18. Checkpoint — rules-only app works end to end": [
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794375838250
+      },
+      {
+        "executionId": "be964f6f-1a8d-476d-ac62-667d9f9cc313",
+        "chatSessionId": "sess_6513ead8-4fd4-4420-844d-08a17053476e",
+        "timestamp": 1794376316031
+      }
     ]
   }
 }

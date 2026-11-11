@@ -21,6 +21,28 @@
  * control, task 18.2 / app wiring, task 19.1) routes them through the same
  * {@link IntakeController} pipeline used for dropped files (Req 13.2); this
  * module only produces the files.
+ *
+ * ## Second, mismatched dataset (Feature 2, Req 8.1–8.4)
+ *
+ * {@link BundledDemoDataLoader.loadMismatched} returns a *second*, separately
+ * loadable dataset built for the stitching feature. Its two files describe the
+ * **same entities** (the lab's captured creatures) but are deliberately
+ * mismatched so the stitching engine has something to propose:
+ *   - **different column headers across the files** — `monsters."Monster Name"`
+ *     vs `experiments.name`, `Species` vs `creature_type`, etc. — so fuzzy
+ *     name matching (Req 8.2) is exercised;
+ *   - **inconsistent category spellings / casing / whitespace** in the
+ *     species and threat columns (e.g. `swamp-wraith`, `Swamp Wraith`,
+ *     `swamp  wraith`) so `category-standardize` cleaning (Req 8.3) has
+ *     something to propose;
+ *   - **some fully-duplicate rows** so `duplicate-rows` cleaning (Req 8.3) has
+ *     something to propose.
+ * The two files share creature-name values, so the expected
+ * `monsters."Monster Name"` ↔ `experiments.name` match surfaces, while the
+ * boolean `sedated`/`hazardous` columns are excluded by the engine's boolean
+ * gate (a known non-match). This dataset is also bundled inline — no network
+ * access (Req 8.1). The App wires it to the same {@link IntakeController}
+ * pipeline as a second "Load mismatched demo" action (Req 8.4).
  */
 
 import type { DemoDataLoader } from "./types";
@@ -88,6 +110,58 @@ const DEMO_DATASETS: readonly DemoDataset[] = [
   { fileName: "lab_inventory.csv", csv: LAB_INVENTORY_CSV },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Second, mismatched dataset (Feature 2, Req 8.1–8.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Mismatched file A — the containment roster of captured creatures.
+ *
+ * Headers: `Monster Name`, `Species`, `Threat Level`, `Sedated`. Shares its
+ * creature names with {@link MISMATCH_EXPERIMENTS_CSV} (via that file's `name`
+ * column) so `Monster Name` ↔ `name` matches on both the fuzzy name and the
+ * value overlap. The `Species` column carries inconsistent spellings/casing/
+ * whitespace of the same categories (`swamp-wraith`, `Swamp Wraith`,
+ * `swamp  wraith`) for `category-standardize`, and the last two rows are an
+ * exact duplicate of the Gorzak row for `duplicate-rows`.
+ */
+const MISMATCH_MONSTERS_CSV = `Monster Name,Species,Threat Level,Sedated
+Gorzak,swamp-wraith,High,yes
+Mothra Jr.,Moth Titan,high,no
+Blinky,three eyed ooze,Low,yes
+Snarl,cave-howler,HIGH,no
+Wisp,swamp  wraith,low,no
+Grond,Rock Golem,medium,yes
+Gorzak,swamp-wraith,High,yes
+Gorzak,swamp-wraith,High,yes
+`;
+
+/**
+ * Mismatched file B — field observations of the same creatures.
+ *
+ * Headers: `name`, `creature_type`, `threat`, `hazardous` — all different from
+ * file A's headers, so cross-table matching has to bridge them by similarity,
+ * not exact equality. The `name` values overlap file A's `Monster Name` values.
+ * `creature_type` repeats the same messy species spellings (`Swamp Wraith`,
+ * `swamp wraith`) for `category-standardize`, and the Blinky observation is
+ * duplicated for `duplicate-rows`.
+ */
+const MISMATCH_EXPERIMENTS_CSV = `name,creature_type,threat,hazardous
+Gorzak,Swamp Wraith,High,true
+Mothra Jr.,moth titan,High,true
+Blinky,Three-Eyed Ooze,Low,false
+Snarl,Cave Howler,High,true
+Wisp,swamp wraith,Low,false
+Grond,rock golem,Medium,true
+Blinky,Three-Eyed Ooze,Low,false
+`;
+
+/** The second, mismatched demo dataset's files, in display order (Req 8.1–8.3). */
+const MISMATCHED_DEMO_DATASETS: readonly DemoDataset[] = [
+  { fileName: "monsters.csv", csv: MISMATCH_MONSTERS_CSV },
+  { fileName: "experiments.csv", csv: MISMATCH_EXPERIMENTS_CSV },
+];
+
 /**
  * A {@link DemoDataLoader} backed entirely by bundled, inline CSV strings.
  *
@@ -98,12 +172,45 @@ const DEMO_DATASETS: readonly DemoDataset[] = [
  */
 export class BundledDemoDataLoader implements DemoDataLoader {
   async load(): Promise<File[]> {
-    return DEMO_DATASETS.map(
-      ({ fileName, csv }) =>
-        new File([csv], fileName, { type: "text/csv" })
-    );
+    return materialize(DEMO_DATASETS);
+  }
+
+  /**
+   * Load the second, mismatched dataset (Req 8.1–8.4). Returns two `.csv`
+   * {@link File} objects built from the bundled {@link MISMATCHED_DEMO_DATASETS}
+   * strings — no network access. The caller routes them through the same
+   * {@link IntakeController} pipeline; with two tables loaded, the stitching
+   * stage becomes reachable (Req 8.4).
+   */
+  async loadMismatched(): Promise<File[]> {
+    return materialize(MISMATCHED_DEMO_DATASETS);
   }
 }
 
-/** Shared singleton instance of the bundled demo-data loader. */
-export const demoDataLoader: DemoDataLoader = new BundledDemoDataLoader();
+/**
+ * Materialize a list of inline datasets into `.csv` `File` objects. Synchronous
+ * in substance (no I/O); the datasets are embedded in the bundle.
+ */
+function materialize(datasets: readonly DemoDataset[]): File[] {
+  return datasets.map(
+    ({ fileName, csv }) => new File([csv], fileName, { type: "text/csv" })
+  );
+}
+
+/**
+ * Shared singleton instance of the bundled demo-data loader.
+ *
+ * Typed as the concrete {@link BundledDemoDataLoader} (not the base
+ * {@link DemoDataLoader} interface) so callers can reach the second,
+ * mismatched dataset via {@link BundledDemoDataLoader.loadMismatched} as well
+ * as the original {@link DemoDataLoader.load}.
+ */
+export const demoDataLoader: BundledDemoDataLoader = new BundledDemoDataLoader();
+
+/**
+ * The second, mismatched dataset's file names in display order (Req 8.1). The
+ * golden-example test (task 17) uses these to route the same bundled files
+ * through the real pipeline.
+ */
+export const MISMATCHED_DEMO_FILE_NAMES: readonly string[] =
+  MISMATCHED_DEMO_DATASETS.map((d) => d.fileName);
