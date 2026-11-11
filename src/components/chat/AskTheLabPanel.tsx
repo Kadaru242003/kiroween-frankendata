@@ -28,6 +28,7 @@ import { AskStore, useAskStore } from "../../state/ask-store";
 import { SqlBlock } from "./SqlBlock";
 import { ResultTableView } from "./ResultTableView";
 import { StarterChips } from "./StarterChips";
+import { BarChart } from "./charts/BarChart";
 import "./AskTheLabPanel.css";
 
 export interface AskTheLabPanelProps {
@@ -167,6 +168,13 @@ export function AskTheLabPanel({
                 rows={outcome.rows}
                 capped={outcome.capped}
               />
+              {outcome.chart && outcome.chart.type === "bar" ? (
+                <BarChart
+                  spec={outcome.chart}
+                  columns={outcome.columns}
+                  rows={outcome.rows}
+                />
+              ) : null}
             </>
           ) : null}
           {outcome.kind === "ai-unavailable" ? (

@@ -11,12 +11,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createAskController,
   wrapWithFetchCap,
-  validateChart,
   type QueryExecResult,
   type AskControllerDeps,
 } from "./ask-controller";
 import { createFakeSqlProvider } from "./sql-provider";
-import { ASK_MAX_FETCH_ROWS, type ChartSpec, type SqlResponse } from "./types";
+import { ASK_MAX_FETCH_ROWS, type SqlResponse } from "./types";
 
 const TABLES = ["monsters", "experiments"];
 
@@ -189,35 +188,41 @@ describe("ask (free-form)", () => {
   });
 });
 
-describe("validateChart (drop-invalid-chart hook)", () => {
-  const cols = ["species", "count"];
-  const rows = [
-    ["ghost", 3],
-    ["vamp", 1],
-  ] as (string | number)[][];
-
-  it("keeps a valid bar chart (numeric y)", () => {
-    expect(validateChart({ type: "bar", x: "species", y: "count" }, cols, rows)).toEqual({
-      type: "bar",
-      x: "species",
-      y: "count",
+describe("chart wiring through the controller", () => {
+  it("keeps a valid bar chart on the ok outcome, drops an invalid one but still returns the table", async () => {
+    const withGoodChart: SqlResponse = {
+      sql: "SELECT species, COUNT(*) AS count FROM monsters GROUP BY species",
+      explanation: "per species",
+      chart: { type: "bar", x: "species", y: "count" },
+    };
+    const provider = createFakeSqlProvider({ behavior: { kind: "respond", response: withGoodChart } });
+    const runQuery = okRunner({
+      columns: ["species", "count"],
+      rows: [{ species: "ghost", count: 3 }],
     });
-  });
+    const ctrl = createAskController(
+      baseDeps({ aiEnabled: true, provider, buildSchema: async () => ({ tables: [] }), runQuery })
+    );
+    const ok = await ctrl.ask("per species");
+    expect(ok.kind === "ok" && ok.chart).toEqual({ type: "bar", x: "species", y: "count" });
 
-  it("drops a chart whose column is missing", () => {
-    expect(validateChart({ type: "bar", x: "nope", y: "count" }, cols, rows)).toBeUndefined();
-  });
-
-  it("drops a chart whose y column is not numeric", () => {
-    const strRows = [["a", "b"]];
-    expect(
-      validateChart({ type: "bar", x: "species", y: "count" }, cols, strRows)
-    ).toBeUndefined();
-  });
-
-  it("drops a chart with an unknown type", () => {
-    expect(
-      validateChart({ type: "scatter" as unknown as ChartSpec["type"], x: "species", y: "count" }, cols, rows)
-    ).toBeUndefined();
+    // A chart whose y column is missing is dropped; the table still shows.
+    const badChart: SqlResponse = {
+      sql: "SELECT species FROM monsters",
+      explanation: "names",
+      chart: { type: "bar", x: "species", y: "count" },
+    };
+    const provider2 = createFakeSqlProvider({ behavior: { kind: "respond", response: badChart } });
+    const ctrl2 = createAskController(
+      baseDeps({
+        aiEnabled: true,
+        provider: provider2,
+        buildSchema: async () => ({ tables: [] }),
+        runQuery: okRunner({ columns: ["species"], rows: [{ species: "ghost" }] }),
+      })
+    );
+    const out2 = await ctrl2.ask("names");
+    expect(out2.kind).toBe("ok");
+    expect(out2.kind === "ok" && out2.chart).toBeUndefined();
   });
 });

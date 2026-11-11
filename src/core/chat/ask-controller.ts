@@ -35,13 +35,13 @@ import {
   ASK_MAX_QUESTION_CHARS,
   type AskOutcome,
   type ChartSpec,
-  type DisplayValue,
   type SchemaSummary,
   type SqlProvider,
   type SqlResponse,
 } from "./types.js";
 import { validateSql } from "./sql-validator.js";
 import { toDisplayRows, type TimestampColumns } from "./result-convert.js";
+import { validateChartSpec } from "./chart-spec.js";
 
 /** A single executed query's rows + ordered columns (post-conversion input). */
 export interface QueryExecResult {
@@ -95,34 +95,6 @@ function isUnavailableError(err: unknown): boolean {
   return /\b(429|503)\b/.test(msg) || /unavailable|rate|cap/i.test(msg);
 }
 
-/**
- * Validate a model ChartSpec against the result columns. A full validator
- * (with category capping) lands in task 10; this task only needs the "drop an
- * invalid chart, keep the table" hook (Req 5.8): type allowed, x and y exist,
- * and y is numeric by sampling the first non-empty value.
- */
-export function validateChart(
-  chart: ChartSpec | undefined,
-  columns: string[],
-  rows: DisplayValue[][]
-): ChartSpec | undefined {
-  if (!chart) return undefined;
-  if (chart.type !== "bar" && chart.type !== "line" && chart.type !== "pie") {
-    return undefined;
-  }
-  const xi = columns.indexOf(chart.x);
-  const yi = columns.indexOf(chart.y);
-  if (xi === -1 || yi === -1) return undefined;
-  // y must be numeric: find the first non-empty y cell and check it is a number.
-  for (const row of rows) {
-    const v = row[yi];
-    if (v === "" || v === null || v === undefined) continue;
-    return typeof v === "number" ? chart : undefined;
-  }
-  // All-empty y column → treat as non-numeric, drop the chart.
-  return rows.length === 0 ? chart : undefined;
-}
-
 export function createAskController(deps: AskControllerDeps): AskController {
   /** Validate → wrap → execute → convert → build an `ok` outcome. Never throws. */
   async function executeValidated(
@@ -147,7 +119,7 @@ export function createAskController(deps: AskControllerDeps): AskController {
           rows,
           rowCount: rows.length,
           capped,
-          chart: validateChart(chart, exec.columns, rows),
+          chart: validateChartSpec(chart, exec.columns, rows),
         },
       };
     } catch (err) {

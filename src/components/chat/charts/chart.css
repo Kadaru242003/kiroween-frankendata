@@ -1,0 +1,51 @@
+/*
+ * Chart styling (Feature 3, task 10). Presentation-only; canonical lab-theme
+ * CSS variables from src/index.css (mirrors of src/theme/tokens.ts). Text uses
+ * the high-contrast body tokens (≥4.5:1 on the surface); bars/axes use the lab
+ * accents (decorative, not body text).
+ */
+
+.ask-chart {
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.ask-chart__caption {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ask-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 560px;
+}
+
+.ask-chart__axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.ask-chart__bar {
+  fill: var(--lab-green);
+}
+
+.ask-chart__bar:hover {
+  fill: var(--lab-green-deep);
+}
+
+/* Plain-text labels — high-contrast body color against the themed surface. */
+.ask-chart__tick,
+.ask-chart__xlabel {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}
+
+.ask-chart__value {
+  fill: var(--text-primary);
+  font-size: 11px;
+}

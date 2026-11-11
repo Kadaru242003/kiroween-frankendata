@@ -127,4 +127,46 @@ describe("AskTheLabPanel", () => {
       screen.getByRole("button", { name: /Download CSV/ })
     ).toBeInTheDocument();
   });
+
+  it("renders a bar chart under the table when the outcome carries a valid bar ChartSpec", async () => {
+    const categoryChip: StarterChip = {
+      tableName: "monsters",
+      question: "How many rows per species in monsters?",
+      sql: "SELECT species AS category, COUNT(*) AS count FROM monsters GROUP BY species",
+      chart: { type: "bar", x: "category", y: "count" },
+    };
+    const okOutcome: AskOutcome = {
+      kind: "ok",
+      sql: categoryChip.sql,
+      explanation: categoryChip.question,
+      columns: ["category", "count"],
+      rows: [
+        ["ghost", 3],
+        ["vamp", 1],
+      ],
+      rowCount: 2,
+      capped: false,
+      chart: { type: "bar", x: "category", y: "count" },
+    };
+    const controller = fakeController({ runSql: vi.fn(async () => okOutcome) });
+    render(
+      <AskTheLabPanel
+        controller={controller}
+        store={new AskStore()}
+        chips={[categoryChip]}
+        aiAvailable={false}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: categoryChip.question }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Bar chart of count by category")).toBeInTheDocument()
+    );
+    // The chip carried a chart spec through to runSql.
+    expect(controller.runSql).toHaveBeenCalledWith(
+      categoryChip.sql,
+      categoryChip.question,
+      categoryChip.chart
+    );
+  });
 });

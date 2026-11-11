@@ -83,18 +83,18 @@ This plan is ordered so **value lands early and the feature works fully with AI 
 
 ### Group F — charts and golden
 
-- [ ] 10. ChartSpec validation and BarChart
+- [x] 10. ChartSpec validation and BarChart
   - Implement `src/core/chat/chart-spec.ts`: validate a `ChartSpec` against result columns (type allowed, x and y exist, y numeric), drop when invalid; category capping (`ASK_CHART_MAX_CATEGORIES`: truncate for bar, group "Other" for pie). Wire chart validation into `AskController`/panel so an invalid chart is dropped and the table still shows
   - Implement `src/components/chat/charts/BarChart.tsx` (+`charts/chart.css`): hand-built SVG, lab theme, plain-text labels, ≥4.5:1; render it in the panel when a valid bar `ChartSpec` is present
   - Unit tests for `chart-spec` (valid/invalid, capping/Other)
   - _Design: ChartSpec validation, Charts; Requirements 5.8, 8.1–8.4_
 
-- [ ] 11. DuckDB golden test + real-DuckDB conversion test
+- [x] 11. DuckDB golden test + real-DuckDB conversion test
   - Golden test (node-blocking-bundle harness like `stitch-golden.duckdb.test.ts`): load the Feature 2 mismatched demo, stitch it, run `AskController.ask("how many monsters per species")` with a `FakeSqlProvider` returning the grouped-count SQL + bar `ChartSpec`; assert the grouped counts match the known demo data and the validated `ChartSpec` is the bar spec
   - Real-DuckDB conversion test: select DATE, TIMESTAMP, DECIMAL (`ROUND(AVG(x),2)`), HUGEINT or BIGINT, and BOOLEAN values, pass real result rows through `toDisplayValue`, and assert the display values (ISO strings, finite decimal number, safe/string big integer, boolean) — never a typed-array JSON string or `[object Object]`
   - _Design: Golden test, Real-DuckDB conversion test; Requirements 7.1–7.4, 10.4, 10.6_
 
-- [ ] 12. **Checkpoint** — full feature
+- [x] 12. **Checkpoint** — full feature
   - Run `npm test`, `npm run lint`, `npm run build`, `npm run check:api`; fix any failures
   - With `VITE_AI_ENABLED` on (fake/local), confirm a free-form question path works; with it off, confirm chips still work
   - _Design: Overview; Requirements 4, 6, 9_

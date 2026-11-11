@@ -213,7 +213,8 @@ export const SQL_PROXY_SYSTEM_PROMPT = [
   "Use ONLY the tables and columns provided in the schema. Never reference any other table, column, file, or URL.",
   "Write DuckDB SQL. Produce a SINGLE statement that is a SELECT (optionally a WITH ... SELECT). Never write INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, ATTACH, COPY, PRAGMA, INSTALL, LOAD, or any file/network table function.",
   "If the user message includes a REPAIR with a previous SQL and an error, fix that query using the same rules.",
-  "Optionally include a chart when the result is naturally a bar/line/pie: pick an x column and a NUMERIC y column that your SELECT returns.",
+  "Include a bar chart spec ONLY when the result is exactly one category (text) column plus one numeric column; otherwise OMIT the chart entirely.",
+  "When you include a chart, its x and y MUST be EXACT column names your SELECT returns — use explicit column aliases in the SQL and set x/y to those aliases.",
   'Respond with JSON ONLY, no prose and no markdown fences, exactly matching: {"sql":string,"explanation":string,"chart"?:{"type":"bar"|"line"|"pie","x":string,"y":string}}.',
   "The explanation MUST be ONE plain-text sentence. Keep all text plain (no markup).",
 ].join("\n");
