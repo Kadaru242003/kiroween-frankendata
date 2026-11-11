@@ -23,6 +23,7 @@ import { mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { Readable } from "node:stream";
 
 const repoRoot = process.cwd();
 // Temp dir OUTSIDE the repo (OS temp), so no in-repo artifact is produced.
@@ -78,6 +79,46 @@ try {
     fail("emitted api/ai.js loaded but has no default handler export");
   }
   console.log("  ✓ emitted api/ai.js imported cleanly (no ERR_MODULE_NOT_FOUND).");
+
+  // ── Stage 3: Node (req, res) invocation smoke test ─────────────────────────
+  // Call the default export the way Vercel's Node runtime does — with a
+  // Node-style readable `req` and a `ServerResponse`-like `res` — for the body
+  // "{}". This is the check that catches `req.text is not a function`: a web-
+  // Request-assuming handler throws here. We assert it RESOLVES and writes a
+  // 400 (schema) or 503 (fail-closed) status, never throwing. No env/secret is
+  // set, so it fails closed and contacts no provider / makes no network call.
+  console.log(
+    "check:api → Node (req, res) invocation smoke test (body \"{}\"; " +
+      "expects 400 or 503, no throw, no network)…"
+  );
+  const req = Object.assign(Readable.from([Buffer.from("{}", "utf8")]), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+  });
+  let statusCode = 0;
+  let ended = false;
+  const res = {
+    statusCode: 0,
+    setHeader() {},
+    end() {
+      statusCode = this.statusCode;
+      ended = true;
+    },
+  };
+  await mod.default(req, res);
+  if (!ended) {
+    fail("handler returned without writing a response (res.end not called)");
+  }
+  if (statusCode !== 400 && statusCode !== 503) {
+    fail(
+      `handler responded with unexpected status ${statusCode} ` +
+        "(expected 400 schema or 503 fail-closed)"
+    );
+  }
+  console.log(
+    `  ✓ handler invoked as (req, res) and responded ${statusCode} ` +
+      "without throwing (no req.text crash)."
+  );
 
   rmSync(outDir, { recursive: true, force: true });
   console.log("\n✓ check:api PASSED");

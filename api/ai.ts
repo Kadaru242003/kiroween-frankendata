@@ -26,31 +26,110 @@
 
 import {
   handleAiProxyRequest,
+  AI_PROXY_MAX_PAYLOAD_BYTES,
   type AiProxyEnv,
   type LlmClient,
   type LlmCompletionInput,
   type RedisClient,
 } from "../src/core/stitching/ai-proxy.js";
 
-// A deliberately structural Request/Response typing so this file does not
-// depend on a specific `@vercel/node` version being installed. Vercel passes a
-// Fetch-style `Request` to functions that export a default handler; we read the
-// pieces the core handler needs and return a standard `Response`.
-interface FetchLikeRequest {
-  method: string;
-  headers: { get(name: string): string | null };
-  text(): Promise<string>;
+// Deliberately structural Node-style request/response typings so this file
+// does not depend on a specific `@vercel/node` version being installed.
+// Vercel's Node.js runtime invokes the default export as `(req, res)` where
+// `req` is a Node IncomingMessage-like readable stream (NOT a web `Request`,
+// so it has no `.text()`), and `res` is a ServerResponse-like writable.
+interface NodeLikeRequest {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  // Readable-stream event surface — enough to accumulate the raw body.
+  on(event: "data", listener: (chunk: Buffer | string) => void): unknown;
+  on(event: "end", listener: () => void): unknown;
+  on(event: "error", listener: (err: Error) => void): unknown;
+  // Optional: lets us stop reading an oversized stream early.
+  destroy?(error?: Error): void;
+}
+
+interface NodeLikeResponse {
+  statusCode: number;
+  setHeader(name: string, value: string): unknown;
+  end(body?: string): unknown;
+}
+
+/** Read a single request header, coalescing the array form to its first value. */
+function header(
+  headers: Record<string, string | string[] | undefined>,
+  name: string,
+): string | undefined {
+  const raw = headers[name.toLowerCase()];
+  if (Array.isArray(raw)) return raw[0];
+  return raw ?? undefined;
 }
 
 /** Extract a best-effort client IP from the standard proxy headers. */
-function clientIpFrom(headers: { get(name: string): string | null }): string | undefined {
-  const xff = headers.get("x-forwarded-for");
+function clientIpFrom(
+  headers: Record<string, string | string[] | undefined>,
+): string | undefined {
+  const xff = header(headers, "x-forwarded-for");
   if (xff) {
     // First entry is the original client.
     const first = xff.split(",")[0]?.trim();
     if (first) return first;
   }
-  return headers.get("x-real-ip") ?? undefined;
+  return header(headers, "x-real-ip");
+}
+
+/**
+ * Read the raw request body from the Node stream into a UTF-8 string, with a
+ * HARD byte cap. As soon as the accumulated bytes exceed `maxBytes` we stop
+ * reading, destroy the stream, and signal `overLimit` — so a malicious or
+ * buggy client can never make us buffer unbounded input. The cap equals the
+ * proxy's payload limit; the core handler also re-checks the exact byte
+ * length, so behavior (413) is identical whether the body is slightly or
+ * massively over the limit.
+ */
+function readBodyCapped(
+  req: NodeLikeRequest,
+  maxBytes: number,
+): Promise<{ overLimit: true } | { overLimit: false; body: string }> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let settled = false;
+
+    const finish = (
+      value: { overLimit: true } | { overLimit: false; body: string },
+    ) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    req.on("data", (chunk: Buffer | string) => {
+      if (settled) return;
+      const buf =
+        typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk;
+      total += buf.length;
+      if (total > maxBytes) {
+        // Stop buffering immediately and tear down the stream.
+        try {
+          req.destroy?.();
+        } catch {
+          /* best-effort */
+        }
+        finish({ overLimit: true });
+        return;
+      }
+      chunks.push(buf);
+    });
+    req.on("end", () => {
+      finish({ overLimit: false, body: Buffer.concat(chunks).toString("utf8") });
+    });
+    req.on("error", (e: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(e);
+    });
+  });
 }
 
 /**
@@ -129,7 +208,17 @@ function makeLlmClient(apiKey: string, baseUrl: string): LlmClient {
   };
 }
 
-export default async function handler(req: FetchLikeRequest): Promise<Response> {
+/**
+ * Vercel Node.js runtime entrypoint. Invoked as `(req, res)` with a Node
+ * IncomingMessage-like `req` (a readable stream — NO web `Request`/`.text()`)
+ * and a ServerResponse-like `res`. We stream the body with a hard byte cap,
+ * adapt it to the framework-agnostic {@link handleAiProxyRequest} shape, and
+ * write the `{ status, body }` result back via `res`.
+ */
+export default async function handler(
+  req: NodeLikeRequest,
+  res: NodeLikeResponse,
+): Promise<void> {
   const env: AiProxyEnv = {
     AI_PROVIDER: process.env.AI_PROVIDER,
     AI_MODEL: process.env.AI_MODEL,
@@ -153,19 +242,28 @@ export default async function handler(req: FetchLikeRequest): Promise<Response> 
     ? makeLlmClient(apiKey, llmBaseUrl)
     : { complete: async () => { throw new Error("LLM key not configured"); } };
 
-  const rawBody = await req.text();
+  // Stream the body with a hard cap = the proxy payload limit. If the client
+  // sends more, we stop reading and return 413 WITHOUT buffering it all or
+  // calling the core handler — identical status to the core's own size check.
+  const read = await readBodyCapped(req, AI_PROXY_MAX_PAYLOAD_BYTES);
+  if (read.overLimit) {
+    res.statusCode = 413;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "payload_too_large" }));
+    return;
+  }
+
   const result = await handleAiProxyRequest(
     {
-      method: req.method,
-      rawBody,
-      origin: req.headers.get("origin") ?? undefined,
+      method: req.method ?? "GET",
+      rawBody: read.body,
+      origin: header(req.headers, "origin"),
       clientIp: clientIpFrom(req.headers),
     },
     { env, redis, llm }
   );
 
-  return new Response(JSON.stringify(result.body), {
-    status: result.status,
-    headers: { "Content-Type": "application/json" },
-  });
+  res.statusCode = result.status;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(result.body));
 }
