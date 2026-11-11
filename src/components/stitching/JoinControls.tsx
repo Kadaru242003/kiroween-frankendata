@@ -35,7 +35,7 @@
  * `dangerouslySetInnerHTML`.
  */
 
-import { useMemo, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import type { FanOutCounts } from "../../core/stitching/stitch-applier";
 import { pairKey } from "../../core/stitching/plan-assembly";
 import type {
@@ -204,8 +204,47 @@ export function JoinControls({
 
   const showFanOutWarning = fanOut?.fannedOut === true;
 
+  // The Join panel mounts exactly once when the user clicks "Confirm & stitch"
+  // (the working plan goes from empty to set), so this mount effect runs once
+  // per confirm. It scrolls the panel into view, moves keyboard focus to the
+  // "Apply & stitch" button (preventScroll so the browser does not jump a
+  // second time), and triggers a brief one-shot green glow. All of it respects
+  // prefers-reduced-motion: the scroll is instant and the glow is skipped.
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const applyButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [glow, setGlow] = useState(false);
+
+  useEffect(() => {
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const section = sectionRef.current;
+    if (section && typeof section.scrollIntoView === "function") {
+      section.scrollIntoView({
+        behavior: prefersReduced ? "auto" : "smooth",
+        block: "start",
+      });
+    }
+    applyButtonRef.current?.focus({ preventScroll: true });
+
+    if (!prefersReduced) {
+      setGlow(true);
+      const timer = setTimeout(() => setGlow(false), 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+    // Mount-only: run once per confirm (the component remounts on each confirm).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <section className="join-controls" aria-label="Join controls">
+    <section
+      ref={sectionRef}
+      className={`join-controls${glow ? " join-controls--alive" : ""}`}
+      aria-label="Join controls"
+    >
       <header className="join-controls__header">
         <h3 className="join-controls__title">Join</h3>
         <p className="join-controls__subtitle">
@@ -286,6 +325,7 @@ export function JoinControls({
         <button
           type="button"
           className="join-controls__apply"
+          ref={applyButtonRef}
           onClick={onApply}
           disabled={applied}
         >
