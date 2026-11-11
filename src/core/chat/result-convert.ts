@@ -28,27 +28,78 @@
 
 import type { DisplayValue } from "./types.js";
 
+/**
+ * Convert an epoch-ms number/bigint, a `Date`, or an ISO-ish string to a
+ * timezone-safe `YYYY-MM-DD` date-only string, or `null` when it is not a
+ * finite instant. Uses UTC components so a UTC-midnight instant keeps its
+ * calendar day regardless of host timezone (mirrors the data layer's
+ * `duckDbDateToIso`, inlined here to keep this pure core module free of a
+ * dependency on `src/db`).
+ */
+function epochToIsoDate(value: unknown): string | null {
+  let ms: number | null = null;
+  if (typeof value === "number") ms = value;
+  else if (typeof value === "bigint") ms = Number(value);
+  else if (value instanceof Date) ms = value.getTime();
+  else if (typeof value === "string") {
+    // Already ISO-ish? Keep just the date portion.
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(value.trim());
+    if (m) return m[1];
+    const parsed = Date.parse(value);
+    ms = Number.isNaN(parsed) ? null : parsed;
+  }
+  if (ms === null || !Number.isFinite(ms)) return null;
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear().toString().padStart(4, "0");
+  const mo = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+  const day = d.getUTCDate().toString().padStart(2, "0");
+  return `${y}-${mo}-${day}`;
+}
+
 /** A column whose raw DuckDB values are epoch-ms timestamps to render as ISO. */
 export type TimestampColumns = ReadonlySet<string>;
+/** A column whose raw DuckDB values are DATEs to render as `YYYY-MM-DD`. */
+export type DateColumns = ReadonlySet<string>;
+
+/**
+ * How a column's temporal values should be rendered:
+ *   - `"timestamp"` → full ISO string (TIMESTAMP / TIMESTAMPTZ columns);
+ *   - `"date"`      → `YYYY-MM-DD` date-only string (DATE columns);
+ *   - `undefined`   → not temporal; numbers stay numbers.
+ *
+ * DuckDB's browser bundles surface DATE/TIMESTAMP as epoch-ms numbers (or Date
+ * objects), so a column-type-aware caller passes the kind to render them
+ * correctly instead of leaking raw epoch milliseconds.
+ */
+export type TemporalKind = "timestamp" | "date";
 
 /**
  * Convert a single DuckDB result value to a safe {@link DisplayValue}.
  *
  * @param value The raw value from a `DuckDBService.query` row.
- * @param isEpochMsTimestamp When true, a finite `number` value is treated as
- *   epoch milliseconds and rendered as an ISO string (used for TIMESTAMP
- *   columns, whose browser values arrive as epoch-ms numbers). Defaults to
- *   false, so ordinary numeric columns keep their numbers.
+ * @param temporal The column's temporal kind (see {@link TemporalKind}). When
+ *   omitted (or `false`), a finite `number` stays a number; a `"timestamp"`
+ *   epoch-ms number renders as full ISO, a `"date"` one as `YYYY-MM-DD`.
+ *   A boolean is accepted for backward compatibility (`true` ≡ `"timestamp"`).
  */
 export function toDisplayValue(
   value: unknown,
-  isEpochMsTimestamp = false
+  temporal: TemporalKind | boolean = false
 ): DisplayValue {
+  const kind: TemporalKind | undefined =
+    temporal === true ? "timestamp" : temporal === false ? undefined : temporal;
+
   // 1. Missing.
   if (value === null || value === undefined) return "";
 
   // 2. BigInt (BIGINT / HUGEINT).
   if (typeof value === "bigint") {
+    if (kind === "date" || kind === "timestamp") {
+      // A temporal column may surface its value as bigint epoch-ms.
+      const iso = temporalIso(value, kind);
+      if (iso !== null) return iso;
+    }
     if (
       value >= BigInt(Number.MIN_SAFE_INTEGER) &&
       value <= BigInt(Number.MAX_SAFE_INTEGER)
@@ -58,15 +109,17 @@ export function toDisplayValue(
     return value.toString();
   }
 
-  // 3. Date (TIMESTAMP / DATE objects).
+  // 3. Date object (TIMESTAMP / DATE).
   if (value instanceof Date) {
+    if (kind === "date") return epochToIsoDate(value) ?? "";
     return Number.isNaN(value.getTime()) ? "" : value.toISOString();
   }
 
-  // 4b. A numeric TIMESTAMP (epoch ms) when the column is declared timestamp.
+  // 4b. A numeric DATE/TIMESTAMP (epoch ms) when the column is declared temporal.
   if (typeof value === "number") {
-    if (isEpochMsTimestamp && Number.isFinite(value)) {
-      return new Date(value).toISOString();
+    if (kind && Number.isFinite(value)) {
+      const iso = temporalIso(value, kind);
+      if (iso !== null) return iso;
     }
     return value;
   }
@@ -83,22 +136,56 @@ export function toDisplayValue(
   return safeStringify(value);
 }
 
-/** Convert a whole result row, honoring the set of TIMESTAMP-like columns. */
+/**
+ * Render an epoch-ms (number/bigint) temporal value to its ISO form: a full ISO
+ * string for `"timestamp"`, or a `YYYY-MM-DD` date-only string for `"date"`
+ * (reusing the timezone-safe {@link duckDbDateToIso} for the date case).
+ * Returns `null` when the value is not a finite instant.
+ */
+function temporalIso(value: number | bigint, kind: TemporalKind): string | null {
+  if (kind === "date") return epochToIsoDate(value);
+  const ms = typeof value === "bigint" ? Number(value) : value;
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toISOString();
+}
+
+/** Resolve a column's temporal kind from the date/timestamp column sets. */
+function kindFor(
+  column: string,
+  dateColumns: DateColumns,
+  timestampColumns: TimestampColumns
+): TemporalKind | undefined {
+  if (dateColumns.has(column)) return "date";
+  if (timestampColumns.has(column)) return "timestamp";
+  return undefined;
+}
+
+/**
+ * Convert a whole result row, honoring the DATE and TIMESTAMP column sets. DATE
+ * columns render as `YYYY-MM-DD`; TIMESTAMP columns as full ISO strings; all
+ * other columns by the default rules.
+ */
 export function toDisplayRow(
   row: Record<string, unknown>,
   columns: string[],
-  timestampColumns: TimestampColumns = new Set()
+  timestampColumns: TimestampColumns = new Set(),
+  dateColumns: DateColumns = new Set()
 ): DisplayValue[] {
-  return columns.map((c) => toDisplayValue(row[c], timestampColumns.has(c)));
+  return columns.map((c) =>
+    toDisplayValue(row[c], kindFor(c, dateColumns, timestampColumns))
+  );
 }
 
 /** Convert an array of result rows into a display matrix in column order. */
 export function toDisplayRows(
   rows: Record<string, unknown>[],
   columns: string[],
-  timestampColumns: TimestampColumns = new Set()
+  timestampColumns: TimestampColumns = new Set(),
+  dateColumns: DateColumns = new Set()
 ): DisplayValue[][] {
-  return rows.map((r) => toDisplayRow(r, columns, timestampColumns));
+  return rows.map((r) =>
+    toDisplayRow(r, columns, timestampColumns, dateColumns)
+  );
 }
 
 /**

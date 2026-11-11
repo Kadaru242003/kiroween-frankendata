@@ -62,8 +62,8 @@ import {
 import {
   createAskController,
   type AskController,
-  type QueryExecResult,
 } from './core/chat/ask-controller'
+import { createDuckDbQueryRunner } from './core/chat/query-runner'
 import { buildQueryableTables } from './core/chat/queryable-tables'
 import { generateStarterChips, type StarterChip } from './core/chat/starter-questions'
 import { createProxySqlProvider } from './core/chat/sql-provider'
@@ -191,13 +191,10 @@ function getLabStack(): Promise<LabStack> {
       // task 9), so `ask` resolves to `ai-unavailable` for free-form questions
       // and never makes a network call; starter chips run directly.
       const askStore = new AskStore()
-      const runQuery = async (sql: string): Promise<QueryExecResult> => {
-        const rows = await duckDBService.query<Record<string, unknown>>(sql)
-        // DuckDB preserves SELECT order in each row object's key order; derive
-        // the columns from the first row (empty result → no columns).
-        const columns = rows.length > 0 ? Object.keys(rows[0]) : []
-        return { columns, rows }
-      }
+      // The real QueryRunner (extracted to src/core/chat/query-runner.ts) runs
+      // the SQL and asks DuckDB for the result column types, so DATE/TIMESTAMP
+      // values render as readable ISO strings instead of raw epoch ms.
+      const runQuery = createDuckDbQueryRunner(duckDBService)
       // The LLM path is wired ONLY when VITE_AI_ENABLED === "true": the
       // ProxySqlProvider posts to the same-origin `/api/sql`, and the schema
       // builder reads bounded samples via the Feature 2 SampleReader. With the

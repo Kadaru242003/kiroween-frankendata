@@ -40,15 +40,21 @@ import {
   type SqlResponse,
 } from "./types.js";
 import { validateSql } from "./sql-validator.js";
-import { toDisplayRows, type TimestampColumns } from "./result-convert.js";
+import {
+  toDisplayRows,
+  type TimestampColumns,
+  type DateColumns,
+} from "./result-convert.js";
 import { validateChartSpec } from "./chart-spec.js";
 
 /** A single executed query's rows + ordered columns (post-conversion input). */
 export interface QueryExecResult {
   columns: string[];
   rows: Record<string, unknown>[];
-  /** Columns whose raw values are epoch-ms timestamps (for ISO conversion). */
+  /** TIMESTAMP-family columns (epoch-ms → full ISO string). */
   timestampColumns?: TimestampColumns;
+  /** DATE columns (epoch-ms → `YYYY-MM-DD` date-only string). */
+  dateColumns?: DateColumns;
 }
 
 /**
@@ -108,7 +114,12 @@ export function createAskController(deps: AskControllerDeps): AskController {
     }
     try {
       const exec = await deps.runQuery(wrapWithFetchCap(validation.sql));
-      const rows = toDisplayRows(exec.rows, exec.columns, exec.timestampColumns);
+      const rows = toDisplayRows(
+        exec.rows,
+        exec.columns,
+        exec.timestampColumns,
+        exec.dateColumns,
+      );
       const capped = rows.length >= ASK_MAX_FETCH_ROWS;
       return {
         outcome: {
