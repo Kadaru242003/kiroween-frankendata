@@ -21,7 +21,10 @@
  */
 
 import { useCallback, useState } from "react";
-import { ASK_MAX_QUESTION_CHARS } from "../../core/chat/types";
+import {
+  ASK_MAX_QUESTION_CHARS,
+  ASK_VISIBLE_CHIPS_LIMIT,
+} from "../../core/chat/types";
 import type { AskController } from "../../core/chat/ask-controller";
 import type { StarterChip } from "../../core/chat/starter-questions";
 import { AskStore, useAskStore } from "../../state/ask-store";
@@ -61,6 +64,13 @@ export function AskTheLabPanel({
 }: AskTheLabPanelProps) {
   const { history, outcome, loading } = useAskStore(store);
   const [question, setQuestion] = useState("");
+  // Starter-chip overflow: show at most ASK_VISIBLE_CHIPS_LIMIT until expanded.
+  const [chipsExpanded, setChipsExpanded] = useState(false);
+  const hasOverflowChips = chips.length > ASK_VISIBLE_CHIPS_LIMIT;
+  const visibleChips =
+    chipsExpanded || !hasOverflowChips
+      ? chips
+      : chips.slice(0, ASK_VISIBLE_CHIPS_LIMIT);
 
   const runFreeForm = useCallback(
     async (text: string) => {
@@ -144,7 +154,19 @@ export function AskTheLabPanel({
         </div>
       ) : null}
 
-      <StarterChips chips={chips} onRun={(c) => void runChip(c)} disabled={loading} />
+      <StarterChips chips={visibleChips} onRun={(c) => void runChip(c)} disabled={loading} />
+      {hasOverflowChips ? (
+        <button
+          type="button"
+          className="ask-panel__chips-toggle"
+          onClick={() => setChipsExpanded((v) => !v)}
+          aria-expanded={chipsExpanded}
+        >
+          {chipsExpanded
+            ? "Show fewer"
+            : `Show more (${chips.length - ASK_VISIBLE_CHIPS_LIMIT})`}
+        </button>
+      ) : null}
 
       {!aiAvailable ? (
         <p className="ask-panel__ai-note">

@@ -151,3 +151,19 @@
 .ask-panel__message--error {
   border-color: var(--amber-accent);
 }
+
+.ask-panel__chips-toggle {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ask-panel__chips-toggle:hover {
+  color: var(--text-h);
+  border-color: var(--accent);
+}

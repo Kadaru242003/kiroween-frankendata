@@ -41,6 +41,7 @@ const chip: StarterChip = {
   tableName: "monsters",
   question: "How many rows are in monsters?",
   sql: "SELECT COUNT(*) AS row_count FROM monsters",
+  kind: "row-count",
 };
 
 describe("AskTheLabPanel", () => {
@@ -128,11 +129,43 @@ describe("AskTheLabPanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("caps starter chips at 8 with a 'Show more' toggle that reveals the rest", async () => {
+    const many: StarterChip[] = Array.from({ length: 11 }, (_, i) => ({
+      tableName: "monsters",
+      question: `Chip question ${i}`,
+      sql: `SELECT ${i}`,
+      kind: "row-count" as const,
+    }));
+    render(
+      <AskTheLabPanel
+        controller={fakeController()}
+        store={new AskStore()}
+        chips={many}
+        aiAvailable={false}
+      />
+    );
+    // Only the first 8 chips are visible initially.
+    expect(screen.getByRole("button", { name: "Chip question 0" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chip question 7" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Chip question 8" })).toBeNull();
+
+    // "Show more (3)" reveals the remaining chips.
+    const toggle = screen.getByRole("button", { name: /Show more \(3\)/ });
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Chip question 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chip question 10" })).toBeInTheDocument();
+
+    // "Show fewer" collapses back to 8.
+    fireEvent.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(screen.queryByRole("button", { name: "Chip question 8" })).toBeNull();
+  });
+
   it("renders a bar chart under the table when the outcome carries a valid bar ChartSpec", async () => {
     const categoryChip: StarterChip = {
       tableName: "monsters",
       question: "How many rows per species in monsters?",
       sql: "SELECT species AS category, COUNT(*) AS count FROM monsters GROUP BY species",
+      kind: "category",
       chart: { type: "bar", x: "category", y: "count" },
     };
     const okOutcome: AskOutcome = {

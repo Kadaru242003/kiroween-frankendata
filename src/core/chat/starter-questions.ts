@@ -42,6 +42,9 @@ import {
 } from "./types.js";
 
 /** A clickable starter question with its rule-built SQL and optional chart. */
+/** Which rule pattern produced a chip (drives the UI display ordering). */
+export type StarterChipKind = "category" | "row-count" | "numeric";
+
 export interface StarterChip {
   /** The table this chip queries (for grouping chips in the UI). */
   tableName: string;
@@ -49,6 +52,8 @@ export interface StarterChip {
   question: string;
   /** The rule-built SQL run directly when the chip is clicked. */
   sql: string;
+  /** The rule pattern that produced this chip. */
+  kind: StarterChipKind;
   /** A bar chart spec for the rows-per-category chip; absent otherwise. */
   chart?: ChartSpec;
 }
@@ -144,6 +149,7 @@ export function chipsForTable(
     tableName: table.tableName,
     question: `How many rows are in ${table.tableName}?`,
     sql: `SELECT COUNT(*) AS row_count FROM ${t}`,
+    kind: "row-count",
   });
 
   // 2. Rows per category — up to MAX_CATEGORY_CHIPS_PER_TABLE eligible string
@@ -160,6 +166,7 @@ export function chipsForTable(
         sql:
           `SELECT ${col} AS category, COUNT(*) AS count ` +
           `FROM ${t} GROUP BY ${col} ORDER BY count DESC`,
+        kind: "category",
         chart: { type: "bar", x: "category", y: "count" },
       });
     }
@@ -175,6 +182,7 @@ export function chipsForTable(
       tableName: table.tableName,
       question: `What are the top 10 rows in ${table.tableName} by ${firstNumeric.name}?`,
       sql: `SELECT * FROM ${t} ORDER BY ${col} DESC LIMIT 10`,
+      kind: "numeric",
     });
 
     // 4. Min / max / avg of the numeric column.
@@ -184,6 +192,7 @@ export function chipsForTable(
       sql:
         `SELECT MIN(${col}) AS min, MAX(${col}) AS max, AVG(${col}) AS avg ` +
         `FROM ${t}`,
+      kind: "numeric",
     });
   }
 
@@ -203,7 +212,51 @@ export async function generateStarterChips(
   for (const table of tables) {
     chips.push(...chipsForTable(table, probes.get(table.tableName) ?? null));
   }
-  return chips;
+  return orderStarterChips(chips);
+}
+
+/** Is a table name a Feature 2 joined result (`stitch_<n>_result`)? */
+function isStitchResultTable(tableName: string): boolean {
+  return /^stitch_\d+_result$/.test(tableName);
+}
+
+/** Display rank by chip kind: category < row-count < numeric (lower first). */
+function kindRank(kind: StarterChipKind): number {
+  switch (kind) {
+    case "category":
+      return 0;
+    case "row-count":
+      return 1;
+    case "numeric":
+      return 2;
+  }
+}
+
+/**
+ * Order chips for display so the most useful come first (Req: chip overflow):
+ *   1. chips for `stitch_<n>_result` tables (the joined view) before others;
+ *   2. then rows-per-category chips, then row-count, then the numeric chips.
+ *
+ * The sort is STABLE (a decorate-sort-undecorate on the original index), so
+ * generation order is preserved within a rank and the result stays
+ * deterministic.
+ */
+export function orderStarterChips(chips: StarterChip[]): StarterChip[] {
+  return chips
+    .map((chip, index) => ({
+      chip,
+      index,
+      stitch: isStitchResultTable(chip.tableName) ? 0 : 1,
+      kind: kindRank(chip.kind),
+    }))
+    .sort((a, b) =>
+      a.stitch !== b.stitch
+        ? a.stitch - b.stitch
+        : a.kind !== b.kind
+          ? a.kind - b.kind
+          : a.index - b.index
+    )
+    .map((x) => x.chip);
 }
 
 /** Narrow a column list to the queryable-column shape (helper for callers). */

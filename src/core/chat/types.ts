@@ -47,6 +47,8 @@ export const ASK_HISTORY_SIZE = 5;
 export const ASK_MAX_STARTER_CHIPS_PER_TABLE = 4;
 /** Max distinct values a string column may have for a "rows per category" chip. */
 export const ASK_CATEGORY_DISTINCT_MAX = 12;
+/** Max starter chips shown before the "Show more" toggle reveals the rest. */
+export const ASK_VISIBLE_CHIPS_LIMIT = 8;
 /** Max categories a chart renders (pie groups the rest as "Other"; bar truncates). */
 export const ASK_CHART_MAX_CATEGORIES = 20;
 /** Max tables included in a SchemaSummary. */

@@ -12,6 +12,7 @@ import {
   DemoDataControl,
   LOAD_DEMO_DATA_LABEL,
   LOAD_DEMO_DATA_LOADING_LABEL,
+  DEMO_ALREADY_LOADED_LABEL,
 } from "./DemoDataControl";
 
 describe("DemoDataControl", () => {
@@ -86,5 +87,16 @@ describe("DemoDataControl", () => {
         screen.getByRole("button", { name: LOAD_DEMO_DATA_LABEL })
       ).toBeEnabled();
     });
+  });
+
+  it("shows a disabled 'Already loaded' state and ignores clicks when alreadyLoaded", () => {
+    const onLoadDemo = vi.fn();
+    render(<DemoDataControl onLoadDemo={onLoadDemo} alreadyLoaded />);
+    const button = screen.getByRole("button", {
+      name: DEMO_ALREADY_LOADED_LABEL,
+    });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onLoadDemo).not.toHaveBeenCalled();
   });
 });

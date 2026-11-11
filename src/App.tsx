@@ -64,6 +64,12 @@ import {
   type AskController,
 } from './core/chat/ask-controller'
 import { createDuckDbQueryRunner } from './core/chat/query-runner'
+import {
+  createDemoLoader,
+  type DemoLoader,
+  type DemoId,
+} from './core/chat/demo-loader'
+import { dropAllTables } from './core/chat/reset-lab'
 import { buildQueryableTables } from './core/chat/queryable-tables'
 import { generateStarterChips, type StarterChip } from './core/chat/starter-questions'
 import { createProxySqlProvider } from './core/chat/sql-provider'
@@ -108,6 +114,8 @@ interface LabStack {
   askController: AskController
   /** Session-only state for the Ask the Lab panel (history + outcome). */
   askStore: AskStore
+  /** Idempotent demo loader (one load per demo id until reset). */
+  demoLoader: DemoLoader
 }
 
 /**
@@ -211,6 +219,16 @@ function getLabStack(): Promise<LabStack> {
           : undefined,
       })
 
+      // Idempotent demo loading: each demo loads once (by id) until reset, so
+      // repeated clicks never pile up monsters_2, monsters_3, … copies.
+      const demoLoader = createDemoLoader({
+        providers: {
+          default: () => demoDataLoader.load(),
+          mismatched: () => demoDataLoader.loadMismatched(),
+        },
+        intake: (files) => controller.intake(files),
+      })
+
       return {
         duckDBService,
         controller,
@@ -218,6 +236,7 @@ function getLabStack(): Promise<LabStack> {
         stitchController,
         askController,
         askStore,
+        demoLoader,
       }
     })()
   }
@@ -250,6 +269,11 @@ function App() {
   const [uncheckedTableNames, setUncheckedTableNames] = useState<
     ReadonlySet<string>
   >(() => new Set())
+  // Which demos are currently loaded (by id), mirrored from the demo loader so
+  // each demo's button shows an "Already loaded" state and loads only once.
+  const [loadedDemos, setLoadedDemos] = useState<ReadonlySet<DemoId>>(
+    () => new Set(),
+  )
 
   // Initialize DuckDB + controller once on mount. The module-level singleton
   // promise makes this safe under StrictMode's double-invoke.
@@ -306,24 +330,65 @@ function App() {
     [stack],
   )
 
-  const handleLoadDemo = useCallback(async () => {
-    if (stack === null) {
-      return
-    }
-    const files = await demoDataLoader.load()
-    await stack.controller.intake(files)
-  }, [stack])
+  // Load a demo ONCE by id (idempotent). A repeated click is a no-op; the
+  // button reflects "Already loaded" via `loadedDemos`. Loading the other demo
+  // is always allowed. Reset re-enables both (see handleResetLab).
+  const loadDemo = useCallback(
+    async (id: DemoId) => {
+      if (stack === null) {
+        return
+      }
+      const didLoad = await stack.demoLoader.load(id)
+      if (didLoad) {
+        setLoadedDemos((prev) => {
+          const next = new Set(prev)
+          next.add(id)
+          return next
+        })
+      }
+    },
+    [stack],
+  )
 
-  // Load the second, mismatched demo dataset (Req 8.1–8.4) through the SAME
-  // intake pipeline as dropped files and the first demo. Its two files (same
-  // creatures, different headers) push the loaded-table count to two, which is
-  // what makes the stitching stage reachable (Req 8.4).
-  const handleLoadMismatchedDemo = useCallback(async () => {
+  const handleLoadDemo = useCallback(() => loadDemo('default'), [loadDemo])
+  // The second, mismatched dataset (Req 8.1–8.4) routes through the SAME intake
+  // pipeline; its two files make the stitching stage reachable (Req 8.4).
+  const handleLoadMismatchedDemo = useCallback(
+    () => loadDemo('mismatched'),
+    [loadDemo],
+  )
+
+  // Reset the whole lab: drop every DuckDB table (originals, cleaned copies,
+  // stitch results), clear the intake store, stitch state + undo, the Ask the
+  // Lab history/outcome, and re-enable the demo buttons. Never throws, even if
+  // DuckDB is mid-operation or a drop fails. No confirm dialog.
+  const handleResetLab = useCallback(async () => {
     if (stack === null) {
       return
     }
-    const files = await demoDataLoader.loadMismatched()
-    await stack.controller.intake(files)
+    // Best-effort undo of any applied stitch (drops its created tables), then a
+    // belt-and-braces drop of every remaining base table.
+    try {
+      await stack.stitchController.undo()
+    } catch {
+      /* non-fatal */
+    }
+    try {
+      await dropAllTables(stack.duckDBService)
+    } catch {
+      /* dropAllTables already never throws; guard anyway */
+    }
+    stack.stitchStore.reset()
+    stack.askStore.reset()
+    stack.demoLoader.clear()
+    intakeStore.reset()
+    // Reset local React view state so no stale selection/plan/demo flags linger.
+    setLoadedDemos(new Set())
+    setUncheckedTableNames(new Set())
+    setWorkingPlan(null)
+    setStitchOpen(false)
+    queryableTableNamesHolder = []
+    queryableSchemaSourceHolder = []
   }, [stack])
 
   const canStitch = shouldShowStitchEntry(tables.length)
@@ -467,6 +532,7 @@ function App() {
               <DemoDataControl
                 onLoadDemo={handleLoadDemo}
                 caption="Three messy lab files, typed automatically"
+                alreadyLoaded={loadedDemos.has('default')}
               />
               {/*
                 Second demo action: the mismatched stitching dataset (Req 8.4).
@@ -477,8 +543,23 @@ function App() {
                 onLoadDemo={handleLoadMismatchedDemo}
                 label={LOAD_MISMATCHED_DEMO_LABEL}
                 caption="Two files with different headers, ready to stitch"
+                alreadyLoaded={loadedDemos.has('mismatched')}
               />
             </div>
+            {/*
+              Reset lab: shown only when at least one table is loaded. Drops all
+              DuckDB tables, clears every store + undo + the ask panel, and
+              re-enables the demo buttons. No confirm dialog; never throws.
+            */}
+            {tables.length > 0 ? (
+              <button
+                type="button"
+                className="lab-reset__button"
+                onClick={() => void handleResetLab()}
+              >
+                Reset lab
+              </button>
+            ) : null}
           </section>
 
           <ErrorDisplay errors={[...errors]} />

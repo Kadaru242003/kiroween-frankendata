@@ -35,6 +35,9 @@ export const LOAD_DEMO_DATA_LABEL = "Load demo data";
 /** The label shown while a returned {@link DemoDataControlProps.onLoadDemo} promise is pending. */
 export const LOAD_DEMO_DATA_LOADING_LABEL = "Loading…";
 
+/** The label shown when this demo's tables are already loaded (Req: idempotent demo load). */
+export const DEMO_ALREADY_LOADED_LABEL = "Already loaded";
+
 /** Props for {@link DemoDataControl}. */
 export interface DemoDataControlProps {
   /**
@@ -57,6 +60,12 @@ export interface DemoDataControlProps {
    * dataset is (plain text). Omitted when not provided.
    */
   caption?: string;
+  /**
+   * When true, this demo's tables are already loaded: the button is disabled
+   * and shows an "Already loaded" label, and clicks are ignored (Req:
+   * idempotent demo load). Cleared when the lab is reset.
+   */
+  alreadyLoaded?: boolean;
 }
 
 /**
@@ -68,6 +77,7 @@ export function DemoDataControl({
   onLoadDemo,
   label = LOAD_DEMO_DATA_LABEL,
   caption,
+  alreadyLoaded = false,
 }: DemoDataControlProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   // A ref mirror of the loading flag so rapid clicks are rejected synchronously,
@@ -75,7 +85,7 @@ export function DemoDataControl({
   const loadingRef = useRef(false);
 
   const handleClick = useCallback(() => {
-    if (loadingRef.current) {
+    if (loadingRef.current || alreadyLoaded) {
       return;
     }
     loadingRef.current = true;
@@ -89,7 +99,13 @@ export function DemoDataControl({
         loadingRef.current = false;
         setIsLoading(false);
       });
-  }, [onLoadDemo]);
+  }, [onLoadDemo, alreadyLoaded]);
+
+  const buttonLabel = alreadyLoaded
+    ? DEMO_ALREADY_LOADED_LABEL
+    : isLoading
+      ? LOAD_DEMO_DATA_LOADING_LABEL
+      : label;
 
   return (
     <div className="frankendata-demo-control">
@@ -97,10 +113,10 @@ export function DemoDataControl({
         type="button"
         className="frankendata-demo-control__button"
         onClick={handleClick}
-        disabled={isLoading}
+        disabled={isLoading || alreadyLoaded}
         aria-busy={isLoading}
       >
-        {isLoading ? LOAD_DEMO_DATA_LOADING_LABEL : label}
+        {buttonLabel}
       </button>
       {caption ? (
         <p className="frankendata-demo-control__caption">{caption}</p>
