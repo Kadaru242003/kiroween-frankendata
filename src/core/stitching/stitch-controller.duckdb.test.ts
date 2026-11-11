@@ -207,6 +207,63 @@ describe("StitchController over a real DuckDB", () => {
     expect(store.getState().recomputed).toBe(false);
   });
 
+  it("selectTable restricts proposals to the checked tables (item 1)", async () => {
+    const service = createDuckDBService(adapter);
+    await service.init();
+
+    // Three tables, all sharing an overlapping "name" column, so without a
+    // filter EVERY pair would match. We check only two and assert the third is
+    // never referenced by any proposal.
+    const monsters = uniqueName("monsters");
+    const experiments = uniqueName("experiments");
+    const extra = uniqueName("extra");
+    const schema: ColumnSchema[] = [{ name: "name", type: "string" }];
+    for (const t of [monsters, experiments, extra]) {
+      await service.createTable(t, schema, [
+        ["Swamp Wraith"],
+        ["Bog Golem"],
+        ["Night Howler"],
+      ]);
+    }
+
+    const store = new StitchStore();
+    const tables = [
+      loaded(monsters, schema, 3, 1),
+      loaded(experiments, schema, 3, 2),
+      loaded(extra, schema, 3, 3),
+    ];
+    // Only monsters + experiments are checked; `extra` is excluded.
+    const checked = new Set([monsters, experiments]);
+    const controller = createStitchController({
+      db: service,
+      getTables: () => tables,
+      store,
+      selectTable: (t) => checked.has(t.tableName),
+    });
+
+    const result = await controller.computeProposals();
+
+    // No match references the unchecked table on either side.
+    const touchesExtra = result.matches.some(
+      (m) => m.left.tableName === extra || m.right.tableName === extra,
+    );
+    expect(touchesExtra).toBe(false);
+    // No cleaning proposal targets the unchecked table either.
+    const cleaningTouchesExtra = result.cleanings.some(
+      (c) => c.target.tableName === extra,
+    );
+    expect(cleaningTouchesExtra).toBe(false);
+    // The checked pair still matches, so we didn't just filter everything out.
+    const checkedMatch = result.matches.find(
+      (m) =>
+        (m.left.tableName === monsters && m.right.tableName === experiments) ||
+        (m.left.tableName === experiments && m.right.tableName === monsters),
+    );
+    expect(checkedMatch).toBeDefined();
+    // The dataset version derives from the FILTERED set (two loadIds).
+    expect(store.getDatasetVersion()).toBe("1,2");
+  });
+
   it("discards prior proposals + decisions and recomputes on a datasetVersion change (Req 3.8)", async () => {
     const service = createDuckDBService(adapter);
     const a = uniqueName("a");

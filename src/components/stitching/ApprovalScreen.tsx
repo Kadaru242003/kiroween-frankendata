@@ -189,6 +189,20 @@ export function ApprovalScreen({
   }, [matches, store]);
 
   /**
+   * "Approve all suggestions": approve every PENDING (undecided) match and
+   * cleanup proposal. Proposals the user has already decided — including ones
+   * they REJECTED, and ones they approved or edited — are left untouched, so
+   * this never overrides an explicit reject. Per-card controls keep working.
+   */
+  const approveAllSuggestions = useCallback(() => {
+    for (const proposal of [...matches, ...cleanings]) {
+      if (decisions[proposal.id] === undefined) {
+        store.setDecision({ proposalId: proposal.id, decision: "approved" });
+      }
+    }
+  }, [matches, cleanings, decisions, store]);
+
+  /**
    * Assemble the plan from the current decisions and hand it to `onConfirm`
    * (Req 3.5). This is the explicit confirm action — nothing is assembled until
    * the user clicks. The assembled plan is also stored so later apply wiring
@@ -233,6 +247,14 @@ export function ApprovalScreen({
           disabled={!hasHighConfidence}
         >
           Approve all high-confidence
+        </button>
+        <button
+          type="button"
+          className="approval-screen__bulk"
+          onClick={approveAllSuggestions}
+          disabled={!hasAnyProposal}
+        >
+          Approve all suggestions
         </button>
         <button
           type="button"

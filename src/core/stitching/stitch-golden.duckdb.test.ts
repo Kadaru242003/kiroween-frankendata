@@ -69,7 +69,13 @@ import { IntakeStore } from "../../state/intake-store";
 import { StitchStore } from "./stitch-store";
 import { createStitchController } from "./stitch-controller";
 import { HIGH_CONFIDENCE_THRESHOLD } from "./types";
-import type { MatchProposal, ProposalSet } from "./types";
+import type {
+  ApprovalDecision,
+  MatchProposal,
+  Proposal,
+  ProposalSet,
+} from "./types";
+import { assembleStitchPlan } from "./plan-assembly";
 
 const require = createRequire(import.meta.url);
 
@@ -290,5 +296,79 @@ describe("Golden example — real pipeline stitching regression (Design: Golden 
     // intake load are one-time costs excluded from the "produce proposals"
     // budget (see the file header). The small demo data keeps this comfortable.
     expect(computeMs).toBeLessThan(2000);
+  });
+});
+
+
+describe("Golden example — apply all approved proposals (Design: Apply; Req 4.1, 7.1, 7.9)", () => {
+  let adapter: DuckDBConnectionAdapter;
+  let dispose: () => void;
+  let service: ReturnType<typeof createDuckDBService>;
+  let stitchStore: StitchStore;
+  let stitchedRowCount = 0;
+  let fanOutAnchor = 0;
+  let fanOutResult = 0;
+  let fannedOut = true;
+
+  beforeAll(async () => {
+    ({ adapter, dispose } = await createNodeAdapter());
+    service = createDuckDBService(adapter);
+    await service.init();
+
+    // Load ONLY the mismatched pair so the stitch is the clean two-table join
+    // the assertion is about (monsters ⨝ experiments on monster_name).
+    const mismatched = await demoDataLoader.loadMismatched();
+    const store = new IntakeStore();
+    const intake = createIntakeController({ duckDBService: service, store });
+    await intake.intake(mismatched);
+    expect(store.getState().errors).toEqual([]);
+    expect(store.getState().tables).toHaveLength(2);
+
+    stitchStore = new StitchStore();
+    const controller = createStitchController({
+      db: service,
+      getTables: () => store.getState().tables,
+      store: stitchStore,
+    });
+
+    const proposals = await controller.computeProposals();
+
+    // Approve EVERY proposal (both matches and cleanups), mirroring the
+    // approval screen's "Approve all suggestions" action.
+    const all: Proposal[] = [...proposals.matches, ...proposals.cleanings];
+    const decisions: Record<string, ApprovalDecision> = {};
+    for (const proposal of all) {
+      decisions[proposal.id] = {
+        proposalId: proposal.id,
+        decision: "approved",
+      };
+    }
+    const plan = assembleStitchPlan(
+      proposals,
+      decisions,
+      store.getState().tables,
+    );
+
+    const stitched = await controller.applyPlan(plan);
+    stitchedRowCount = stitched.rowCount;
+    const fanOut = stitchStore.getState().fanOut!;
+    fanOutAnchor = fanOut.anchorRowCount;
+    fanOutResult = fanOut.resultRowCount;
+    fannedOut = fanOut.fannedOut;
+  });
+
+  afterAll(() => {
+    dispose?.();
+  });
+
+  it("stitched result has 12 rows with NO fan-out (anchor 12 in, 12 out)", () => {
+    // Each file carries 12 distinct creatures (plus duplicate rows removed by
+    // the approved duplicate-rows cleaning), and monster_name is unique per
+    // side post-cleaning, so the LEFT JOIN is 1-to-1: 12 anchor rows in, 12
+    // result rows out, no fan-out.
+    expect(stitchedRowCount).toBe(12);
+    expect(fanOutAnchor).toBe(12);
+    expect(fanOutResult).toBe(12);
+    expect(fannedOut).toBe(false);
   });
 });

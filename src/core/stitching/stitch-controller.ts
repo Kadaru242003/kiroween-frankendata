@@ -91,6 +91,16 @@ export interface StitchControllerOptions {
    * resulting {@link ProposalSet} has `aiUsed = false`.
    */
   aiProvider?: AiProvider;
+  /**
+   * Optional table-selection filter (polish batch 2, item 1). When provided,
+   * `computeProposals` proposes matches/cleanups over ONLY the tables for which
+   * this returns `true` — so with more than two tables loaded the user can
+   * exclude tables (and avoid a table being matched against another copy of
+   * itself). When omitted, every loaded table participates (the original
+   * behavior). The `datasetVersion` is derived from the FILTERED set, so
+   * toggling a table correctly invalidates stale proposals (Req 3.8).
+   */
+  selectTable?: (table: LoadedTable) => boolean;
 }
 
 /**
@@ -187,6 +197,7 @@ export function createStitchController(
   const rulesEngine = options.rulesEngine ?? createRulesEngine(db);
   const applier = options.applier ?? createStitchApplier(db);
   const aiProvider = options.aiProvider;
+  const selectTable = options.selectTable;
 
   /**
    * Read samples, run the rules engine (match + clean), optionally refine via
@@ -196,7 +207,13 @@ export function createStitchController(
    * are discarded first and the store is flagged `recomputed` (Req 3.8).
    */
   async function computeProposals(): Promise<ProposalSet> {
-    const tables = getTables();
+    const allTables = getTables();
+    // Only the selected tables participate (item 1). The datasetVersion is
+    // derived from this filtered set, so unchecking a table changes the version
+    // and correctly recomputes/invalidates (Req 3.8).
+    const tables = selectTable
+      ? allTables.filter((t) => selectTable(t))
+      : allTables;
     const datasetVersion = computeDatasetVersion(tables);
     const previousVersion = store.getDatasetVersion();
     // A change since the last stored version means the prior proposals and all

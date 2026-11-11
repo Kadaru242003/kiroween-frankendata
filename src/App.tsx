@@ -47,6 +47,7 @@ import {
 import {
   StitchEntryPoint,
   shouldShowStitchEntry,
+  canStartStitching,
 } from './components/stitching/StitchEntryPoint'
 import {
   JoinControls,
@@ -83,6 +84,23 @@ interface LabStack {
  */
 let labStackPromise: Promise<LabStack> | null = null
 
+/**
+ * The set of table names currently CHECKED for stitching (polish batch 2,
+ * item 1). Held at module scope so the controller's `selectTable` filter —
+ * built once inside {@link getLabStack} — always reads the latest selection
+ * the App (React state) maintains. `null` means "not yet initialized": every
+ * loaded table participates until the App seeds the set.
+ */
+let selectedTableNamesHolder: ReadonlySet<string> | null = null
+
+/** `true` when a table participates in stitching (default: yes, when unseeded). */
+function isTableSelectedForStitching(tableName: string): boolean {
+  return (
+    selectedTableNamesHolder === null ||
+    selectedTableNamesHolder.has(tableName)
+  )
+}
+
 /** Initialize the DuckDB service once and build the wired controller. */
 function getLabStack(): Promise<LabStack> {
   if (labStackPromise === null) {
@@ -103,6 +121,9 @@ function getLabStack(): Promise<LabStack> {
         db: duckDBService,
         getTables,
         store: stitchStore,
+        // Only the CHECKED tables participate (item 1). The filter reads the
+        // module-level selection the App keeps in sync with its React state.
+        selectTable: (t) => isTableSelectedForStitching(t.tableName),
       })
       return { duckDBService, controller, stitchStore, stitchController }
     })()
@@ -126,6 +147,16 @@ function App() {
   // JoinControls (anchor + per-pair join keys). null until confirm; cleared on
   // undo. Nothing is applied to DuckDB until the user hits "Apply & stitch".
   const [workingPlan, setWorkingPlan] = useState<StitchPlan | null>(null)
+  // The set of table names checked for stitching (item 1). All loaded
+  // tables are checked by default, including ones loaded later; the effect
+  // below adds new table names to the set and keeps the module-level holder
+  // (read by the controller's selectTable filter) in sync.
+  const [selectedTableNames, setSelectedTableNames] = useState<
+    ReadonlySet<string>
+  >(() => new Set())
+  // Names we've already accounted for, so the sync effect only auto-checks
+  // genuinely new tables (never undoing an explicit uncheck).
+  const seenTableNamesRef = useRef<Set<string>>(new Set())
 
   // Initialize DuckDB + controller once on mount. The module-level singleton
   // promise makes this safe under StrictMode's double-invoke.
@@ -149,6 +180,34 @@ function App() {
   }, [])
 
   const stack = status.phase === 'ready' ? status.stack : null
+
+  // Keep the checked-table set in sync with the loaded tables (item 1):
+  //   - a NEWLY loaded table starts checked;
+  //   - a user's explicit uncheck is preserved across later loads;
+  //   - a table that is no longer loaded is dropped from the set.
+  // `seenTableNamesRef` records which names we've already accounted for so
+  // we only auto-check genuinely new arrivals, never re-check an uncheck.
+  useEffect(() => {
+    const loaded = tables.map((t) => t.tableName)
+    const loadedSet = new Set(loaded)
+    setSelectedTableNames((prev) => {
+      const next = new Set<string>()
+      for (const name of loaded) {
+        const isNew = !seenTableNamesRef.current.has(name)
+        // New arrival → checked; otherwise keep its current checked state.
+        if (isNew || prev.has(name)) {
+          next.add(name)
+        }
+      }
+      return next
+    })
+    seenTableNamesRef.current = loadedSet
+  }, [tables])
+
+  // Mirror the selection to the module-level holder the controller reads.
+  useEffect(() => {
+    selectedTableNamesHolder = selectedTableNames
+  }, [selectedTableNames])
 
   const handleFiles = useCallback(
     (files: File[]) => {
@@ -181,12 +240,41 @@ function App() {
   }, [stack])
 
   const canStitch = shouldShowStitchEntry(tables.length)
+  // Number of tables checked for stitching, and whether that is enough to
+  // start (>= 2). The entry button is disabled otherwise (item 1).
+  const selectedCount = tables.reduce(
+    (n, t) => (selectedTableNames.has(t.tableName) ? n + 1 : n),
+    0,
+  )
+  const canStartStitch = canStartStitching(selectedCount)
+  // The subset of loaded tables checked for stitching, so the approval UI's
+  // re-pair targets and anchor options match what the controller proposed
+  // over (item 1).
+  const selectedTables = tables.filter((t) =>
+    selectedTableNames.has(t.tableName),
+  )
 
-  // Opening the stitch screen computes proposals for the current table set
+  // Toggle a table's participation in stitching (item 1).
+  const handleToggleTable = useCallback(
+    (tableName: string, checked: boolean) => {
+      setSelectedTableNames((prev) => {
+        const next = new Set(prev)
+        if (checked) {
+          next.add(tableName)
+        } else {
+          next.delete(tableName)
+        }
+        return next
+      })
+    },
+    [],
+  )
+
+  // Opening the stitch screen computes proposals for the CHECKED table set
   // (rules-only). Any compute failure is swallowed — the screen simply shows an
   // empty state rather than crashing the lab.
   const handleOpenStitch = useCallback(() => {
-    if (stack === null || !canStitch) {
+    if (stack === null || !canStartStitch) {
       return
     }
     setStitchOpen(true)
@@ -194,7 +282,7 @@ function App() {
       // Non-fatal: leave the screen open with whatever (possibly empty) state
       // the store holds.
     })
-  }, [stack, canStitch])
+  }, [stack, canStartStitch])
 
   const handleCloseStitch = useCallback(() => {
     setStitchOpen(false)
@@ -321,7 +409,9 @@ function App() {
           */}
           {stitchOpen ? null : (
             <StitchEntryPoint
-              tableCount={tables.length}
+              tables={tables}
+              selectedTableNames={selectedTableNames}
+              onToggleTable={handleToggleTable}
               onOpen={handleOpenStitch}
             />
           )}
@@ -337,7 +427,7 @@ function App() {
               </button>
               <ApprovalScreen
                 store={status.stack.stitchStore}
-                tables={tables as readonly ApprovalScreenTable[]}
+                tables={selectedTables as readonly ApprovalScreenTable[]}
                 onConfirm={handleConfirmPlan}
               />
               {/*
@@ -350,7 +440,7 @@ function App() {
                 <StitchStage
                   store={status.stack.stitchStore}
                   plan={workingPlan}
-                  tables={tables}
+                  tables={selectedTables}
                   duckDBService={status.stack.duckDBService}
                   onChangeAnchor={handleChangeAnchor}
                   onChangeJoinKey={handleChangeJoinKey}

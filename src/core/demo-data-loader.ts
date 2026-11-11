@@ -130,17 +130,17 @@ const DEMO_DATASETS: readonly DemoDataset[] = [
  */
 const MISMATCH_MONSTERS_CSV = `Monster Name,Species,Threat Level,Sedated
 Gorzak,swamp-wraith,High,yes
-Mothra Jr.,Moth Titan,high,no
+Mothra Jr.,Moth Titan,High,no
 Blinky,three eyed ooze,Low,yes
-Snarl,cave-howler,HIGH,no
-Wisp,swamp  wraith,low,no
-Grond,Rock Golem,medium,yes
+Snarl,Cave Howler,High,no
+Wisp,Swamp Wraith,Low,no
+Grond,Rock Golem,Medium,yes
 Vex,Moth Titan,High,no
-Thornak,cave howler,Medium,yes
-Bellow,ROCK GOLEM,high,no
-Drip,three-eyed-ooze,Low,yes
-Marrow,bone-shambler,High,no
-Fizz,Swamp Wraith,low,yes
+Thornak,Cave Howler,Medium,yes
+Bellow,ROCK GOLEM,High,no
+Drip,Three-Eyed Ooze,Low,yes
+Marrow,Rock Golem,High,no
+Fizz,Swamp Wraith,Low,yes
 Gorzak,swamp-wraith,High,yes
 Gorzak,swamp-wraith,High,yes
 `;
@@ -160,17 +160,17 @@ Gorzak,swamp-wraith,High,yes
  */
 const MISMATCH_EXPERIMENTS_CSV = `monster_name,species,threat_level,hazardous
 Gorzak,Swamp Wraith,High,true
-Mothra Jr.,moth titan,High,true
+Mothra Jr.,Moth Titan,High,true
 Blinky,Three-Eyed Ooze,Low,false
 Snarl,Cave Howler,High,true
 Wisp,swamp wraith,Low,false
-Grond,rock golem,Medium,true
-Vex,moth  titan,High,false
+Grond,Rock Golem,Medium,true
+Vex,Moth Titan,High,false
 Thornak,Cave Howler,Medium,true
 Bellow,rock golem,High,false
 Drip,Three-Eyed Ooze,Low,true
-Marrow,Bone Shambler,High,false
-Fizz,swamp wraith,Low,false
+Marrow,rock golem,High,false
+Fizz,Swamp Wraith,Low,false
 Blinky,Three-Eyed Ooze,Low,false
 `;
 

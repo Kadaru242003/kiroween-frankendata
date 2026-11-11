@@ -210,6 +210,17 @@
   word-break: break-all;
 }
 
+/*
+ * The quoted example values highlighted inside a whitespace/case proposal's
+ * reason sentence (item 3). Rendered inline with the monospace treatment so
+ * the visible-space middle dots read clearly without breaking the sentence
+ * flow.
+ */
+.stitch-proposal__reason-example {
+  display: inline;
+  font-family: var(--mono);
+}
+
 .stitch-diff__type {
   color: var(--lab-green);
   font-family: var(--mono);

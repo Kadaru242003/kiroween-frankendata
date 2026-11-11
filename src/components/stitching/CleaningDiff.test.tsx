@@ -84,3 +84,27 @@ describe("CleaningDiff — visible whitespace (item 4)", () => {
     expect(screen.getByText("swamp\u00B7wraith")).toBeInTheDocument();
   });
 });
+
+describe("CleaningDiff — visible whitespace in the reason sentence (item 3)", () => {
+  it("shows the example values inside the reason with middle-dot spaces", () => {
+    const proposal: CleaningProposal = {
+      id: "clean:whitespace:monsters.species",
+      target: { tableName: "monsters", columnName: "species" },
+      kind: "whitespace-case",
+      before: "swamp  wraith",
+      after: "swamp wraith",
+      reason:
+        'Trim and collapse whitespace in "monsters.species" (e.g. "swamp  wraith" -> "swamp wraith").',
+    };
+    renderDiff(proposal);
+
+    // The quoted example values appear inside the sentence with their spaces
+    // rendered as middle dots, so the before/after are visibly different.
+    expect(
+      screen.getByText('"swamp\u00B7\u00B7wraith"')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('"swamp\u00B7wraith"')
+    ).toBeInTheDocument();
+  });
+});

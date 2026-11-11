@@ -264,4 +264,39 @@ describe("ApprovalScreen", () => {
     );
     expect(screen.getByText(/No proposals yet/)).toBeInTheDocument();
   });
+
+  it("\"Approve all suggestions\" approves every pending proposal but not already-rejected ones (item 2)", () => {
+    const match = highMatch();
+    const low = lowMatch();
+    const cleaning = categoryCleaning();
+    const store = seedStore({
+      matches: [match, low],
+      cleanings: [cleaning],
+      aiUsed: false,
+    });
+    // The user has already REJECTED the low match before bulk-approving.
+    store.setDecision({ proposalId: low.id, decision: "rejected" });
+
+    render(
+      <ApprovalScreen store={store} tables={tables} onConfirm={onConfirm} />
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Approve all suggestions" })
+    );
+
+    // Pending match + cleaning are now approved...
+    expect(store.getDecision(match.id)?.decision).toBe("approved");
+    expect(store.getDecision(cleaning.id)?.decision).toBe("approved");
+    // ...but the explicit reject is preserved (not overridden).
+    expect(store.getDecision(low.id)?.decision).toBe("rejected");
+
+    // Per-card controls still work afterwards. Target the low MATCH card
+    // specifically (the category cleaning also targets monsters.habitat).
+    const lowCard = screen.getByRole("article", {
+      name: /Match proposal.*habitat.*subject/,
+    });
+    fireEvent.click(within(lowCard).getByRole("button", { name: "Approve" }));
+    expect(store.getDecision(low.id)?.decision).toBe("approved");
+  });
+
 });

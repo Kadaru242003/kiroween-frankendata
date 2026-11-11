@@ -137,6 +137,71 @@ function makeWhitespaceVisible(display: string): string {
   return display.replace(/ /g, SPACE_MARKER);
 }
 
+/**
+ * Render a whitespace/case proposal's `reason` sentence so the quoted
+ * example values inside it (e.g. `\"swamp  wraith\" \u2192 \"swamp wraith\"`)
+ * get the SAME visible-space treatment as the Before/After boxes (item 3).
+ * Otherwise the browser collapses the spaces and the two examples look
+ * identical.
+ *
+ * We locate the literal `\"before\"` and `\"after\"` substrings in the reason
+ * (quotes included) and render just those occurrences inside a
+ * `white-space: pre` span with each space shown as a middle dot. All other
+ * parts of the sentence render as ordinary wrapping text. Everything is a
+ * React text node, so the plain-text / no-markup guarantee holds (Req 6.8).
+ */
+function renderWhitespaceReason(
+  reason: string,
+  before: unknown,
+  after: unknown
+): JSX.Element {
+  // The quoted example tokens to highlight, longest first so a shorter one
+  // (e.g. the trimmed `after`) never splits inside the longer `before`.
+  const tokens = [before, after]
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => `"${v}"`)
+    .sort((a, b) => b.length - a.length);
+
+  if (tokens.length === 0) {
+    return <>{reason}</>;
+  }
+
+  // Walk the reason, emitting plain text between token occurrences and a
+  // visible-space span for each token occurrence.
+  const parts: JSX.Element[] = [];
+  let rest = reason;
+  let key = 0;
+  while (rest.length > 0) {
+    // Find the earliest occurrence of any token in the remaining string.
+    let bestIdx = -1;
+    let bestToken = "";
+    for (const token of tokens) {
+      const idx = rest.indexOf(token);
+      if (idx !== -1 && (bestIdx === -1 || idx < bestIdx)) {
+        bestIdx = idx;
+        bestToken = token;
+      }
+    }
+    if (bestIdx === -1) {
+      parts.push(<span key={key++}>{rest}</span>);
+      break;
+    }
+    if (bestIdx > 0) {
+      parts.push(<span key={key++}>{rest.slice(0, bestIdx)}</span>);
+    }
+    parts.push(
+      <span
+        key={key++}
+        className="stitch-diff__value--whitespace stitch-proposal__reason-example"
+      >
+        {makeWhitespaceVisible(bestToken)}
+      </span>
+    );
+    rest = rest.slice(bestIdx + bestToken.length);
+  }
+  return <>{parts}</>;
+}
+
 /** The column/row target label for the proposal (plain text). */
 function targetLabel(proposal: CleaningProposal): string {
   const { tableName, columnName } = proposal.target;
@@ -222,7 +287,9 @@ export function CleaningDiff({
       </div>
 
       {/* reason may come from the AI — rendered as a plain text node (Req 6.8). */}
-      <p className="stitch-proposal__reason">{reason}</p>
+      <p className="stitch-proposal__reason">
+        {isWhitespace ? renderWhitespaceReason(reason, before, after) : reason}
+      </p>
 
       {isCategory ? (
         <div className="stitch-proposal__edit">
