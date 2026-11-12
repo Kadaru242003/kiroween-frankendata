@@ -68,16 +68,8 @@
   transition: border-color 140ms ease, opacity 140ms ease;
 }
 
-/* A stylized intake marker above the prompt. */
-.frankendata-dropzone__headline::before {
-  content: "⚗";
-  display: block;
-  font-size: 2.2em;
-  line-height: 1;
-  margin-bottom: 10px;
-  color: var(--accent);
-  text-shadow: 0 0 14px rgba(57, 255, 20, 0.45);
-}
+/* The old green glyph marker was removed; the animated flask above the headline
+   is the only intake marker now. */
 
 .frankendata-dropzone:hover {
   border-color: var(--accent-border);
@@ -122,8 +114,7 @@
 
 .frankendata-dropzone--dragging .frankendata-dropzone__headline::before,
 .frankendata-dropzone[data-dragging="true"] .frankendata-dropzone__headline::before {
-  color: var(--accent);
-  text-shadow: 0 0 20px rgba(57, 255, 20, 0.7);
+  content: none;
 }
 
 .frankendata-dropzone__headline {
@@ -132,6 +123,7 @@
   font-weight: 600;
   font-size: 1.05em;
   letter-spacing: 0.2px;
+  text-align: center;
 }
 
 .frankendata-dropzone__hint {
@@ -194,5 +186,96 @@
   .frankendata-dropzone--dragging,
   .frankendata-dropzone[data-dragging="true"] {
     transform: none;
+  }
+}
+
+/*
+ * Decorative lab flask in the intake port with slow rising bubbles. Purely
+ * presentational (aria-hidden in the markup): glassware only, no face. Only
+ * transform and opacity animate.
+ */
+.frankendata-dropzone__flask {
+  width: 40px;
+  height: 46px;
+  pointer-events: none;
+}
+
+.frankendata-dropzone__flask-glass {
+  stroke: var(--accent-border);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.frankendata-dropzone__flask-liquid {
+  fill: var(--lab-green-deep);
+  opacity: 0.55;
+}
+
+.frankendata-dropzone__bubble {
+  fill: var(--lab-green);
+  opacity: 0;
+  animation: frankendata-bubble-rise 4.5s ease-in-out infinite;
+}
+
+.frankendata-dropzone__bubble--2 {
+  animation-duration: 5.5s;
+  animation-delay: 1.4s;
+}
+
+.frankendata-dropzone__bubble--3 {
+  animation-duration: 6.2s;
+  animation-delay: 2.6s;
+}
+
+@keyframes frankendata-bubble-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+}
+
+/*
+ * Item 3: electric crackle on the drag-over border. The inner dashed ring
+ * (::before) flickers its glow while a drag is over the port. Keyed off the
+ * existing drag-over class and data attribute, so no new state is introduced.
+ */
+.frankendata-dropzone--dragging::before,
+.frankendata-dropzone[data-dragging="true"]::before {
+  animation: frankendata-crackle 600ms steps(2, end) infinite;
+}
+
+@keyframes frankendata-crackle {
+  0% {
+    box-shadow: inset 0 0 8px rgba(57, 255, 20, 0.25);
+    opacity: 0.85;
+  }
+  50% {
+    box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.7);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: inset 0 0 6px rgba(57, 255, 20, 0.2);
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frankendata-dropzone__bubble {
+    animation: none;
+    opacity: 0;
+  }
+  .frankendata-dropzone--dragging::before,
+  .frankendata-dropzone[data-dragging="true"]::before {
+    animation: none;
   }
 }

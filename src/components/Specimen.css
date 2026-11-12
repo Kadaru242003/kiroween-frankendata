@@ -1,0 +1,403 @@
+/*
+ * Specimen styling: fixed bottom-left placement, story-state poses, accessories,
+ * short reactions, and the poke button. Decorative SVGs are aria-hidden; the
+ * wrapping button carries the accessible name and a visible focus ring. Only
+ * transform, opacity, stroke-dashoffset, box-shadow, and filter animate. Hidden
+ * below 640px. Reduced motion shows static poses with no timed animation.
+ */
+
+/* Reserve bottom space so the Specimen never covers controls (Download CSV,
+   Apply & stitch). */
+#lab {
+  padding-bottom: 168px;
+}
+
+.specimen-layer {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2; /* below the sticky action bar (z-index 5) and dialogs */
+}
+
+/* The whole creature is a real button: focusable, pointer cursor, visible
+   focus ring. It does not block page clicks because it is a small fixed box. */
+.specimen-button {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.specimen-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.specimen {
+  position: relative;
+  display: block;
+  width: 94px;
+  height: 140px;
+}
+
+.specimen__body {
+  width: 94px;
+  height: 140px;
+  display: block;
+}
+
+/* ── Cells, grid, head, slab ─────────────────────────────────────────────── */
+.specimen__grid line,
+.specimen__grid-frame,
+.specimen__head {
+  stroke: var(--lab-green);
+  stroke-width: 1.6;
+}
+
+.specimen__grid-frame,
+.specimen__head {
+  fill: var(--surface-raised);
+}
+
+.specimen__slab {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.specimen__slab-leg {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.specimen__stitches line {
+  stroke: var(--lab-green);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.specimen__leg,
+.specimen__arm {
+  fill: var(--surface);
+  stroke: var(--lab-green-deep);
+  stroke-width: 1.4;
+}
+
+.specimen__arm--right {
+  fill: var(--lab-purple);
+}
+
+.specimen__eye {
+  fill: var(--text-primary);
+}
+
+.specimen__lid {
+  stroke: var(--text-secondary);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.specimen__electrode {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+.specimen__electrode-tip {
+  fill: var(--lab-green);
+}
+
+.specimen__electrode-spark {
+  stroke: var(--lab-green);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgba(57, 255, 20, 0.8));
+  opacity: 0;
+}
+
+/* ── Accessories ─────────────────────────────────────────────────────────── */
+.specimen__goggles circle {
+  fill: rgba(57, 255, 20, 0.12);
+  stroke: var(--amber-accent);
+  stroke-width: 1.6;
+}
+
+.specimen__bandage {
+  fill: #e9efe9;
+  stroke: #b9c7b9;
+  stroke-width: 0.6;
+}
+
+.specimen__patch {
+  fill: var(--surface);
+  stroke: var(--lab-green);
+  stroke-width: 1.4;
+}
+
+.specimen__extra-cell {
+  fill: var(--surface-raised);
+  stroke: var(--lab-green);
+  stroke-width: 1.4;
+}
+
+.specimen__clipboard rect {
+  fill: var(--surface-raised);
+  stroke: var(--border);
+  stroke-width: 1.2;
+}
+
+.specimen__clipboard polyline {
+  stroke: var(--lab-green);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.specimen__plaster {
+  fill: #e9efe9;
+  stroke: #b9c7b9;
+  stroke-width: 0.6;
+}
+
+.specimen__star {
+  fill: var(--amber-accent);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+/* ── Bolt / sign / bubble ────────────────────────────────────────────────── */
+.specimen__bolt {
+  position: absolute;
+  left: 42%;
+  top: -6px;
+  width: 18px;
+  height: 34px;
+  transform: translateX(-50%);
+  opacity: 0;
+}
+
+.specimen__bolt-path {
+  stroke: var(--lab-green);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.9));
+}
+
+.specimen__sign {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 24px;
+  height: 18px;
+  transform: translateX(-50%);
+}
+
+.specimen__sign-bg {
+  fill: var(--surface-raised);
+  stroke: var(--amber-accent);
+  stroke-width: 1;
+}
+
+.specimen__bar {
+  fill: var(--lab-green);
+}
+
+.specimen__bubble {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border: 1px solid var(--lab-green);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.specimen__bubble--dots i {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 1px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  animation: specimen-dot 1.2s ease-in-out infinite;
+}
+
+.specimen__bubble--dots i:nth-child(2) { animation-delay: 0.2s; }
+.specimen__bubble--dots i:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes specimen-dot {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.specimen__zzz {
+  position: absolute;
+  left: 62%;
+  top: 30px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+  animation: specimen-zzz 3s ease-in-out infinite;
+}
+
+@keyframes specimen-zzz {
+  0% { transform: translateY(0); opacity: 0; }
+  30% { opacity: 0.8; }
+  100% { transform: translateY(-10px); opacity: 0; }
+}
+
+/* ── Resting poses ───────────────────────────────────────────────────────── */
+
+/* a. Asleep: grey, lids closed, slumped onto the slab, Zzz floating. */
+.specimen--asleep {
+  filter: grayscale(1) brightness(0.85);
+}
+
+.specimen--asleep .specimen__eye { opacity: 0; }
+.specimen--asleep .specimen__lid { opacity: 1; }
+.specimen--asleep .specimen__body { transform: rotate(3deg); transform-origin: 50% 90%; }
+
+/* b. Awake: breathing, blink, electrode spark. */
+.specimen--awake .specimen__body {
+  animation: specimen-breathe 3s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+.specimen--awake .specimen__eye {
+  animation: specimen-blink 5s step-end infinite;
+}
+
+.specimen--awake .specimen__electrode-spark {
+  animation: specimen-electrode 7s ease-out infinite;
+}
+
+@keyframes specimen-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes specimen-blink {
+  0%, 92%, 100% { opacity: 1; }
+  94%, 98% { opacity: 0.1; }
+}
+
+@keyframes specimen-electrode {
+  0%, 96%, 100% { opacity: 0; }
+  97% { opacity: 1; }
+  98% { opacity: 0.3; }
+}
+
+/* c. Alive: green glow (plus breathing). */
+.specimen--alive {
+  filter: drop-shadow(0 0 8px rgba(57, 255, 20, 0.7));
+}
+
+.specimen--alive .specimen__body {
+  animation: specimen-breathe 3s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+.specimen--alive .specimen__grid-frame,
+.specimen--alive .specimen__head {
+  stroke: var(--lab-green);
+}
+
+/* ── Reactions (short, time-boxed by JS) ─────────────────────────────────── */
+.specimen--react-alive .specimen__bolt,
+.specimen--react-stitched .specimen__bolt,
+.specimen--react-poke-jolt .specimen__bolt {
+  opacity: 1;
+  animation: specimen-bolt 500ms ease-out 1;
+}
+
+@keyframes specimen-bolt {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.specimen--react-poke-jolt .specimen__body {
+  animation: specimen-jolt 300ms ease-in-out 3;
+}
+
+@keyframes specimen-jolt {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.specimen--react-poke-wave .specimen__arm--right {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: specimen-wave 300ms ease-in-out 3;
+}
+
+@keyframes specimen-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-35deg); }
+}
+
+.specimen--react-poke-spin .specimen__body {
+  transform-origin: 50% 60%;
+  animation: specimen-spin 1000ms ease-in-out 1;
+}
+
+@keyframes specimen-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.specimen--react-poke-giggle .specimen__body,
+.specimen--react-hmm .specimen__eye {
+  animation: specimen-giggle 300ms ease-in-out 3;
+}
+
+@keyframes specimen-giggle {
+  0%, 100% { transform: rotate(0deg); }
+  33% { transform: rotate(-3deg); }
+  66% { transform: rotate(3deg); }
+}
+
+.specimen--react-ugh .specimen__body {
+  animation: specimen-shake 120ms ease-in-out 6;
+}
+
+@keyframes specimen-shake {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-3px); }
+}
+
+/* i. Reset: X eyes and a flop. */
+.specimen--react-reset .specimen__eye { opacity: 0; }
+.specimen--react-reset .specimen__lid {
+  opacity: 1;
+  stroke: var(--amber-accent);
+}
+
+/* ── Responsive + reduced motion ─────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .specimen-layer { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .specimen__body,
+  .specimen__eye,
+  .specimen__electrode-spark,
+  .specimen__arm--right,
+  .specimen__bolt,
+  .specimen__zzz,
+  .specimen__bubble--dots i {
+    animation: none !important;
+  }
+  .specimen__bolt { opacity: 0; }
+}

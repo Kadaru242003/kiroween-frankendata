@@ -167,3 +167,64 @@
   color: var(--text-h);
   border-color: var(--accent);
 }
+
+/*
+ * "Brewing your query..." loading state: a small bubbling flask shown in place
+ * of the result area while a question is being answered. Announced politely via
+ * aria-live in the markup. Reduced motion stops the bubbles.
+ */
+.ask-panel__brewing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.ask-panel__brew-flask {
+  width: 36px;
+  height: 42px;
+  flex: 0 0 auto;
+}
+
+.ask-panel__brew-glass {
+  stroke: var(--accent-border);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.ask-panel__brew-liquid {
+  fill: var(--lab-green-deep);
+  opacity: 0.6;
+}
+
+.ask-panel__brew-bubble {
+  fill: var(--lab-green);
+  opacity: 0;
+  animation: ask-brew-rise 2.4s ease-in-out infinite;
+}
+
+.ask-panel__brew-bubble--2 { animation-duration: 3s; animation-delay: 0.7s; }
+.ask-panel__brew-bubble--3 { animation-duration: 3.4s; animation-delay: 1.3s; }
+
+@keyframes ask-brew-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 0.85; }
+  80% { opacity: 0.5; }
+  100% { transform: translateY(-14px); opacity: 0; }
+}
+
+.ask-panel__brew-text {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-panel__brew-bubble {
+    animation: none;
+    opacity: 0;
+  }
+}

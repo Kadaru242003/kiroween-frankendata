@@ -1,0 +1,175 @@
+/*
+ * LabIntro + header decoration styling.
+ *
+ * The strike overlay (bolts + flash) is absolute with pointer-events: none. The
+ * Tesla nodes and the title seam are normal-flow inline pieces placed by the
+ * App, so they never cover the subtitle text. Only transform, opacity,
+ * stroke-dashoffset, box-shadow, and filter animate. Under
+ * prefers-reduced-motion the final static state is shown (seam and nodes
+ * visible, no sparks).
+ */
+
+.lab-intro {
+  position: absolute;
+  inset: -24px 0 auto 0;
+  height: 120px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* a. Dim then flash: opacity-only overlay across the header. */
+.lab-intro__flash {
+  position: absolute;
+  inset: -40px -40px auto -40px;
+  height: 200px;
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0) 60%
+  );
+  opacity: 0;
+  animation: lab-intro-flash 2.2s ease-out 1;
+}
+
+@keyframes lab-intro-flash {
+  0% { opacity: 0; background: rgba(8, 10, 9, 0.35); }
+  18% { opacity: 0.35; background: rgba(8, 10, 9, 0.35); }
+  40% { opacity: 0; }
+  44% { opacity: 0.85; }
+  52% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* b. Lightning bolts, drawn with stroke-dashoffset. */
+.lab-intro__bolt {
+  position: absolute;
+  top: -28px;
+  width: 120px;
+  height: 120px;
+}
+
+.lab-intro__bolt--left { left: calc(50% - 190px); }
+.lab-intro__bolt--right { right: calc(50% - 190px); }
+
+.lab-intro__bolt-path {
+  stroke: var(--lab-green);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.9));
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  opacity: 0;
+  animation: lab-intro-bolt 2.2s ease-out 1;
+}
+
+@keyframes lab-intro-bolt {
+  0%, 8% { stroke-dashoffset: 260; opacity: 0; }
+  10% { opacity: 1; }
+  22% { stroke-dashoffset: 0; opacity: 1; }
+  40% { opacity: 0.9; }
+  52% { opacity: 0; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* ── Tesla nodes (inline-flow, in the title row) ─────────────────────────── */
+.lab-node {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 1em;
+  overflow: visible;
+}
+
+.lab-node__base {
+  fill: var(--surface-raised);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.lab-node__ball {
+  fill: var(--lab-green-deep);
+  stroke: var(--lab-green);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 5px rgba(57, 255, 20, 0.7));
+}
+
+.lab-node__arc {
+  stroke: var(--lab-green);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(57, 255, 20, 0.9));
+  opacity: 0;
+  animation: lab-node-spark 7s ease-out 2.4s infinite;
+}
+
+.lab-node--right .lab-node__arc {
+  animation-duration: 8s;
+  animation-delay: 3.4s;
+}
+
+@keyframes lab-node-spark {
+  0%, 97%, 100% { opacity: 0; }
+  98% { opacity: 1; }
+  99% { opacity: 0.4; }
+}
+
+/* ── Title seam (inline in the FrankenData gap) ──────────────────────────── */
+.lab-title__seam {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0.06em;
+  vertical-align: baseline;
+}
+
+.lab-title__seam-svg {
+  width: 0.34em;
+  height: 0.72em; /* capped to about title cap height */
+}
+
+.lab-seam-line {
+  stroke: var(--lab-green-deep);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.lab-seam-stitch {
+  stroke: var(--lab-green);
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgba(57, 255, 20, 0.7));
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: lab-seam-stitch 2.2s ease-out 1 forwards;
+}
+
+.lab-seam-stitch:nth-child(1) { animation-delay: 0.48s; }
+.lab-seam-stitch:nth-child(2) { animation-delay: 0.54s; }
+.lab-seam-stitch:nth-child(3) { animation-delay: 0.60s; }
+.lab-seam-stitch:nth-child(4) { animation-delay: 0.66s; }
+.lab-seam-stitch:nth-child(5) { animation-delay: 0.72s; }
+.lab-seam-stitch:nth-child(6) { animation-delay: 0.78s; }
+.lab-seam-stitch:nth-child(7) { animation-delay: 0.84s; }
+.lab-seam-stitch:nth-child(8) { animation-delay: 0.90s; }
+
+@keyframes lab-seam-stitch {
+  from { stroke-dashoffset: 14; }
+  to { stroke-dashoffset: 0; }
+}
+
+@media (max-width: 639px) {
+  .lab-node { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-intro__flash,
+  .lab-intro__bolt-path,
+  .lab-node__arc {
+    animation: none;
+    opacity: 0;
+  }
+  .lab-seam-stitch {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

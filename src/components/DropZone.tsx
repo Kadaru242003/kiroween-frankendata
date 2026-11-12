@@ -172,6 +172,27 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
         onClick={openFilePicker}
         onKeyDown={handleKeyDown}
       >
+        <svg
+          className="frankendata-dropzone__flask"
+          viewBox="0 0 48 56"
+          aria-hidden="true"
+        >
+          {/* Flask outline: neck and conical body (no face, purely glassware). */}
+          <path
+            className="frankendata-dropzone__flask-glass"
+            d="M19 4 h10 v16 l11 26 a3 3 0 0 1 -3 4 h-26 a3 3 0 0 1 -3 -4 l11 -26 z"
+            fill="none"
+          />
+          {/* Liquid line near the bottom of the body. */}
+          <path
+            className="frankendata-dropzone__flask-liquid"
+            d="M13.5 40 h21 l4 6 a3 3 0 0 1 -3 4 h-23 a3 3 0 0 1 -3 -4 z"
+          />
+          {/* Slow rising bubbles. */}
+          <circle className="frankendata-dropzone__bubble frankendata-dropzone__bubble--1" cx="21" cy="46" r="1.6" />
+          <circle className="frankendata-dropzone__bubble frankendata-dropzone__bubble--2" cx="26" cy="47" r="1.2" />
+          <circle className="frankendata-dropzone__bubble frankendata-dropzone__bubble--3" cx="24" cy="48" r="2" />
+        </svg>
         <p className="frankendata-dropzone__headline">
           Drop CSV or XLSX files into the intake port
         </p>

@@ -24,19 +24,110 @@
 }
 
 .lab-header {
+  position: relative;
   text-align: center;
 }
 
+/*
+ * Title row: [left node] [h1] [right node] on one centered line. The nodes are
+ * compact (1em tall) so nothing in this row extends below the title line, and
+ * they sit beside the words instead of over the subtitle.
+ */
+.lab-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
 .lab-title {
-  margin: 0 0 8px;
+  display: inline-flex;
+  align-items: baseline;
+  margin: 0;
   color: var(--lab-green);
   text-shadow: 0 0 18px rgba(57, 255, 20, 0.35);
 }
 
 .lab-subtitle {
-  margin: 0 auto;
+  margin: 16px auto 0;
   max-width: 48ch;
   color: var(--text-secondary);
+}
+
+/*
+ * Intro "It's alive!" motion on the title and subtitle. The strike lands at
+ * about 0.45s (see LabIntro.css), so the title jolts and its glow surges then,
+ * and the subtitle fades in just after. CSS animations run once on first paint,
+ * so the intro plays once per page load with no JS. Idle flicker continues
+ * after the intro, subtly.
+ */
+@keyframes lab-title-jolt {
+  0%,
+  44% {
+    transform: translate3d(0, 0, 0);
+    text-shadow: 0 0 18px rgba(57, 255, 20, 0.35);
+  }
+  46% {
+    transform: translate3d(-3px, 1px, 0);
+    text-shadow: 0 0 36px rgba(57, 255, 20, 0.95);
+  }
+  49% {
+    transform: translate3d(3px, -2px, 0);
+  }
+  52% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+  55% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    text-shadow: 0 0 22px rgba(57, 255, 20, 0.55);
+  }
+}
+
+@keyframes lab-title-flicker {
+  0%,
+  92%,
+  100% {
+    text-shadow: 0 0 22px rgba(57, 255, 20, 0.55);
+  }
+  94% {
+    text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+  }
+  96% {
+    text-shadow: 0 0 34px rgba(57, 255, 20, 0.9);
+  }
+}
+
+@keyframes lab-subtitle-fade {
+  0%,
+  55% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.lab-title {
+  animation:
+    lab-title-jolt 2.2s ease-out 1,
+    lab-title-flicker 7s ease-in-out 2.2s infinite;
+}
+
+.lab-subtitle {
+  animation: lab-subtitle-fade 2.2s ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-title {
+    animation: none;
+    text-shadow: 0 0 22px rgba(57, 255, 20, 0.55);
+  }
+  .lab-subtitle {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* Initialization status banners (Summoning the lab… / error). */
@@ -310,5 +401,70 @@
 @media (prefers-reduced-motion: reduce) {
   .lab-stitch__result--alive {
     animation: none;
+  }
+}
+
+/* App-wide: a disabled button never shows a busy (wait/progress) cursor. */
+button:disabled,
+button[disabled] {
+  cursor: not-allowed;
+}
+
+/*
+ * Item 9: lab atmosphere. A very faint green grid (about 4% opacity, 32px
+ * cells) and a soft dark vignette at the edges, behind all page content. CSS
+ * only, fixed to the viewport so it never scrolls or affects layout, and never
+ * placed over text in a way that reduces contrast (it sits on the body, under
+ * the opaque surfaces that hold text).
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(57, 255, 20, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 255, 20, 0.04) 1px, transparent 1px),
+    radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0) 55%,
+      rgba(0, 0, 0, 0.55) 100%
+    );
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+
+#lab {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Item 10: electric hover. Primary buttons get a quick green glow pulse on
+ * hover and keyboard focus (box-shadow only). Disabled buttons get none.
+ */
+.approval-screen__confirm:not(:disabled):hover,
+.approval-screen__confirm:not(:disabled):focus-visible,
+.join-controls__apply:not(:disabled):hover,
+.join-controls__apply:not(:disabled):focus-visible,
+.ask-panel__submit:not(:disabled):hover,
+.ask-panel__submit:not(:disabled):focus-visible,
+.lab-reset__button:not(:disabled):hover,
+.lab-reset__button:not(:disabled):focus-visible {
+  animation: lab-electric-pulse 300ms ease-out 1;
+}
+
+@keyframes lab-electric-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0); }
+  50% { box-shadow: 0 0 14px 2px rgba(57, 255, 20, 0.6); }
+  100% { box-shadow: 0 0 6px 1px rgba(57, 255, 20, 0.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .approval-screen__confirm,
+  .join-controls__apply,
+  .ask-panel__submit,
+  .lab-reset__button {
+    animation: none !important;
   }
 }

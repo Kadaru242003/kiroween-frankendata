@@ -31,6 +31,9 @@ import { intakeStore, useIntakeStore } from './state/intake-store'
 import type { DuckDBService, IntakeController, LoadedTable } from './core/types'
 import { DropZone } from './components/DropZone'
 import { DemoDataControl } from './components/DemoDataControl'
+import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
+import { Specimen } from './components/Specimen'
+import { useAskStore } from './state/ask-store'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
 import { ErrorDisplay } from './components/ErrorDisplay'
 import { StitchStore } from './core/stitching/stitch-store'
@@ -506,7 +509,18 @@ function App() {
   return (
     <main id="lab">
       <header className="lab-header">
-        <h1 className="lab-title">FrankenData</h1>
+        <LabIntro />
+        <div className="lab-title-row">
+          <TeslaNode side="left" />
+          <h1 className="lab-title">
+            <span>Franken</span>
+            <span className="lab-title__seam" aria-hidden="true">
+              <TitleSeam />
+            </span>
+            <span>Data</span>
+          </h1>
+          <TeslaNode side="right" />
+        </div>
         <p className="lab-subtitle">
           Drag messy CSV or XLSX files into the lab and watch them come alive.
         </p>
@@ -633,9 +647,69 @@ function App() {
             tables={tables}
             duckDBService={status.stack.duckDBService}
           />
+
+          {/*
+            The Specimen mascot. Rendered here (inside the ready block) so the
+            stores exist; it reads read-only state and renders nothing that
+            changes app logic. See SpecimenRegion.
+          */}
+          <SpecimenRegion
+            tableCount={tables.length}
+            intakeError={errors.length > 0}
+            stitchStore={status.stack.stitchStore}
+            askStore={status.stack.askStore}
+          />
         </>
       ) : null}
     </main>
+  )
+}
+
+/** Props for {@link SpecimenRegion}. */
+interface SpecimenRegionProps {
+  tableCount: number
+  intakeError: boolean
+  stitchStore: StitchStore
+  askStore: AskStore
+}
+
+/**
+ * Derives the Specimen's read-only story-state props from existing state and
+ * renders the mascot. Subscribes to the stitch and ask stores (read only) so
+ * the Specimen reacts to proposals showing, approvals, the stitched result,
+ * and the Ask the Lab pending/result states. No app logic changes.
+ */
+function SpecimenRegion({
+  tableCount,
+  intakeError,
+  stitchStore,
+  askStore,
+}: SpecimenRegionProps) {
+  const stitch = useStitchStore(stitchStore)
+  const { outcome, loading } = useAskStore(askStore)
+
+  const proposals = stitch.proposals
+  const proposalsShowing =
+    proposals !== null &&
+    (proposals.matches.length > 0 || proposals.cleanings.length > 0)
+  // Count decisions that are an applied approval ("approved" or "edited").
+  let approvedCount = 0
+  for (const decision of Object.values(stitch.decisions)) {
+    if (decision.decision === 'approved' || decision.decision === 'edited') {
+      approvedCount += 1
+    }
+  }
+
+  return (
+    <Specimen
+      tableCount={tableCount}
+      proposalsShowing={proposalsShowing}
+      approvedCount={approvedCount}
+      stitched={stitch.stitchedTable !== null}
+      askPending={loading}
+      askResult={outcome?.kind === 'ok'}
+      intakeError={intakeError}
+    />
   )
 }
 

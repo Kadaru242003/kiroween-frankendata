@@ -175,9 +175,27 @@ export function AskTheLabPanel({
       ) : null}
 
       {loading ? (
-        <p className="ask-panel__loading" role="status">
-          Consulting the lab…
-        </p>
+        <div
+          className="ask-panel__brewing"
+          role="status"
+          aria-live="polite"
+        >
+          <svg className="ask-panel__brew-flask" viewBox="0 0 48 56" aria-hidden="true">
+            <path
+              className="ask-panel__brew-glass"
+              d="M19 4 h10 v16 l11 26 a3 3 0 0 1 -3 4 h-26 a3 3 0 0 1 -3 -4 l11 -26 z"
+              fill="none"
+            />
+            <path
+              className="ask-panel__brew-liquid"
+              d="M13.5 40 h21 l4 6 a3 3 0 0 1 -3 4 h-23 a3 3 0 0 1 -3 -4 z"
+            />
+            <circle className="ask-panel__brew-bubble ask-panel__brew-bubble--1" cx="21" cy="46" r="1.6" />
+            <circle className="ask-panel__brew-bubble ask-panel__brew-bubble--2" cx="26" cy="47" r="1.2" />
+            <circle className="ask-panel__brew-bubble ask-panel__brew-bubble--3" cx="24" cy="48" r="2" />
+          </svg>
+          <p className="ask-panel__brew-text">Brewing your query...</p>
+        </div>
       ) : null}
 
       {!loading && outcome ? (

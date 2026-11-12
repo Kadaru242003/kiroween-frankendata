@@ -36,7 +36,7 @@ export const LOAD_DEMO_DATA_LABEL = "Load demo data";
 export const LOAD_DEMO_DATA_LOADING_LABEL = "Loading…";
 
 /** The label shown when this demo's tables are already loaded (Req: idempotent demo load). */
-export const DEMO_ALREADY_LOADED_LABEL = "Already loaded";
+export const DEMO_ALREADY_LOADED_LABEL = "\u2713 Already loaded";
 
 /** Props for {@link DemoDataControl}. */
 export interface DemoDataControlProps {
