@@ -1,13 +1,14 @@
 /**
- * Specimen — a presentational lab mascot fixed in the bottom-left corner.
+ * Specimen (shown to users as "Little Frank") — a presentational lab mascot
+ * fixed in the bottom-left corner.
  *
- * The Specimen is a tiny creature built from spreadsheet cells, standing on a
+ * Little Frank is a tiny creature built from spreadsheet cells, standing on a
  * simple SVG operating slab. It draws no movie monster: no flat head, no neck
  * bolts, no green-skinned humanoid face, just cells, stitches, an electrode,
  * and the occasional spark.
  *
  * It is decorative but interactive: the whole creature is wrapped in a real
- * <button aria-label="Poke the Specimen"> so it is keyboard reachable with a
+ * <button aria-label="Poke Little Frank"> so it is keyboard reachable with a
  * visible focus ring, while the slab and body SVGs are aria-hidden. It changes
  * no app state: all story states come from read-only props, and poking only
  * plays a short local animation.
@@ -78,6 +79,19 @@ const POKE_REACTIONS: Reaction[] = [
   "poke-spin",
   "poke-giggle",
 ];
+
+/**
+ * Whether an Ask the Lab answer is currently on screen. The ask store keeps the
+ * latest answer in `outcome` (set by both typed questions and starter chips),
+ * and the panel hides it while a new question is `loading`, so the mascot only
+ * holds the chart sign when there is an `ok` outcome AND nothing is pending.
+ */
+export function isAskResultShown(
+  outcome: { kind: string } | null,
+  loading: boolean
+): boolean {
+  return !loading && outcome !== null && outcome.kind === "ok";
+}
 
 function prefersReducedMotion(): boolean {
   return (
@@ -229,15 +243,16 @@ export function Specimen(props: SpecimenProps): JSX.Element {
 
   // Accessory flags that persist while their state holds.
   const wearGoggles = proposalsShowing && !askResult;
-  const holdClipboard = awake && approvedCount > 0 && !stitched;
   const holdChart = askResult;
+  // The chart sign takes the same hand as the clipboard, so only one at a time.
+  const holdClipboard = awake && approvedCount > 0 && !stitched && !holdChart;
 
   return (
     <div className="specimen-layer">
       <button
         type="button"
         className="specimen-button"
-        aria-label="Poke the Specimen"
+        aria-label="Poke Little Frank"
         onClick={handlePoke}
       >
         <span className={className} aria-hidden="true">
@@ -253,16 +268,6 @@ export function Specimen(props: SpecimenProps): JSX.Element {
 
           {/* Zzz when asleep. */}
           {!awake ? <span className="specimen__zzz">Zzz</span> : null}
-
-          {/* Bar-chart sign held up while an Ask result is shown. */}
-          {holdChart ? (
-            <svg className="specimen__sign" viewBox="0 0 24 18">
-              <rect className="specimen__sign-bg" x="0.5" y="0.5" width="23" height="17" rx="2" />
-              <rect className="specimen__bar" x="4" y="9" width="3" height="6" />
-              <rect className="specimen__bar" x="9" y="5" width="3" height="10" />
-              <rect className="specimen__bar" x="14" y="7" width="3" height="8" />
-            </svg>
-          ) : null}
 
           {/* Lightning bolt for the alive / poke-jolt reactions. */}
           <svg className="specimen__bolt" viewBox="0 0 24 44">
@@ -284,8 +289,10 @@ export function Specimen(props: SpecimenProps): JSX.Element {
             <rect className="specimen__arm specimen__arm--left" x="4" y="52" width="12" height="6" rx="3" />
             <rect className="specimen__arm specimen__arm--right" x="48" y="52" width="12" height="6" rx="3" />
             {/* Legs. */}
-            <rect className="specimen__leg specimen__leg--left" x="22" y="80" width="7" height="8" rx="3" />
-            <rect className="specimen__leg specimen__leg--right" x="35" y="80" width="7" height="8" rx="3" />
+            {/* Legs run from under the body (y 64) down onto the slab (y 84)
+                so there is no gap between the grid and the feet. */}
+            <rect className="specimen__leg specimen__leg--left" x="22" y="64" width="7" height="22" rx="3" />
+            <rect className="specimen__leg specimen__leg--right" x="35" y="64" width="7" height="22" rx="3" />
 
             {/* Electrode on top of the head (sparks when awake). */}
             <line className="specimen__electrode" x1="32" y1="6" x2="32" y2="1" />
@@ -315,6 +322,11 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               <line x1="18" y1="53" x2="14" y2="57" />
               <line x1="46" y1="53" x2="50" y2="57" />
               <line x1="50" y1="53" x2="46" y2="57" />
+              {/* Hip stitches joining each leg to the body. */}
+              <line x1="22" y1="68" x2="29" y2="72" />
+              <line x1="29" y1="68" x2="22" y2="72" />
+              <line x1="35" y1="68" x2="42" y2="72" />
+              <line x1="42" y1="68" x2="35" y2="72" />
             </g>
 
             {/* Goggles (proposals showing). */}
@@ -353,6 +365,21 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               </g>
             ) : null}
           </svg>
+
+          {/*
+            Bar-chart sign held up while an Ask result is shown. It is drawn
+            AFTER the body SVG (and given a z-index in CSS) because the body has
+            an animated transform, which creates a stacking context that would
+            otherwise paint over an earlier sibling and hide the sign.
+          */}
+          {holdChart ? (
+            <svg className="specimen__sign" viewBox="0 0 24 18">
+              <rect className="specimen__sign-bg" x="0.5" y="0.5" width="23" height="17" rx="2" />
+              <rect className="specimen__bar" x="4" y="9" width="3" height="6" />
+              <rect className="specimen__bar" x="9" y="5" width="3" height="10" />
+              <rect className="specimen__bar" x="14" y="7" width="3" height="8" />
+            </svg>
+          ) : null}
         </span>
       </button>
     </div>

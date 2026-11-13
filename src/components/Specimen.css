@@ -189,11 +189,12 @@
 
 .specimen__sign {
   position: absolute;
-  left: 50%;
-  top: 6px;
-  width: 24px;
-  height: 18px;
-  transform: translateX(-50%);
+  /* Held up beside the right arm, above the shoulder, clear of the head. */
+  left: 66px;
+  top: 48px;
+  width: 28px;
+  height: 21px;
+  z-index: 3;
 }
 
 .specimen__sign-bg {

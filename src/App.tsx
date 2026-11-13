@@ -32,7 +32,7 @@ import type { DuckDBService, IntakeController, LoadedTable } from './core/types'
 import { DropZone } from './components/DropZone'
 import { DemoDataControl } from './components/DemoDataControl'
 import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
-import { Specimen } from './components/Specimen'
+import { Specimen, isAskResultShown } from './components/Specimen'
 import { useAskStore } from './state/ask-store'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
 import { ErrorDisplay } from './components/ErrorDisplay'
@@ -707,7 +707,7 @@ function SpecimenRegion({
       approvedCount={approvedCount}
       stitched={stitch.stitchedTable !== null}
       askPending={loading}
-      askResult={outcome?.kind === 'ok'}
+      askResult={isAskResultShown(outcome, loading)}
       intakeError={intakeError}
     />
   )
