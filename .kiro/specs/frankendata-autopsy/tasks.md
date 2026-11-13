@@ -53,17 +53,17 @@ Feature 4 adds "The Autopsy": a data quality report for any loaded table or stit
   - Smoke tests: partial then complete render, too-large message, error and retry, export buttons call the download helper, Fix it button invokes its callback, the TablePreview button
   - _Design: UI layout; Requirements 1, 5.3, 6, 8_
 
-- [ ] 8. App integration and cleanup-only Fix it flow
+- [x] 8. App integration and cleanup-only Fix it flow
   - In `App.tsx`: autopsy target state, render the panel, close it when its table disappears, `handleFixIt`, and the `cleanupOnly` flag so the approval screen opens with one table
   - Keep all existing stitching behavior unchanged for two or more tables
   - _Design: Fix it mapping; Requirements 1.2 to 1.6, 5.3, 5.4, 5.6_
 
-- [ ] 9. Little Frank magnifying glass
+- [x] 9. Little Frank magnifying glass
   - Add the optional `autopsyOpen` prop to `Specimen` and `SpecimenRegion`, the magnifying-glass accessory, and the `specimen--investigating` class
   - Smoke test: the glass shows when open and the chart sign and clipboard are suppressed
   - _Design: Little Frank integration; Requirement 8.5_
 
-- [ ] 10. **Checkpoint**
+- [x] 10. **Checkpoint**
   - Run `npm run build` and the autopsy, TablePreview, and Specimen tests; fix any failures
 
 - [ ] 11. DuckDB property tests

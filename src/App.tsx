@@ -33,6 +33,7 @@ import { DropZone } from './components/DropZone'
 import { DemoDataControl } from './components/DemoDataControl'
 import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
 import { Specimen, isAskResultShown } from './components/Specimen'
+import { CaseFilePanel } from './components/autopsy/CaseFilePanel'
 import { useAskStore } from './state/ask-store'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
 import { ErrorDisplay } from './components/ErrorDisplay'
@@ -258,6 +259,11 @@ function App() {
   // Whether the stitching approval screen is currently open. Only reachable
   // once two or more tables are loaded; see MIN_TABLES_FOR_STITCHING.
   const [stitchOpen, setStitchOpen] = useState(false)
+  // The table whose Autopsy case file is open, or null (Autopsy Req 1).
+  const [autopsyTable, setAutopsyTable] = useState<LoadedTable | null>(null)
+  // True when the approval screen was opened by an Autopsy "Fix it" so it can
+  // show with a single table (Autopsy Req 5.6). Does not affect stitching.
+  const [cleanupOnly, setCleanupOnly] = useState(false)
   // The plan the user confirmed on the approval screen and is now adjusting in
   // JoinControls (anchor + per-pair join keys). null until confirm; cleared on
   // undo. Nothing is applied to DuckDB until the user hits "Apply & stitch".
@@ -390,6 +396,8 @@ function App() {
     setUncheckedTableNames(new Set())
     setWorkingPlan(null)
     setStitchOpen(false)
+    setCleanupOnly(false)
+    setAutopsyTable(null)
     queryableTableNamesHolder = []
     queryableSchemaSourceHolder = []
   }, [stack])
@@ -436,7 +444,58 @@ function App() {
 
   const handleCloseStitch = useCallback(() => {
     setStitchOpen(false)
+    setCleanupOnly(false)
   }, [])
+
+  // Autopsy: open a case file for a table (original or stitched result). Only
+  // one panel is open at a time; opening another replaces it (Autopsy Req 1.4).
+  const handleAutopsy = useCallback((table: LoadedTable) => {
+    setAutopsyTable(table)
+  }, [])
+
+  // Autopsy "Fix it": hand the existing cleaning proposal to the existing
+  // approval flow. Nothing is applied here: the proposal is approved in the
+  // StitchStore and the approval screen opens (in cleanup-only mode when fewer
+  // than two tables are loaded). The user still confirms, applies, and can undo.
+  const handleFixIt = useCallback(
+    async (tableName: string, proposalId: string) => {
+      if (stack === null) {
+        return
+      }
+      // The table must participate in the proposal computation. Update the
+      // selection the controller reads right now (the effect that mirrors React
+      // state into it runs only after the next render).
+      setUncheckedTableNames((prev) => toggleUnchecked(prev, tableName, true))
+      const checked = new Set(
+        tables
+          .map((t) => t.tableName)
+          .filter((name) => !uncheckedTableNames.has(name)),
+      )
+      checked.add(tableName)
+      selectedTableNamesHolder = checked
+
+      const store = stack.stitchStore
+      let proposals = store.getState().proposals
+      if (
+        proposals === null ||
+        !proposals.cleanings.some((c) => c.id === proposalId)
+      ) {
+        try {
+          proposals = await stack.stitchController.computeProposals()
+        } catch {
+          proposals = null
+        }
+      }
+      if (proposals !== null && proposals.cleanings.some((c) => c.id === proposalId)) {
+        store.setDecision({ proposalId, decision: 'approved' })
+      }
+      setWorkingPlan(null)
+      setAutopsyTable(null)
+      setCleanupOnly(true)
+      setStitchOpen(true)
+    },
+    [stack, tables, uncheckedTableNames],
+  )
 
   // The user confirmed on the approval screen: hold the assembled plan so the
   // JoinControls can adjust the anchor / join keys before applying. Nothing is
@@ -500,11 +559,14 @@ function App() {
   // flow), close the screen so a stale view is never shown without an entry
   // point.
   useEffect(() => {
-    if (!canStitch && stitchOpen) {
+    // The approval screen also stays open with a single table when it was
+    // opened by an Autopsy "Fix it" (cleanup-only mode), but never with none.
+    if (stitchOpen && (tables.length === 0 || (!canStitch && !cleanupOnly))) {
       setStitchOpen(false)
+      setCleanupOnly(false)
       setWorkingPlan(null)
     }
-  }, [canStitch, stitchOpen])
+  }, [canStitch, stitchOpen, cleanupOnly, tables.length])
 
   return (
     <main id="lab">
@@ -594,7 +656,7 @@ function App() {
             />
           )}
 
-          {canStitch && stitchOpen ? (
+          {(canStitch || cleanupOnly) && stitchOpen ? (
             <section className="lab-stitch" aria-label="Stitching table">
               <button
                 type="button"
@@ -624,6 +686,7 @@ function App() {
                   onChangeJoinKey={handleChangeJoinKey}
                   onApply={handleApplyPlan}
                   onCancel={handleUndoStitch}
+                  onAutopsy={handleAutopsy}
                 />
               ) : null}
             </section>
@@ -643,9 +706,24 @@ function App() {
             stitchStore={status.stack.stitchStore}
           />
 
+          {/*
+            Autopsy case file: a data quality report for the selected table,
+            computed locally with read-only SQL (no AI, no network). Closes
+            itself when its table disappears (Reset lab, undone stitch).
+          */}
+          <AutopsyRegion
+            target={autopsyTable}
+            loadedTables={tables}
+            duckDBService={status.stack.duckDBService}
+            stitchStore={status.stack.stitchStore}
+            onClose={() => setAutopsyTable(null)}
+            onFixIt={handleFixIt}
+          />
+
           <TablePreviewRegion
             tables={tables}
             duckDBService={status.stack.duckDBService}
+            onAutopsy={handleAutopsy}
           />
 
           {/*
@@ -655,6 +733,7 @@ function App() {
           */}
           <SpecimenRegion
             tableCount={tables.length}
+            autopsyOpen={autopsyTable !== null}
             intakeError={errors.length > 0}
             stitchStore={status.stack.stitchStore}
             askStore={status.stack.askStore}
@@ -665,8 +744,67 @@ function App() {
   )
 }
 
+/** Props for {@link AutopsyRegion}. */
+interface AutopsyRegionProps {
+  target: LoadedTable | null
+  loadedTables: readonly LoadedTable[]
+  duckDBService: DuckDBService
+  stitchStore: StitchStore
+  onClose: () => void
+  onFixIt: (tableName: string, proposalId: string) => void
+}
+
+/**
+ * Renders the Autopsy case file for the chosen table. It subscribes to the
+ * stitch store (read only) to know whether a stitched result still exists, and
+ * closes itself when the target is gone (Reset lab or an undone stitch,
+ * Autopsy Req 1.6). "Fix it" is offered only for loaded tables: the existing
+ * approval flow works on loaded tables, not on stitched results.
+ */
+function AutopsyRegion({
+  target,
+  loadedTables,
+  duckDBService,
+  stitchStore,
+  onClose,
+  onFixIt,
+}: AutopsyRegionProps) {
+  const { stitchedTable } = useStitchStore(stitchStore)
+  const isLoaded =
+    target !== null && loadedTables.some((t) => t.tableName === target.tableName)
+  const isStitched =
+    target !== null && stitchedTable?.tableName === target.tableName
+  const exists = isLoaded || isStitched
+
+  useEffect(() => {
+    if (target !== null && !exists) {
+      onClose()
+    }
+  }, [target, exists, onClose])
+
+  if (target === null || !exists) {
+    return null
+  }
+  return (
+    <section className="lab-autopsy" aria-label="Autopsy">
+      <CaseFilePanel
+        db={duckDBService}
+        target={{
+          tableName: target.tableName,
+          schema: target.schema,
+          rowCount: target.rowCount,
+        }}
+        fixable={isLoaded}
+        onClose={onClose}
+        onFixIt={onFixIt}
+      />
+    </section>
+  )
+}
+
 /** Props for {@link SpecimenRegion}. */
 interface SpecimenRegionProps {
+  autopsyOpen: boolean
   tableCount: number
   intakeError: boolean
   stitchStore: StitchStore
@@ -680,6 +818,7 @@ interface SpecimenRegionProps {
  * and the Ask the Lab pending/result states. No app logic changes.
  */
 function SpecimenRegion({
+  autopsyOpen,
   tableCount,
   intakeError,
   stitchStore,
@@ -703,6 +842,7 @@ function SpecimenRegion({
   return (
     <Specimen
       tableCount={tableCount}
+      autopsyOpen={autopsyOpen}
       proposalsShowing={proposalsShowing}
       approvedCount={approvedCount}
       stitched={stitch.stitchedTable !== null}
@@ -811,6 +951,8 @@ function AskPanelRegion({
 interface TablePreviewRegionProps {
   tables: readonly LoadedTable[]
   duckDBService: DuckDBService
+  /** Optional: shows an "Autopsy" button on each card (Autopsy Req 1.1). */
+  onAutopsy?: (table: LoadedTable) => void
 }
 
 /**
@@ -822,7 +964,11 @@ interface TablePreviewRegionProps {
  * empty previews and fill in as their rows resolve, so the async fetch never
  * blocks the UI (Req 7.2).
  */
-function TablePreviewRegion({ tables, duckDBService }: TablePreviewRegionProps) {
+function TablePreviewRegion({
+  tables,
+  duckDBService,
+  onAutopsy,
+}: TablePreviewRegionProps) {
   const [previews, setPreviews] = useState<TablePreviewData[]>([])
   // Track the latest effect run so a stale fetch (from a superseded table list)
   // cannot overwrite fresher preview data.
@@ -861,7 +1007,7 @@ function TablePreviewRegion({ tables, duckDBService }: TablePreviewRegionProps) 
     }
   }, [tables, duckDBService])
 
-  return <TablePreview tables={previews} />
+  return <TablePreview tables={previews} onAutopsy={onAutopsy} />
 }
 
 /** Props for {@link StitchStage}. */
@@ -874,6 +1020,8 @@ interface StitchStageProps {
   onChangeJoinKey: (pairKeyValue: string, nextMatchId: string) => void
   onApply: () => void
   onCancel: () => void
+  /** Opens an Autopsy on the stitched result (Autopsy Req 1.1). */
+  onAutopsy: (table: LoadedTable) => void
 }
 
 /**
@@ -895,6 +1043,7 @@ function StitchStage({
   onChangeJoinKey,
   onApply,
   onCancel,
+  onAutopsy,
 }: StitchStageProps) {
   const { stitchedTable, fanOut } = useStitchStore(store)
   const applied = stitchedTable !== null
@@ -944,6 +1093,7 @@ function StitchStage({
           <TablePreviewRegion
             tables={[stitchedTable]}
             duckDBService={duckDBService}
+            onAutopsy={onAutopsy}
           />
         </section>
       ) : null}

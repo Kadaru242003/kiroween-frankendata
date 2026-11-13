@@ -84,6 +84,29 @@ describe("Specimen (Little Frank)", () => {
     expect(legTop).toBeLessThanOrEqual(frameBottom);
   });
 
+  it("holds a magnifying glass while an Autopsy is open and not otherwise", () => {
+    const open = renderSpecimen({ tableCount: 2, autopsyOpen: true });
+    expect(open.container.querySelector(".specimen__magnifier")).not.toBeNull();
+    expect(open.container.querySelector(".specimen--investigating")).not.toBeNull();
+    open.unmount();
+
+    const closed = renderSpecimen({ tableCount: 2 });
+    expect(closed.container.querySelector(".specimen__magnifier")).toBeNull();
+    expect(closed.container.querySelector(".specimen--investigating")).toBeNull();
+  });
+
+  it("suppresses the chart sign and clipboard while the magnifying glass shows", () => {
+    const { container } = renderSpecimen({
+      tableCount: 2,
+      autopsyOpen: true,
+      askResult: true,
+      approvedCount: 2,
+    });
+    expect(container.querySelector(".specimen__magnifier")).not.toBeNull();
+    expect(container.querySelector(".specimen__sign")).toBeNull();
+    expect(container.querySelector(".specimen__clipboard")).toBeNull();
+  });
+
   it("does not throw when poked", () => {
     const { getByRole } = renderSpecimen({ tableCount: 2 });
     const button = getByRole("button", { name: "Poke Little Frank" });

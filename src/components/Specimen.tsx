@@ -41,6 +41,12 @@ export interface SpecimenProps {
   askResult: boolean;
   /** An intake error exists (plaster, dizzy stars, head shake). */
   intakeError: boolean;
+  /**
+   * An Autopsy case file is open: Little Frank holds a magnifying glass. It
+   * uses the same hand as the chart sign and clipboard, so those are hidden
+   * while it shows. Optional, default false.
+   */
+  autopsyOpen?: boolean;
 }
 
 /** A transient reaction the Specimen plays for a short time, then clears. */
@@ -111,6 +117,7 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     askResult,
     intakeError,
   } = props;
+  const autopsyOpen = props.autopsyOpen ?? false;
 
   const reduced = prefersReducedMotion();
   const awake = tableCount > 0;
@@ -237,15 +244,18 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     reaction ? `specimen--react-${reaction}` : "",
     reduced ? "specimen--reduced" : "",
     askPending ? "specimen--thinking" : "",
+    autopsyOpen ? "specimen--investigating" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   // Accessory flags that persist while their state holds.
   const wearGoggles = proposalsShowing && !askResult;
-  const holdChart = askResult;
-  // The chart sign takes the same hand as the clipboard, so only one at a time.
-  const holdClipboard = awake && approvedCount > 0 && !stitched && !holdChart;
+  // The magnifying glass, chart sign, and clipboard share the same hand, so
+  // only one shows at a time, with the magnifying glass taking priority.
+  const holdChart = askResult && !autopsyOpen;
+  const holdClipboard =
+    awake && approvedCount > 0 && !stitched && !holdChart && !autopsyOpen;
 
   return (
     <div className="specimen-layer">
@@ -345,6 +355,14 @@ export function Specimen(props: SpecimenProps): JSX.Element {
                 <rect className="specimen__bandage" x="4" y="53" width="12" height="4" rx="1" />
                 <rect className="specimen__patch" x="30" y="44" width="10" height="10" rx="1" />
                 <rect className="specimen__extra-cell" x="46" y="40" width="9" height="12" rx="1" />
+              </g>
+            ) : null}
+
+            {/* Magnifying glass held in the right hand while an Autopsy is open. */}
+            {autopsyOpen ? (
+              <g className="specimen__magnifier">
+                <circle cx="56" cy="44" r="6.5" />
+                <line x1="52" y1="49" x2="49" y2="55" />
               </g>
             ) : null}
 

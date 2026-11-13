@@ -402,3 +402,16 @@
   }
   .specimen__bolt { opacity: 0; }
 }
+
+/* Magnifying glass held while an Autopsy case file is open. */
+.specimen__magnifier circle {
+  fill: rgba(57, 255, 20, 0.14);
+  stroke: var(--amber-accent);
+  stroke-width: 1.8;
+}
+
+.specimen__magnifier line {
+  stroke: var(--text-secondary);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
