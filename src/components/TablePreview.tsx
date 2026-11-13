@@ -40,6 +40,11 @@ export interface TablePreviewData {
 export interface TablePreviewProps {
   /** The tables to preview; one card is rendered per entry (Req 7.1). */
   tables: TablePreviewData[]
+  /**
+   * Optional: when provided, each card shows an "Autopsy" button that reports
+   * its table here (Autopsy Req 1.1). Omitted, the cards are unchanged.
+   */
+  onAutopsy?: (table: LoadedTable) => void
 }
 
 /**
@@ -66,7 +71,11 @@ function rowCountLabel(rowCount: number): string {
 }
 
 /** A single table's preview card. */
-function TablePreviewCard({ table, previewRows }: TablePreviewData) {
+function TablePreviewCard({
+  table,
+  previewRows,
+  onAutopsy,
+}: TablePreviewData & { onAutopsy?: (table: LoadedTable) => void }) {
   const { tableName, sourceFileName, schema, rowCount } = table
   // Guard defensively: never render more than 20 rows even if the caller
   // passed more (Req 7.2).
@@ -79,6 +88,16 @@ function TablePreviewCard({ table, previewRows }: TablePreviewData) {
         <h3 className="table-preview-card__title">{tableName}</h3>
         <p className="table-preview-card__source">{sourceFileName}</p>
         <p className="table-preview-card__rowcount">{rowCountLabel(rowCount)}</p>
+        {onAutopsy ? (
+          <button
+            type="button"
+            className="table-preview-card__autopsy"
+            aria-label={`Autopsy of ${tableName}`}
+            onClick={() => onAutopsy(table)}
+          >
+            Autopsy
+          </button>
+        ) : null}
       </header>
 
       <div className="table-preview-card__scroll">
@@ -149,7 +168,7 @@ function TablePreviewCard({ table, previewRows }: TablePreviewData) {
  * are no tables, renders nothing so the App can decide what empty-state UI to
  * show.
  */
-export function TablePreview({ tables }: TablePreviewProps) {
+export function TablePreview({ tables, onAutopsy }: TablePreviewProps) {
   if (tables.length === 0) {
     return null
   }
@@ -160,6 +179,7 @@ export function TablePreview({ tables }: TablePreviewProps) {
           key={table.tableName}
           table={table}
           previewRows={previewRows}
+          onAutopsy={onAutopsy}
         />
       ))}
     </div>

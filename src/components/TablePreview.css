@@ -179,3 +179,26 @@
   color: var(--text-secondary);
   font-style: italic;
 }
+
+/* "Autopsy" entry point on each preview card (Autopsy feature). */
+.table-preview-card__autopsy {
+  margin-top: 6px;
+  align-self: flex-start;
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 12px;
+  border: 1px solid var(--amber-accent);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.table-preview-card__autopsy:hover {
+  box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.35) inset;
+}
+
+.table-preview-card__autopsy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -47,7 +47,7 @@ Feature 4 adds "The Autopsy": a data quality report for any loaded table or stit
   - Unit tests: JSON round trip equals the report, Markdown contains the score and breakdown, hostile names cannot start a heading or table row
   - _Design: UI layout; Requirements 6_
 
-- [ ] 7. CaseFilePanel UI and the TablePreview entry point
+- [x] 7. CaseFilePanel UI and the TablePreview entry point
   - Create `src/components/autopsy/CaseFilePanel.tsx`, `.css`, and `download.ts`: progressive rendering, status badges with text, breakdown, table findings, per-column details, Fix it buttons, export buttons, live region, error and too-large states, reduced motion
   - Add the optional `onAutopsy` prop and the "Autopsy" button to `TablePreview` cards
   - Smoke tests: partial then complete render, too-large message, error and retry, export buttons call the download helper, Fix it button invokes its callback, the TablePreview button

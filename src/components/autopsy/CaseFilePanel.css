@@ -1,0 +1,241 @@
+/*
+ * CaseFilePanel styling (Feature 4). Lab-theme variables only (plus one local
+ * critical color). Status is shown with text as well as color. The stamp-in
+ * animation is disabled under prefers-reduced-motion.
+ */
+
+.case-file {
+  --case-critical: #ff8a8a;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber-accent);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.case-file__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.case-file__header > div:first-child {
+  flex: 1 1 200px;
+}
+
+.case-file__label {
+  margin: 0;
+  color: var(--amber-accent);
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.case-file__title {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.case-stamp {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 14px;
+  border: 2px solid var(--lab-green);
+  border-radius: 6px;
+  color: var(--text-primary);
+  transform: rotate(-3deg);
+  animation: case-stamp-in 400ms ease-out 1;
+}
+
+.case-stamp__score {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.case-stamp__max {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.case-stamp__verdict {
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+@keyframes case-stamp-in {
+  from { transform: rotate(-3deg) scale(1.4); opacity: 0; }
+  to { transform: rotate(-3deg) scale(1); opacity: 1; }
+}
+
+.case-file__status {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.case-file__close,
+.case-file__retry,
+.case-file__export,
+.case-fix__button {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.case-file__close:focus-visible,
+.case-file__retry:focus-visible,
+.case-file__export:focus-visible,
+.case-fix__button:focus-visible,
+.case-col__details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.case-file__export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.case-section__title {
+  margin: 0 0 6px;
+  color: var(--text-h);
+  font-size: 15px;
+}
+
+.case-section__empty,
+.case-section__note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.case-breakdown,
+.case-facts,
+.case-cols,
+.case-col__list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.case-cols {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.case-breakdown__points {
+  color: var(--amber-accent);
+  font-weight: 600;
+}
+
+.case-col {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+}
+
+.case-col--healthy { border-left-color: var(--lab-green); }
+.case-col--warning { border-left-color: var(--amber-accent); }
+.case-col--critical { border-left-color: var(--case-critical); }
+
+.case-col__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.case-col__name {
+  color: var(--text-h);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.case-col__type {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.case-badge {
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.case-badge--healthy { color: var(--lab-green); }
+.case-badge--warning { color: var(--amber-accent); }
+.case-badge--critical { color: var(--case-critical); }
+
+.case-col__facts {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.case-col__details {
+  margin-top: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.case-col__details summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.case-col__fixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.case-fix {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.case-fix__label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.case-file__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .case-stamp {
+    animation: none;
+  }
+}
