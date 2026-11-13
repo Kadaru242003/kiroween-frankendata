@@ -12,37 +12,37 @@ Feature 4 adds "The Autopsy": a data quality report for any loaded table or stit
 
 ## Tasks
 
-- [ ] 1. Types, constants, SQL builders, and the DuckDB test harness
+- [x] 1. Types, constants, SQL builders, and the DuckDB test harness
   - Create `src/core/autopsy/types.ts` with the `AUTOPSY_*` constants and the report types from the design
   - Create `src/core/autopsy/autopsy-sql.ts`: `numLit`, and pure builders for stage A, duplicates, top values, string variants, and outliers, using only `quoteIdent` and generated aliases
   - Create `src/core/autopsy/duckdb-test-harness.ts` (node-blocking adapter) shared by the DuckDB-backed autopsy tests
   - Unit tests: quoting of hostile identifiers, `numLit` rejects non-finite numbers, aliases are generated
   - _Design: Data model, SQL strategy; Requirements 2.10, 7.1, 7.2_
 
-- [ ] 2. Health score and column status
+- [x] 2. Health score and column status
   - Create `src/core/autopsy/health-score.ts`: `computeHealth` (the seven deductions, caps, clamp) and `columnStatus` (the thresholds)
   - Unit tests: each deduction and cap, the worked example (score 81), clamp at 0, status thresholds including the boundaries
   - Property test (own file): the HealthScore is an integer in 0 to 100 for arbitrary inputs
   - _Design: Health score; Requirements 4.1 to 4.4, 9.1_
 
-- [ ] 3. Pure report assembly
+- [x] 3. Pure report assembly
   - In `autopsy-engine.ts`, add pure `buildColumnFinding` and `assembleReport` that turn raw stage results into findings (null percent, derived keys, all-null, constant columns, date epoch conversion)
   - Unit tests: null percent with zero rows, candidate keys, all-null, constant, empty-table rules, date conversion
   - Property test (own file): `nullPct` equals `nullCount / rows * 100` (zero when rows is zero) for arbitrary counts
   - _Design: Data model; Requirements 2.1, 3.2 to 3.5, 9.2_
 
-- [ ] 4. The engine: staged read-only queries and progress
+- [x] 4. The engine: staged read-only queries and progress
   - Add `runAutopsy(db, target, options)` implementing stages A, duplicates, B, and C, the row cap, error handling, and `onProgress`
   - Unit tests on small hand-made tables: nulls, distinct, top values ordering, numeric statistics, date statistics, whitespace and case variants, outliers with examples, duplicates, too-large message, failed query yields an error report without throwing
   - _Design: SQL strategy, Error handling, Performance; Requirements 2, 3, 7_
 
-- [ ] 5. Fix it mapping
+- [x] 5. Fix it mapping
   - Create `src/core/autopsy/fix-it.ts`: `buildFixActions` using `createSampleReader` and `cleanTables`, keeping whitespace, category, and duplicate proposals
   - Wire stage C of the engine to it, honoring `allowFixes`
   - Unit tests: action ids and kinds on a small table, no actions for a clean table, none when `allowFixes` is false
   - _Design: Fix it mapping; Requirements 5.1, 5.2, 5.5_
 
-- [ ] 6. Markdown and JSON export
+- [x] 6. Markdown and JSON export
   - Create `src/core/autopsy/report-export.ts`: `toMarkdown` (with escaping) and `toJson`
   - Unit tests: JSON round trip equals the report, Markdown contains the score and breakdown, hostile names cannot start a heading or table row
   - _Design: UI layout; Requirements 6_
