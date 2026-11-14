@@ -31,3 +31,7 @@ dist-ssr
 # MCP server build output
 mcp/dist
 frankendata-output
+
+# Playwright
+test-results
+playwright-report

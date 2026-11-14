@@ -96,6 +96,12 @@ The same engine that runs in the browser is also available to AI agents through 
 2. "Propose a stitch for the two tables. Show me the matches and cleanups, then apply the ones with high confidence and tell me how many rows the result has."
 3. "Which species is most common in the stitched result? Then export the stitched table to CSV."
 
+### End-to-end browser test
+
+`npm run test:e2e` runs one Playwright spec (`e2e/demo.spec.ts`) in a real browser against the Vite dev server. It is not part of `npm test`. First run `npx playwright install chromium`. The spec loads the mismatched demo, stitches with all suggestions (12 rows), checks the species chip (Swamp Wraith 3), opens the Autopsy on monsters (81), saves a recipe, resets, loads next month's files, applies the recipe and expects 12 rows.
+
+For agent-driven browser checks, the Playwright MCP server is registered in `.kiro/settings/mcp.json` but disabled by default. Enable it in the MCP Server view in Kiro, start `npm run dev`, then ask Kiro to open the app and click through the demo.
+
 ## Tech stack
 
 - React 19 + Vite + TypeScript

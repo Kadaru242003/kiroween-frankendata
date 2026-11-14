@@ -7,6 +7,11 @@
         "FRANKENDATA_MCP_ROOT": "."
       },
       "disabled": false
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.85"],
+      "disabled": true
     }
   }
 }

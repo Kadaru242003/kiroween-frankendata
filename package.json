@@ -12,7 +12,8 @@
     "test": "vitest --run",
     "check:api": "node scripts/check-api.mjs",
     "mcp:build": "tsc -p mcp/tsconfig.json && node mcp/build.mjs",
-    "mcp:start": "node mcp/dist/server.js"
+    "mcp:start": "node mcp/dist/server.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
+    "@playwright/test": "1.65.1",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@types/node": "^24.19.2",
