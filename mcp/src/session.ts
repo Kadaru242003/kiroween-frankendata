@@ -19,6 +19,8 @@ export interface SessionOptions {
   root?: string;
   /** Output folder inside the root. Default: ./frankendata-output. */
   outputDir?: string;
+  /** Test hook: supply the DuckDB instance (for example a spy wrapper). */
+  createDb?: () => Promise<NodeDuckDB>;
 }
 
 export interface Session {
@@ -51,7 +53,7 @@ export function createSession(options: SessionOptions = {}): Session {
   let stitchCtl: StitchController | null = null;
   let chain: Promise<unknown> = Promise.resolve();
 
-  const getDuck = (): Promise<NodeDuckDB> => (duck ??= createNodeDuckDB());
+  const getDuck = (): Promise<NodeDuckDB> => (duck ??= (options.createDb ?? createNodeDuckDB)());
   const db = async (): Promise<DuckDBService> => (await getDuck()).service;
 
   return {
@@ -86,16 +88,22 @@ export function createSession(options: SessionOptions = {}): Session {
     },
     async reset() {
       const service = await db();
+      const present = await service
+        .query<{ table_name: string }>(
+          "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' ORDER BY table_name"
+        )
+        .then((rows) => rows.map((r) => String(r.table_name)))
+        .catch(() => [] as string[]);
       try {
         await (await this.stitchController()).undo();
       } catch {
         /* nothing applied */
       }
-      const dropped = await dropAllTables(service);
+      await dropAllTables(service);
       stitchStore.reset();
       intake.reset();
       selection.names = null;
-      return dropped;
+      return present;
     },
     dispose() {
       void duck?.then((d) => d.dispose()).catch(() => undefined);
