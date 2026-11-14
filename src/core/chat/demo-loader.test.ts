@@ -14,7 +14,11 @@ function setup() {
   const defaultFiles = vi.fn(async () => [new File(["a"], "monsters.csv")]);
   const mismatchedFiles = vi.fn(async () => [new File(["b"], "monsters.csv")]);
   const loader = createDemoLoader({
-    providers: { default: defaultFiles, mismatched: mismatchedFiles },
+    providers: {
+      default: defaultFiles,
+      mismatched: mismatchedFiles,
+      nextMonth: async () => [],
+    },
     intake,
   });
   return { loader, intake, defaultFiles, mismatchedFiles };
@@ -60,6 +64,7 @@ describe("createDemoLoader", () => {
       providers: {
         default: async () => [new File(["a"], "monsters.csv")],
         mismatched: async () => [],
+        nextMonth: async () => [],
       },
       intake,
     });

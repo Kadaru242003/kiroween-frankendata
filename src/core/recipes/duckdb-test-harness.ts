@@ -4,6 +4,7 @@
  * `exportFileBytes` so Parquet export can be tested. Test support only.
  */
 import { createRequire } from "node:module";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import {
   createDuckDBService,
@@ -68,10 +69,18 @@ export async function createTestDuckDB(): Promise<TestDuckDB> {
       return conn.query(sql).toArray().map((r) => r.toJSON());
     },
     async exportFileBytes(copySql: string, virtualFileName: string) {
+      // The node runtime writes COPY output to the real file system (relative
+      // to the working directory), unlike the browser's virtual file system, so
+      // read it back from disk and remove it. Falls back to the DuckDB buffer
+      // API when the file is virtual.
+      conn.query(copySql);
       try {
-        conn.query(copySql);
         return db.copyFileToBuffer(virtualFileName);
+      } catch {
+        const bytes = new Uint8Array(fs.readFileSync(virtualFileName));
+        return bytes;
       } finally {
+        fs.rmSync(virtualFileName, { force: true });
         try {
           db.dropFile(virtualFileName);
         } catch {

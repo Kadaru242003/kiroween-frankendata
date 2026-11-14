@@ -23,6 +23,7 @@
  * runner, so all DuckDB wiring lives here in the Vite entry component.
  */
 
+import { loadNextMonthFiles } from './core/recipes/next-month-demo'
 import { revealProposalCard } from './components/autopsy/reveal-proposal'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createDuckDBService } from './db/duckdb-service'
@@ -230,6 +231,7 @@ function getLabStack(): Promise<LabStack> {
         providers: {
           default: () => demoDataLoader.load(),
           mismatched: () => demoDataLoader.loadMismatched(),
+          nextMonth: () => loadNextMonthFiles(),
         },
         intake: (files) => controller.intake(files),
       })
