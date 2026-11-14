@@ -18,9 +18,15 @@ import { runAutopsy } from "./autopsy-engine";
 import { createIntakeController } from "../intake-controller";
 import { demoDataLoader } from "../demo-data-loader";
 import { IntakeStore } from "../../state/intake-store";
+import { createStitchController } from "../stitching/stitch-controller";
+import { StitchStore } from "../stitching/stitch-store";
+import { assembleStitchPlan } from "../stitching/plan-assembly";
+import type { ApprovalDecision } from "../stitching/types";
+import type { LoadedTable } from "../types";
 import type { AutopsyReport } from "./types";
 
 let duck: TestDuckDB;
+let loadedTables: readonly LoadedTable[] = [];
 const reports: Record<string, AutopsyReport> = {};
 
 beforeAll(async () => {
@@ -29,6 +35,7 @@ beforeAll(async () => {
   const intake = createIntakeController({ duckDBService: duck.service, store });
   await intake.intake(await demoDataLoader.loadMismatched());
   expect(store.getState().errors).toEqual([]);
+  loadedTables = store.getState().tables;
   for (const t of store.getState().tables) {
     reports[t.tableName] = await runAutopsy(duck.service, {
       tableName: t.tableName,
@@ -124,5 +131,43 @@ describe("Autopsy golden: mismatched demo experiments table", () => {
       "clean:category:experiments.species",
       "clean:duplicate-rows:experiments",
     ]);
+  });
+});
+
+describe("Autopsy Fix it hands existing proposals to the existing approval flow", () => {
+  it("the stitch controller computes the same ids for a single loaded table, and the plan applies and undoes", async () => {
+    const monsters = loadedTables.find((t) => t.tableName === "monsters")!;
+    const store = new StitchStore();
+    const controller = createStitchController({
+      db: duck.service,
+      getTables: () => [monsters],
+      store,
+    });
+
+    // The exact step App.handleFixIt takes when the store has no proposals yet.
+    const proposals = await controller.computeProposals();
+    const offered = reports.monsters.fixes.map((f) => f.proposalId);
+    const computed = proposals.cleanings.map((c) => c.id);
+    for (const id of offered) {
+      expect(computed).toContain(id);
+    }
+
+    // Approve every offered fix, assemble the plan, and apply it (cleanup only).
+    const decisions: Record<string, ApprovalDecision> = {};
+    for (const id of offered) {
+      decisions[id] = { proposalId: id, decision: "approved" };
+      store.setDecision(decisions[id]);
+    }
+    const plan = assembleStitchPlan(proposals, decisions, [monsters]);
+    const stitched = await controller.applyPlan(plan);
+    expect(stitched.rowCount).toBe(12); // 14 rows minus the 2 duplicate Gorzak rows
+
+    // The original is untouched, and Undo stitch removes the cleaned copies.
+    expect(await duck.service.getRowCount("monsters")).toBe(14);
+    await controller.undo();
+    const left = await duck.service.query<{ table_name: string }>(
+      "SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'stitch%'"
+    );
+    expect(left).toEqual([]);
   });
 });
