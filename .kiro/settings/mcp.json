@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "frankendata": {
+      "command": "node",
+      "args": ["mcp/dist/server.js"],
+      "env": {
+        "FRANKENDATA_MCP_ROOT": "."
+      },
+      "disabled": false
+    }
+  }
+}

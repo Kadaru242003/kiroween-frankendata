@@ -77,6 +77,25 @@ We drove each spec through spec-driven task execution in small batches, running 
 
 Prompts for the Kiro agent were drafted with help from Claude (Anthropic) outside of Kiro; all implementation was done by Kiro agents from the specs.
 
+## Use FrankenData from Kiro (MCP)
+
+The same engine that runs in the browser is also available to AI agents through a local MCP server. It runs on your machine over stdio, makes no network calls, calls no AI, and only reads files inside one allowed folder.
+
+**Set up**
+
+1. `npm install`
+2. `npm run mcp:build` (bundles `mcp/dist/server.js`)
+3. Open the repo in Kiro. The workspace config `.kiro/settings/mcp.json` registers a `frankendata` server. Check it in the MCP Server view and make sure it is enabled.
+4. Optional: set `FRANKENDATA_MCP_ROOT` in that file to the folder that holds your data. The default is the workspace root. Exports go to `frankendata-output/` inside that folder and never overwrite without an explicit flag.
+
+**Tools:** `frankendata_load_files`, `frankendata_autopsy`, `frankendata_propose_stitch`, `frankendata_apply_stitch`, `frankendata_apply_recipe`, `frankendata_query`, `frankendata_export`, `frankendata_reset`.
+
+**Three prompts to try in Kiro chat** (the demo CSVs are in `mcp/fixtures`)
+
+1. "Load mcp/fixtures/monsters.csv and mcp/fixtures/experiments.csv with FrankenData and run an autopsy on monsters. What is wrong with the data?"
+2. "Propose a stitch for the two tables. Show me the matches and cleanups, then apply the ones with high confidence and tell me how many rows the result has."
+3. "Which species is most common in the stitched result? Then export the stitched table to CSV."
+
 ## Tech stack
 
 - React 19 + Vite + TypeScript
