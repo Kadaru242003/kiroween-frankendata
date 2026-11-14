@@ -1,0 +1,14 @@
+monster_name,species,danger_level,hazardous
+Gorzak,Swamp Wraith,High,true
+Mothra Jr.,Moth Titan,High,true
+Blinky,Three-Eyed Ooze,Low,false
+Snarl,Cave Howler,High,true
+Wisp,swamp wraith,Low,false
+Grond,Rock Golem,Medium,true
+Vex,Moth Titan,High,false
+Thornak,cave howler,Medium,true
+Bellow,Rock Golem,High,false
+Drip,three-eyed ooze,Low,true
+Marrow,Bone Shambler,High,false
+Fizz,Swamp Wraith,Low,false
+Blinky,Three-Eyed Ooze,Low,false

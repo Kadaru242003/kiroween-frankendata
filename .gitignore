@@ -27,3 +27,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# MCP server build output
+mcp/dist
+frankendata-output

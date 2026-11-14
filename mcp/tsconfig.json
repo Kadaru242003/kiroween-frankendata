@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "strict": true
+  },
+  "include": ["src", "../src/core", "../src/db", "../src/state"],
+  "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx", "../src/core/**/*test-support*", "../src/core/**/*test-harness*", "../src/core/**/*test-lab*", "../src/core/**/*tokenizer*", "src/**/*.test.ts"]
+}

@@ -25,7 +25,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'api/**/*.{test,spec}.{ts,tsx}'],
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'api/**/*.{test,spec}.{ts,tsx}',
+      'mcp/**/*.{test,spec}.ts',
+    ],
     // Serialize test files (see note above) to remove DuckDB-WASM worker-thread
     // contention. Tests within a file still run exactly as written.
     fileParallelism: false,

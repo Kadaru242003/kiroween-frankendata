@@ -13,7 +13,7 @@ A local stdio MCP server under `mcp/` that reuses `src/core`. The feasibility pr
 
 ## Tasks
 
-- [ ] 1. Feasibility proof: boot and load_files (GATE)
+- [x] 1. Feasibility proof: boot and load_files (GATE)
   - Add `@modelcontextprotocol/sdk` and `zod` as exact-pinned devDependencies
   - Create `mcp/tsconfig.json`, `mcp/build.mjs`, `mcp/src/node-duckdb.ts`, `mcp/src/session.ts`, a minimal `path-guard.ts`, `errors.ts`, `results.ts`, `limits.ts`, `create-server.ts`, `server.ts`, and the `load_files` tool
   - Create `mcp/fixtures/monsters.csv` and `experiments.csv`
