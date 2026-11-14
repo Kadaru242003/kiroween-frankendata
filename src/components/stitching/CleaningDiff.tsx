@@ -264,6 +264,8 @@ export function CleaningDiff({
 
   return (
     <article
+      id={`proposal-card-${proposal.id}`}
+      tabIndex={-1}
       className={`stitch-proposal stitch-proposal--cleaning${decisionClass}`}
       aria-label={`Cleaning proposal ${KIND_TITLE[kind]} on ${targetLabel(proposal)}`}
     >

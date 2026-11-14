@@ -23,6 +23,7 @@
  * runner, so all DuckDB wiring lives here in the Vite entry component.
  */
 
+import { revealProposalCard } from './components/autopsy/reveal-proposal'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createDuckDBService } from './db/duckdb-service'
 import { createIntakeController } from './core/intake-controller'
@@ -490,11 +491,12 @@ function App() {
         store.setDecision({ proposalId, decision: 'approved' })
       }
       setWorkingPlan(null)
-      setAutopsyTable(null)
-      setCleanupOnly(true)
+      // The Autopsy panel stays open so the user can come back and fix more.
+      setCleanupOnly((prev) => (stitchOpen ? prev : true))
       setStitchOpen(true)
+      revealProposalCard(proposalId)
     },
-    [stack, tables, uncheckedTableNames],
+    [stack, tables, uncheckedTableNames, stitchOpen],
   )
 
   // The user confirmed on the approval screen: hold the assembled plan so the

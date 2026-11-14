@@ -51,3 +51,7 @@ The engine lives in `src/core/autopsy/` and is framework-agnostic. The UI lives 
 ## Credits used
 
 About 150 to 170 of the 250 budget.
+
+## Follow-up UI batch
+
+Fix it now shows a disabled Added state, announces it, scrolls to and focuses the new proposal card and keeps the Autopsy panel open. Also: lab flask favicon and table row sew-in animation. The App-level scroll and focus logic lives in `reveal-proposal.ts` and is tested there, since App is not rendered under jsdom.

@@ -54,13 +54,33 @@ function fmt(v: number | string | undefined): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
 }
 
+/** A Fix it button that turns into a disabled "Added" state once clicked. */
+function FixButton(props: {
+  fix: FixAction;
+  added: boolean;
+  onFix: (f: FixAction) => void;
+}): JSX.Element {
+  const { fix, added, onFix } = props;
+  return (
+    <button
+      type="button"
+      className={`case-fix__button${added ? " case-fix__button--added" : ""}`}
+      aria-label={added ? `Added: ${fix.label}` : `Fix it: ${fix.label}`}
+      disabled={added}
+      onClick={() => onFix(fix)}
+    >
+      {added ? "\u2713 Added" : "Fix it"}
+    </button>
+  );
+}
 function ColumnCard(props: {
   col: ColumnFinding;
   fixes: FixAction[];
   fixable: boolean;
   onFix: (f: FixAction) => void;
+  added: ReadonlySet<string>;
 }): JSX.Element {
-  const { col, fixes, fixable, onFix } = props;
+  const { col, fixes, fixable, onFix, added } = props;
   const hasStats = col.min !== undefined || col.mean !== undefined;
   return (
     <li className={`case-col case-col--${col.status}`}>
@@ -110,14 +130,7 @@ function ColumnCard(props: {
         <div className="case-col__fixes">
           {fixes.map((f) => (
             <span key={f.proposalId} className="case-fix">
-              <button
-                type="button"
-                className="case-fix__button"
-                aria-label={`Fix it: ${f.label}`}
-                onClick={() => onFix(f)}
-              >
-                Fix it
-              </button>
+              <FixButton fix={f} added={added.has(f.proposalId)} onFix={onFix} />
               <span className="case-fix__label">{f.label}</span>
             </span>
           ))}
@@ -158,9 +171,23 @@ export function CaseFilePanel({
     // The target is identified by its name and row count.
   }, [db, target.tableName, target.rowCount, fixable, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Proposal ids already handed to the approval flow, so a second click cannot
+  // add a duplicate. Reset when the panel moves to another table.
+  const [added, setAdded] = useState<ReadonlySet<string>>(new Set());
+  const [announcement, setAnnouncement] = useState("");
+  useEffect(() => {
+    setAdded(new Set());
+    setAnnouncement("");
+  }, [target.tableName]);
+
   const handleFix = useCallback(
-    (f: FixAction) => onFixIt(target.tableName, f.proposalId),
-    [onFixIt, target.tableName]
+    (f: FixAction) => {
+      if (added.has(f.proposalId)) return;
+      setAdded((prev) => new Set(prev).add(f.proposalId));
+      setAnnouncement("Added to the stitching table");
+      onFixIt(target.tableName, f.proposalId);
+    },
+    [onFixIt, target.tableName, added]
   );
 
   const complete = report?.complete === true && report.status === "ok";
@@ -195,6 +222,9 @@ export function CaseFilePanel({
         </button>
       </header>
 
+      <p className="case-file__sr" aria-live="polite" data-testid="fixit-live">
+        {announcement}
+      </p>
       <p className="case-file__status" role="status" aria-live="polite">
         {status}
       </p>
@@ -236,14 +266,11 @@ export function CaseFilePanel({
                 Exact duplicate rows: {report.duplicateRows}
                 {fixable && dupFix ? (
                   <span className="case-fix">
-                    <button
-                      type="button"
-                      className="case-fix__button"
-                      aria-label={`Fix it: ${dupFix.label}`}
-                      onClick={() => handleFix(dupFix)}
-                    >
-                      Fix it
-                    </button>
+                    <FixButton
+                      fix={dupFix}
+                      added={added.has(dupFix.proposalId)}
+                      onFix={handleFix}
+                    />
                     <span className="case-fix__label">{dupFix.label}</span>
                   </span>
                 ) : null}
@@ -278,6 +305,7 @@ export function CaseFilePanel({
                   fixes={report.fixes.filter((f) => f.columnName === c.name)}
                   fixable={fixable}
                   onFix={handleFix}
+                  added={added}
                 />
               ))}
             </ul>

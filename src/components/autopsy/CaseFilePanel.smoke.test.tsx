@@ -214,3 +214,21 @@ describe("verdictFor", () => {
     expect(verdictFor(39)).toBe("Critical condition");
   });
 });
+
+describe("Fix it feedback", () => {
+  it("turns the button into a disabled Added state, announces it, and calls the handler once", async () => {
+    const onFixIt = vi.fn();
+    const runner = vi.fn(async () => report(true));
+    render(
+      <CaseFilePanel db={db} target={target} fixable onClose={() => {}} onFixIt={onFixIt} runner={runner} />
+    );
+    const btn = await screen.findByRole("button", { name: "Fix it: Remove duplicate rows" });
+    fireEvent.click(btn);
+    const added = screen.getByRole("button", { name: "Added: Remove duplicate rows" });
+    expect(added).toBeDisabled();
+    expect(added.textContent).toContain("\u2713");
+    fireEvent.click(added);
+    expect(onFixIt).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("fixit-live").textContent).toBe("Added to the stitching table");
+  });
+});

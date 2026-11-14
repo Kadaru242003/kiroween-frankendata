@@ -202,3 +202,40 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/*
+ * Rows "sew in" when a preview first appears: a quick fade and 4px slide with
+ * a 30ms stagger, capped at the first 15 rows. CSS only. Cells are animated
+ * because transforms on table rows are unreliable. Nothing animates under
+ * prefers-reduced-motion.
+ */
+@keyframes table-row-sew-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .table-preview-card__tbody tr:nth-child(-n + 15) .table-preview-card__td {
+    animation: table-row-sew-in 0.25s ease-out both;
+  }
+  .table-preview-card__tbody tr:nth-child(1) .table-preview-card__td { animation-delay: 0ms; }
+  .table-preview-card__tbody tr:nth-child(2) .table-preview-card__td { animation-delay: 30ms; }
+  .table-preview-card__tbody tr:nth-child(3) .table-preview-card__td { animation-delay: 60ms; }
+  .table-preview-card__tbody tr:nth-child(4) .table-preview-card__td { animation-delay: 90ms; }
+  .table-preview-card__tbody tr:nth-child(5) .table-preview-card__td { animation-delay: 120ms; }
+  .table-preview-card__tbody tr:nth-child(6) .table-preview-card__td { animation-delay: 150ms; }
+  .table-preview-card__tbody tr:nth-child(7) .table-preview-card__td { animation-delay: 180ms; }
+  .table-preview-card__tbody tr:nth-child(8) .table-preview-card__td { animation-delay: 210ms; }
+  .table-preview-card__tbody tr:nth-child(9) .table-preview-card__td { animation-delay: 240ms; }
+  .table-preview-card__tbody tr:nth-child(10) .table-preview-card__td { animation-delay: 270ms; }
+  .table-preview-card__tbody tr:nth-child(11) .table-preview-card__td { animation-delay: 300ms; }
+  .table-preview-card__tbody tr:nth-child(12) .table-preview-card__td { animation-delay: 330ms; }
+  .table-preview-card__tbody tr:nth-child(13) .table-preview-card__td { animation-delay: 360ms; }
+  .table-preview-card__tbody tr:nth-child(14) .table-preview-card__td { animation-delay: 390ms; }
+  .table-preview-card__tbody tr:nth-child(15) .table-preview-card__td { animation-delay: 420ms; }
+}
