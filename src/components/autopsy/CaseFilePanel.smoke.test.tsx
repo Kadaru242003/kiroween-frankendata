@@ -231,4 +231,30 @@ describe("Fix it feedback", () => {
     expect(onFixIt).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("fixit-live").textContent).toBe("Added to the stitching table");
   });
+
+  it("shows a review bar with singular and plural counts, and reviews only on click", async () => {
+    const onFixIt = vi.fn();
+    const onReview = vi.fn();
+    const runner = vi.fn(async () => report(true));
+    render(
+      <CaseFilePanel
+        db={db}
+        target={target}
+        fixable
+        onClose={() => {}}
+        onFixIt={onFixIt}
+        onReview={onReview}
+        runner={runner}
+      />
+    );
+    expect(screen.queryByText(/fix(es)? added/)).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Fix it: Remove duplicate rows" }));
+    expect(screen.getByText("1 fix added")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fix it: Trim and collapse whitespace in Species" }));
+    expect(screen.getByText("2 fixes added")).toBeInTheDocument();
+    expect(onReview).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Review in stitching table" }));
+    expect(onReview).toHaveBeenCalledTimes(1);
+    expect(onReview).toHaveBeenCalledWith("clean:whitespace:monsters.Species");
+  });
 });

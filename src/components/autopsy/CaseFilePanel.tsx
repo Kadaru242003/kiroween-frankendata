@@ -35,6 +35,8 @@ export interface CaseFilePanelProps {
   onClose: () => void;
   /** Hand a Fix it intent to the existing approval flow. */
   onFixIt: (tableName: string, proposalId: string) => void;
+  /** Review the added fixes in the stitching table (latest proposal id). */
+  onReview?: (proposalId: string) => void;
   /** Injection points for tests. */
   runner?: typeof runAutopsy;
   download?: typeof downloadText;
@@ -146,6 +148,7 @@ export function CaseFilePanel({
   fixable,
   onClose,
   onFixIt,
+  onReview,
   runner = runAutopsy,
   download = downloadText,
 }: CaseFilePanelProps): JSX.Element {
@@ -175,7 +178,10 @@ export function CaseFilePanel({
   // add a duplicate. Reset when the panel moves to another table.
   const [added, setAdded] = useState<ReadonlySet<string>>(new Set());
   const [announcement, setAnnouncement] = useState("");
+  // Proposal ids added from this panel session, in click order.
+  const [addedOrder, setAddedOrder] = useState<string[]>([]);
   useEffect(() => {
+    setAddedOrder([]);
     setAdded(new Set());
     setAnnouncement("");
   }, [target.tableName]);
@@ -184,6 +190,7 @@ export function CaseFilePanel({
     (f: FixAction) => {
       if (added.has(f.proposalId)) return;
       setAdded((prev) => new Set(prev).add(f.proposalId));
+      setAddedOrder((prev) => [...prev, f.proposalId]);
       setAnnouncement("Added to the stitching table");
       onFixIt(target.tableName, f.proposalId);
     },
@@ -330,6 +337,20 @@ export function CaseFilePanel({
             </button>
           </footer>
         </>
+      ) : null}
+      {addedOrder.length > 0 ? (
+        <div className="case-review-bar" role="group" aria-label="Added fixes">
+          <span className="case-review-bar__count">
+            {addedOrder.length === 1 ? "1 fix added" : `${addedOrder.length} fixes added`}
+          </span>
+          <button
+            type="button"
+            className="case-review-bar__button"
+            onClick={() => onReview?.(addedOrder[addedOrder.length - 1])}
+          >
+            Review in stitching table
+          </button>
+        </div>
       ) : null}
     </section>
   );

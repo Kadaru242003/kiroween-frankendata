@@ -258,3 +258,34 @@
   opacity: 0.85;
   color: #39ff14;
 }
+
+/* Compact bar pinned to the bottom of the panel once a fix has been added. */
+.case-review-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--background);
+  border-top: 1px solid var(--border);
+}
+.case-review-bar__count {
+  font-weight: 600;
+}
+.case-review-bar__button {
+  padding: 6px 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.case-review-bar__button:focus-visible {
+  outline: 2px solid #39ff14;
+  outline-offset: 2px;
+}

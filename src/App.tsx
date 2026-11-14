@@ -490,13 +490,22 @@ function App() {
       if (proposals !== null && proposals.cleanings.some((c) => c.id === proposalId)) {
         store.setDecision({ proposalId, decision: 'approved' })
       }
+      // Nothing on screen changes here: the user stays in the report and can
+      // add more fixes. The review bar calls handleReviewFixes when ready.
+    },
+    [stack, tables, uncheckedTableNames],
+  )
+
+  // "Review in stitching table": open the approval screen the same way the
+  // existing flow does, then scroll to, glow and focus the latest added card.
+  const handleReviewFixes = useCallback(
+    (proposalId: string) => {
       setWorkingPlan(null)
-      // The Autopsy panel stays open so the user can come back and fix more.
       setCleanupOnly((prev) => (stitchOpen ? prev : true))
       setStitchOpen(true)
       revealProposalCard(proposalId)
     },
-    [stack, tables, uncheckedTableNames, stitchOpen],
+    [stitchOpen],
   )
 
   // The user confirmed on the approval screen: hold the assembled plan so the
@@ -720,6 +729,7 @@ function App() {
             stitchStore={status.stack.stitchStore}
             onClose={() => setAutopsyTable(null)}
             onFixIt={handleFixIt}
+            onReview={handleReviewFixes}
           />
 
           <TablePreviewRegion
@@ -754,6 +764,7 @@ interface AutopsyRegionProps {
   stitchStore: StitchStore
   onClose: () => void
   onFixIt: (tableName: string, proposalId: string) => void
+  onReview: (proposalId: string) => void
 }
 
 /**
@@ -770,6 +781,7 @@ function AutopsyRegion({
   stitchStore,
   onClose,
   onFixIt,
+  onReview,
 }: AutopsyRegionProps) {
   const { stitchedTable } = useStitchStore(stitchStore)
   const isLoaded =
@@ -799,6 +811,7 @@ function AutopsyRegion({
         fixable={isLoaded}
         onClose={onClose}
         onFixIt={onFixIt}
+        onReview={onReview}
       />
     </section>
   )
