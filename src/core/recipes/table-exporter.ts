@@ -1,12 +1,12 @@
 /**
- * Table exporter (Feature 5, Requirement 1): CSV, Excel (.xlsx), and Parquet
+ * Table exporter (Feature 5, Requirement 1): CSV and Excel (.xlsx)
  * export of a FULL loaded table or stitched result. Read-only: it only issues
  * SELECT / COPY statements built from `quoteIdent`, `quoteString`, and
  * application-generated names.
  */
 import * as XLSX from "xlsx";
 import { toCsv } from "../chat/csv-export";
-import { quoteIdent, quoteString } from "../stitching/sql-escape";
+import { quoteIdent } from "../stitching/sql-escape";
 import type { ColumnSchema, DuckDBService, LoadedTable } from "../types";
 import { EXPORT_MAX_ROWS } from "./types";
 import type { ExportFormat } from "./types";
@@ -29,12 +29,10 @@ export interface ExportedFile {
 const EXTENSIONS: Record<ExportFormat, string> = {
   csv: "csv",
   xlsx: "xlsx",
-  parquet: "parquet",
 };
 const MIMES: Record<ExportFormat, string> = {
   csv: "text/csv",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  parquet: "application/vnd.apache.parquet",
 };
 
 /** A filesystem-safe file name derived from a table name (Requirement 1.6). */
@@ -124,24 +122,6 @@ export function toXlsxBytes(
   return new Uint8Array(out as ArrayBuffer);
 }
 
-let parquetCounter = 0;
-
-/** Parquet bytes produced by DuckDB itself via COPY to a virtual file (Req 1.5). */
-export async function exportParquet(
-  db: DuckDBService,
-  tableName: string
-): Promise<Uint8Array> {
-  if (!db.exportFileBytes) {
-    throw new Error("Parquet export is not available in this environment.");
-  }
-  parquetCounter += 1;
-  const virtual = `frankendata_export_${parquetCounter}.parquet`;
-  const sql =
-    `COPY (SELECT * FROM ${quoteIdent(tableName)}) ` +
-    `TO ${quoteString(virtual)} (FORMAT PARQUET)`;
-  return db.exportFileBytes(sql, virtual);
-}
-
 /** Export a table in the chosen format. Throws an Error with a plain message. */
 export async function exportTable(
   db: DuckDBService,
@@ -151,12 +131,9 @@ export async function exportTable(
   const fileName = exportFileName(table.tableName, format);
   const mime = MIMES[format];
   try {
-    if (format === "parquet") {
-      return { fileName, mime, data: await exportParquet(db, table.tableName) };
-    }
     if (format === "xlsx" && table.rowCount > EXPORT_MAX_ROWS) {
       throw new Error(
-        `This table has ${table.rowCount} rows. Excel files hold at most ${EXPORT_MAX_ROWS} data rows. Use CSV or Parquet instead.`
+        `This table has ${table.rowCount} rows. Excel files hold at most ${EXPORT_MAX_ROWS} data rows. Use CSV instead.`
       );
     }
     const data = await readTable(db, table);

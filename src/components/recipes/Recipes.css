@@ -130,3 +130,36 @@
   display: block;
   opacity: 0.85;
 }
+
+.recipe-panel__intro {
+  margin: 0 0 8px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+.recipe-panel__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.recipe-panel__button--primary {
+  background: #39ff14;
+  border-color: #39ff14;
+  color: #07130a;
+  font-weight: 600;
+}
+.recipe-panel__button--secondary {
+  background: transparent;
+}
+.apply-recipe {
+  margin: 8px 0;
+}
+.apply-recipe__drop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.apply-recipe__drop--active {
+  outline: 1px dashed #39ff14;
+  outline-offset: 4px;
+}

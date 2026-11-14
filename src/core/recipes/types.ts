@@ -112,4 +112,4 @@ export interface RecipeMapping {
   tableMap: Record<string, string>;
 }
 
-export type ExportFormat = "csv" | "xlsx" | "parquet";
+export type ExportFormat = "csv" | "xlsx";

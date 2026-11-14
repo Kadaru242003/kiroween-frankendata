@@ -18,8 +18,6 @@ beforeAll(async () => {
 });
 afterAll(() => lab.dispose());
 
-// Parquet is not exercised here: the node-blocking MVP bundle cannot load
-// DuckDB's Parquet extension (it is a loadable extension, see NOTES.md).
 describe("export with a real DuckDB", () => {
   it("exports CSV with ISO dates and NULL as empty", async () => {
     const f = await exportTable(lab.service, { tableName: "exp_t", schema, rowCount: 3 }, "csv");

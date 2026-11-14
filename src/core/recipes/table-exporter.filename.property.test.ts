@@ -11,10 +11,10 @@ describe("Feature: frankendata-recipes, Property 6: safe file names", () => {
     fc.assert(
       fc.property(
         fc.string({ unit: "binary" }),
-        fc.constantFrom("csv", "xlsx", "parquet"),
+        fc.constantFrom("csv", "xlsx"),
         (name, format) => {
-          const out = exportFileName(name, format as "csv" | "xlsx" | "parquet");
-          expect(out).toMatch(/^[A-Za-z0-9_-]+\.(csv|xlsx|parquet)$/);
+          const out = exportFileName(name, format as "csv" | "xlsx");
+          expect(out).toMatch(/^[A-Za-z0-9_-]+\.(csv|xlsx)$/);
         }
       ),
       { numRuns: 300 }

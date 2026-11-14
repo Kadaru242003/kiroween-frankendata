@@ -101,6 +101,7 @@ import { downloadText } from './components/autopsy/download'
 import { ExportButtons } from './components/recipes/ExportButtons'
 import { RecipeNotApplied } from './components/recipes/RecipeNotApplied'
 import {
+  ApplyRecipe,
   RecipePanel,
   type RecipeApplyOutcome,
 } from './components/recipes/RecipePanel'
@@ -814,6 +815,18 @@ function App() {
                 Reset lab
               </button>
             ) : null}
+            {/* Apply recipe: visible whenever a table is loaded, even before a stitch. */}
+            {tables.length > 0 ? (
+              <ApplyRecipe
+                onApplyRecipe={handleApplyRecipe}
+                onReview={handleReviewRecipe}
+                outcome={
+                  recipeErrors !== null
+                    ? { ok: false, errors: recipeErrors }
+                    : recipeSuccess
+                }
+              />
+            ) : null}
           </section>
 
           <ErrorDisplay errors={[...errors]} />
@@ -873,6 +886,17 @@ function App() {
           ) : null}
 
           {/*
+            Recipes panel: directly after the stitched result and above Ask the
+            Lab. Renders only while a stitched result exists. Feedback stays in
+            place; nothing scrolls.
+          */}
+          <RecipeRegion
+            duckDBService={status.stack.duckDBService}
+            stitchStore={status.stack.stitchStore}
+            getRecipeDownload={getRecipeDownload}
+            getSqlDownload={getSqlDownload}
+          />
+          {/*
             Ask the Lab panel: rendered below the stitching UI, shown only when
             at least one queryable table exists (Req 1.1). It refreshes its
             queryable-table list + starter chips when the loaded tables change
@@ -891,26 +915,6 @@ function App() {
             computed locally with read-only SQL (no AI, no network). Closes
             itself when its table disappears (Reset lab, undone stitch).
           */}
-          {/*
-            Recipes and export: Apply recipe (any time a table is loaded), and,
-            once a stitch is applied, Save recipe, Export SQL script, and the
-            stitched result export. All feedback stays in place.
-          */}
-          {tables.length > 0 ? (
-            <RecipeRegion
-              duckDBService={status.stack.duckDBService}
-              stitchStore={status.stack.stitchStore}
-              onApplyRecipe={handleApplyRecipe}
-              getRecipeDownload={getRecipeDownload}
-              getSqlDownload={getSqlDownload}
-              onReview={handleReviewRecipe}
-              outcome={
-                recipeErrors !== null
-                  ? { ok: false, errors: recipeErrors }
-                  : recipeSuccess
-              }
-            />
-          ) : null}
           <AutopsyRegion
             target={autopsyTable}
             loadedTables={tables}
@@ -1232,33 +1236,24 @@ function TablePreviewRegion({
 interface RecipeRegionProps {
   duckDBService: DuckDBService
   stitchStore: StitchStore
-  onApplyRecipe: (text: string) => Promise<RecipeApplyOutcome>
   getRecipeDownload: () => { fileName: string; mime: string; text: string } | null
   getSqlDownload: () => { fileName: string; mime: string; text: string } | null
-  onReview: () => void
-  outcome: RecipeApplyOutcome | null
 }
 
-/** Subscribes to the stitch store so the panel knows when a stitched result exists. */
+/** Subscribes to the stitch store so the panel shows only with a stitched result. */
 function RecipeRegion({
   duckDBService,
   stitchStore,
-  onApplyRecipe,
   getRecipeDownload,
   getSqlDownload,
-  onReview,
-  outcome,
 }: RecipeRegionProps) {
   const { stitchedTable } = useStitchStore(stitchStore)
   return (
     <RecipePanel
       db={duckDBService}
       stitchedTable={stitchedTable}
-      onApplyRecipe={onApplyRecipe}
       getRecipeDownload={getRecipeDownload}
       getSqlDownload={getSqlDownload}
-      onReview={onReview}
-      outcome={outcome}
       download={downloadText}
     />
   )

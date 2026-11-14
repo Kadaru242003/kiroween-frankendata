@@ -41,7 +41,7 @@ describe("exportFileName", () => {
   it("keeps only safe characters and falls back to table", () => {
     expect(exportFileName("monsters", "csv")).toBe("monsters.csv");
     expect(exportFileName("../a b/c.d", "xlsx")).toBe("a_b_c_d.xlsx");
-    expect(exportFileName("???", "parquet")).toBe("table.parquet");
+    expect(exportFileName("???", "xlsx")).toBe("table.xlsx");
   });
 });
 
@@ -86,34 +86,5 @@ describe("Excel", () => {
     await expect(
       exportTable(fakeDb([]), { tableName: "big", schema, rowCount: 2_000_000 }, "xlsx")
     ).rejects.toThrow(/Excel files hold at most/);
-  });
-});
-
-describe("Parquet", () => {
-  it("copies through DuckDB to a generated virtual file with quoted names", async () => {
-    const calls: string[][] = [];
-    const db = {
-      ...fakeDb([]),
-      exportFileBytes: async (sql: string, file: string) => {
-        calls.push([sql, file]);
-        return new Uint8Array([0x50, 0x41, 0x52, 0x31]);
-      },
-    };
-    const f = await exportTable(db, { tableName: 'we"ird', schema, rowCount: 0 }, "parquet");
-    expect(f.fileName).toBe("we_ird.parquet");
-    expect(Array.from(f.data as Uint8Array)).toEqual([0x50, 0x41, 0x52, 0x31]);
-    const [sql, file] = calls[0];
-    expect(file).toMatch(/^frankendata_export_\d+\.parquet$/);
-    expect(sql).toBe(
-      `COPY (SELECT * FROM "we""ird") TO '${file}' (FORMAT PARQUET)`
-    );
-  });
-});
-
-describe("Parquet availability", () => {
-  it("explains when the environment cannot export Parquet", async () => {
-    await expect(
-      exportTable(fakeDb([]), { tableName: "t", schema, rowCount: 0 }, "parquet")
-    ).rejects.toThrow(/not available/);
   });
 });

@@ -1,8 +1,10 @@
 /**
- * RecipePanel (Feature 5): Apply recipe, Save recipe, Export SQL script, and
- * the stitched-result export. All feedback is in place through one polite live
- * region. Nothing here scrolls or moves focus; navigation to the approval
- * screen happens only from the explicit "Review in stitching table" button.
+ * Recipe UI (Feature 5): {@link ApplyRecipe} (top area, visible whenever a table
+ * is loaded) and {@link RecipePanel} (after the stitched result: Save recipe,
+ * Export SQL script, and the stitched-result CSV and Excel export). Feedback
+ * stays in place in polite live regions. Nothing here scrolls or moves focus;
+ * navigation to the approval screen happens only from the explicit "Review in
+ * stitching table" button.
  */
 import { useCallback, useRef, useState, type DragEvent, type JSX } from "react";
 import type {
@@ -27,33 +29,21 @@ export interface PanelDownload {
   text: string;
 }
 
-export interface RecipePanelProps {
-  db: DuckDBService;
-  /** The stitched result, or null. Save recipe and Export SQL need one. */
-  stitchedTable: LoadedTable | null;
+export interface ApplyRecipeProps {
   /** Read and apply recipe text. Never throws. */
   onApplyRecipe: (text: string) => Promise<RecipeApplyOutcome>;
-  /** Build the recipe JSON download, or null when there is nothing to save. */
-  getRecipeDownload: () => PanelDownload | null;
-  /** Build the SQL script download, or null when there is nothing to export. */
-  getSqlDownload: () => PanelDownload | null;
   /** Open the approval screen (explicit navigation). */
   onReview: () => void;
   /** The last apply outcome, owned by the App so the stitch section can show it. */
   outcome: RecipeApplyOutcome | null;
-  download: (fileName: string, mime: string, text: string) => void;
 }
 
-export function RecipePanel({
-  db,
-  stitchedTable,
+/** "Apply recipe": a secondary button with a drop target, plus its feedback. */
+export function ApplyRecipe({
   onApplyRecipe,
-  getRecipeDownload,
-  getSqlDownload,
   onReview,
   outcome,
-  download,
-}: RecipePanelProps): JSX.Element {
+}: ApplyRecipeProps): JSX.Element {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -93,21 +83,10 @@ export function RecipePanel({
     if (file) void applyFile(file);
   };
 
-  const save = (get: () => PanelDownload | null, done: (name: string) => string) => {
-    const d = get();
-    if (!d) {
-      setMessage("There is nothing to save yet.");
-      return;
-    }
-    download(d.fileName, d.mime, d.text);
-    setMessage(done(d.fileName));
-  };
-
   return (
-    <section className="recipe-panel" aria-label="Recipes">
-      <h2 className="recipe-panel__title">Recipes</h2>
+    <section className="apply-recipe" aria-label="Apply recipe">
       <div
-        className={`recipe-panel__drop${dragging ? " recipe-panel__drop--active" : ""}`}
+        className={`apply-recipe__drop${dragging ? " apply-recipe__drop--active" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -115,7 +94,7 @@ export function RecipePanel({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <label className="recipe-panel__button">
+        <label className="recipe-panel__button recipe-panel__button--secondary">
           <span>{busy ? "Reading recipe..." : "Apply recipe"}</span>
           <input
             ref={inputRef}
@@ -130,35 +109,11 @@ export function RecipePanel({
             }}
           />
         </label>
-        <span className="recipe-panel__hint">
-          Choose or drop a recipe .json. It is checked first and never stitches on its own.
-        </span>
+        <span className="recipe-panel__hint">Reuse a saved stitch on new files</span>
       </div>
-
-      {stitchedTable !== null ? (
-        <div className="recipe-panel__actions">
-          <button
-            type="button"
-            className="recipe-panel__button"
-            onClick={() => save(getRecipeDownload, (n) => `Saved ${n}`)}
-          >
-            Save recipe
-          </button>
-          <button
-            type="button"
-            className="recipe-panel__button"
-            onClick={() => save(getSqlDownload, (n) => `Saved ${n}`)}
-          >
-            Export SQL script
-          </button>
-          <ExportButtons db={db} table={stitchedTable} />
-        </div>
-      ) : null}
-
       <p className="recipe-panel__message" role="status" aria-live="polite">
         {message}
       </p>
-
       {outcome && !outcome.ok ? (
         <div className="recipe-panel__errors" role="alert">
           <p className="recipe-panel__errors-title">Problems found in the recipe:</p>
@@ -174,19 +129,92 @@ export function RecipePanel({
           ) : null}
         </div>
       ) : null}
-
       {outcome && outcome.ok ? (
         <div className="recipe-panel__result">
           <p>
             {outcome.preApproved} {outcome.preApproved === 1 ? "proposal" : "proposals"} pre-approved,{" "}
             {outcome.notApplied.length} not applied.
           </p>
-          <button type="button" className="recipe-panel__button" onClick={onReview}>
+          <button type="button" className="recipe-panel__button recipe-panel__button--secondary" onClick={onReview}>
             Review in stitching table
           </button>
           <RecipeNotApplied items={outcome.notApplied} />
         </div>
       ) : null}
+    </section>
+  );
+}
+
+export interface RecipePanelProps {
+  db: DuckDBService;
+  /** The stitched result. The panel renders nothing without one. */
+  stitchedTable: LoadedTable | null;
+  /** Build the recipe JSON download, or null when there is nothing to save. */
+  getRecipeDownload: () => PanelDownload | null;
+  /** Build the SQL script download, or null when there is nothing to export. */
+  getSqlDownload: () => PanelDownload | null;
+  download: (fileName: string, mime: string, text: string) => void;
+}
+
+/** Save recipe and exports for the stitched result, shown after the result card. */
+export function RecipePanel({
+  db,
+  stitchedTable,
+  getRecipeDownload,
+  getSqlDownload,
+  download,
+}: RecipePanelProps): JSX.Element | null {
+  const [recipeMsg, setRecipeMsg] = useState("");
+  const [sqlMsg, setSqlMsg] = useState("");
+
+  if (stitchedTable === null) return null;
+
+  const save = (
+    get: () => PanelDownload | null,
+    setMsg: (m: string) => void
+  ) => {
+    const d = get();
+    if (!d) {
+      setMsg("There is nothing to save yet.");
+      return;
+    }
+    download(d.fileName, d.mime, d.text);
+    setMsg(`Saved ${d.fileName}`);
+  };
+
+  return (
+    <section className="recipe-panel" aria-label="Recipes">
+      <h2 className="recipe-panel__title">Recipes</h2>
+      <p className="recipe-panel__intro">
+        Save this stitch as a recipe and reuse it on next month&apos;s files.
+      </p>
+      <div className="recipe-panel__actions">
+        <span className="recipe-panel__item">
+          <button
+            type="button"
+            className="recipe-panel__button recipe-panel__button--primary"
+            onClick={() => save(getRecipeDownload, setRecipeMsg)}
+          >
+            Save recipe
+          </button>
+          <span className="recipe-panel__message" role="status" aria-live="polite">
+            {recipeMsg}
+          </span>
+        </span>
+        <span className="recipe-panel__item">
+          <button
+            type="button"
+            className="recipe-panel__button"
+            onClick={() => save(getSqlDownload, setSqlMsg)}
+          >
+            Export SQL script
+          </button>
+          <span className="recipe-panel__message" role="status" aria-live="polite">
+            {sqlMsg}
+          </span>
+        </span>
+        <ExportButtons db={db} table={stitchedTable} />
+      </div>
     </section>
   );
 }

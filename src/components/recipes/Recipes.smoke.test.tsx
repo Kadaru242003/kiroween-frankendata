@@ -5,7 +5,7 @@ import { applyRecipeText } from "../../core/recipes/recipe-apply";
 import { EXPERIMENTS, MONSTERS, proposalSet, validRecipe } from "../../core/recipes/recipe-test-support";
 import { StitchStore } from "../../core/stitching/stitch-store";
 import { ExportButtons } from "./ExportButtons";
-import { RecipePanel, type RecipeApplyOutcome } from "./RecipePanel";
+import { ApplyRecipe, RecipePanel, type RecipeApplyOutcome } from "./RecipePanel";
 
 const db = {} as DuckDBService;
 const table = { tableName: "monsters", schema: MONSTERS.schema, rowCount: 3 };
@@ -32,7 +32,7 @@ describe("ExportButtons", () => {
       throw new Error("Could not export monsters: boom");
     });
     render(<ExportButtons db={db} table={table} exporter={exporter} download={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Export monsters as Parquet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export monsters as Excel" }));
     await waitFor(() => expect(screen.getByText("Could not export monsters: boom")).toBeInTheDocument());
   });
 });
@@ -42,12 +42,19 @@ function panel(props: Partial<React.ComponentProps<typeof RecipePanel>> = {}) {
     <RecipePanel
       db={db}
       stitchedTable={null}
-      onApplyRecipe={async () => ({ ok: true, preApproved: 0, notApplied: [] })}
       getRecipeDownload={() => null}
       getSqlDownload={() => null}
+      download={() => {}}
+      {...props}
+    />
+  );
+}
+function apply(props: Partial<React.ComponentProps<typeof ApplyRecipe>> = {}) {
+  return (
+    <ApplyRecipe
+      onApplyRecipe={async () => ({ ok: true, preApproved: 0, notApplied: [] })}
       onReview={() => {}}
       outcome={null}
-      download={() => {}}
       {...props}
     />
   );
@@ -55,12 +62,19 @@ function panel(props: Partial<React.ComponentProps<typeof RecipePanel>> = {}) {
 const stitched: LoadedTable = { ...EXPERIMENTS, tableName: "stitch_1_result" };
 
 describe("RecipePanel", () => {
-  it("shows Save recipe and Export SQL only when a stitched result exists", () => {
-    const { rerender } = render(panel());
+  it("shows the panel only with a stitched result, in order: Save, SQL, CSV, Excel", () => {
+    const { rerender, container } = render(panel());
     expect(screen.queryByRole("button", { name: "Save recipe" })).toBeNull();
     rerender(panel({ stitchedTable: stitched }));
-    expect(screen.getByRole("button", { name: "Save recipe" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export SQL script" })).toBeInTheDocument();
+    expect(screen.getByText(/Save this stitch as a recipe and reuse it on next month/)).toBeInTheDocument();
+    const names = Array.from(container.querySelectorAll("button")).map((b) => b.textContent);
+    expect(names).toEqual(["Save recipe", "Export SQL script", "CSV", "Excel"]);
+    expect(screen.queryByText(/Parquet/)).toBeNull();
+  });
+  it("Apply recipe is always available with its hint", () => {
+    render(apply());
+    expect(screen.getByLabelText("Apply recipe (JSON file)")).toBeInTheDocument();
+    expect(screen.getByText("Reuse a saved stitch on new files")).toBeInTheDocument();
   });
 
   it("saves through the download helper and confirms in place", () => {
@@ -94,13 +108,13 @@ describe("RecipePanel", () => {
         : { ok: false as const, errors: res.errors };
       return outcome;
     });
-    const { rerender } = render(panel({ onApplyRecipe }));
+    const { rerender } = render(apply({ onApplyRecipe }));
     const input = screen.getByLabelText("Apply recipe (JSON file)");
     const file = new File(['{"format":"nope"}'], "bad.json", { type: "application/json" });
     fireEvent.change(input, { target: { files: [file] } });
     await waitFor(() => expect(onApplyRecipe).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(/not a valid recipe/)).toBeInTheDocument());
-    rerender(panel({ onApplyRecipe, outcome }));
+    rerender(apply({ onApplyRecipe, outcome }));
     expect(screen.getByRole("alert")).toHaveTextContent("Problems found in the recipe");
     expect(store.getState()).toBe(before);
     expect(compute).not.toHaveBeenCalled();
@@ -109,7 +123,7 @@ describe("RecipePanel", () => {
   it("lists items that were not applied with their reasons and offers an explicit review button", () => {
     const onReview = vi.fn();
     render(
-      panel({
+      apply({
         onReview,
         outcome: {
           ok: true,

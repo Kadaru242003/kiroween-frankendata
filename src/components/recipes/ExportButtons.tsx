@@ -1,5 +1,5 @@
 /**
- * ExportButtons (Feature 5, Requirement 1): CSV, Excel, and Parquet export of
+ * ExportButtons (Feature 5, Requirement 1): CSV and Excel export of
  * one table. Feedback stays in place (a polite live region); nothing scrolls or
  * moves focus. The core exporter and the download are injectable for tests.
  */
@@ -23,9 +23,8 @@ export interface ExportButtonsProps {
 const LABELS: Record<ExportFormat, string> = {
   csv: "CSV",
   xlsx: "Excel",
-  parquet: "Parquet",
 };
-const FORMATS: ExportFormat[] = ["csv", "xlsx", "parquet"];
+const FORMATS: ExportFormat[] = ["csv", "xlsx"];
 
 export function ExportButtons({
   db,
@@ -83,11 +82,6 @@ export function ExportButtons({
       >
         {message}
       </span>
-      {busy === "parquet" ? null : (
-        <span className="export-buttons__hint">
-          Parquet is written by DuckDB and may fetch its Parquet extension once. No data is sent.
-        </span>
-      )}
     </div>
   );
 }

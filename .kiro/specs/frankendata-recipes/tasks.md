@@ -75,3 +75,7 @@ Feature 5 adds table export (CSV, Excel, Parquet), savable and appliable recipes
   - Run the full test suite, `npm run build`, `npm run lint`, and `npm run check:api`
   - Write `NOTES.md` and commit
   - _Requirements: all_
+
+## Follow-up (placement fix)
+
+- [x] 16. Drop Parquet from the UI and exporter; move the Recipes panel above Ask the Lab; move Apply recipe to the top area

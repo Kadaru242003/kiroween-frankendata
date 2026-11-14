@@ -75,3 +75,9 @@ Core lives in `src/core/recipes/`, UI in `src/components/recipes/`. The apply lo
 ## Credits used
 
 Roughly 230 of the 300 budget. This is an estimate, since I have no exact meter.
+
+## Follow-up: placement fix and Parquet removal
+
+- **Parquet removed from the UI and the exporter.** The export buttons are CSV and Excel only, with no Parquet hint. The Parquet code path in `table-exporter.ts` and its tests were removed, so the Parquet deviation, the Parquet known issue, and manual test step 10's Parquet mention above no longer apply. Reason: the DuckDB Parquet extension is fetched over the network, which conflicts with `security.md`. The optional `exportFileBytes` plumbing in the DuckDB service and test harness is left in place, unused.
+- **Layout.** The Recipes panel (Save recipe first and primary, Export SQL script, then CSV and Excel for the stitched result, each with its message beside it, plus a one-line intro) now renders only while a stitched result exists, directly above Ask the Lab. "Apply recipe" moved to the top area under the demo buttons and Reset lab, as a secondary button with the hint "Reuse a saved stitch on new files". It shows whenever a table is loaded, and its summary, errors, Not applied list and "Review in stitching table" button sit with it. Per-table CSV and Excel buttons stay on each original table preview card. Nothing scrolls except the explicit review button.
+- Requirements 1.1 and 1.5 and design sections on Parquet are superseded by this change (specs are left as written).
