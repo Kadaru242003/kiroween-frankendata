@@ -162,7 +162,7 @@ These constants SHALL be exposed as named values in `src/core/autopsy/types.ts` 
 2. THE TestSuite SHALL include a property-based test verifying that for every column the null percent equals the null count divided by the row count (zero when the row count is zero).
 3. THE TestSuite SHALL include a property-based test verifying that running the AutopsyEngine twice on the same table yields identical reports.
 4. THE TestSuite SHALL include a property-based test verifying that running an Autopsy never changes any table's schema, row count, or contents.
-5. THE TestSuite SHALL include a property-based test verifying that every FixAction proposal is accepted by the existing applier, leaves the original table unchanged, and produces a result whose row count equals the original minus the duplicates when a duplicate-rows proposal is applied.
+5. THE TestSuite SHALL include a property-based test verifying that every FixAction proposal is accepted by the existing applier, leaves the original table unchanged, and, when a duplicate-rows proposal is applied alone, produces a result whose row count equals the original row count minus the proposal's own duplicate count (the existing rule compares rows after trimming and collapsing whitespace, so that count is at least the exact duplicate count in the report).
 6. THE TestSuite SHALL include a property-based test verifying that adversarial table and column names never cause an injected statement to execute.
 7. THE TestSuite SHALL include a DuckDB golden test on the mismatched demo data that pins exact findings, including the monsters table's duplicate rows and its species casing variants.
 8. THE TestSuite SHALL exercise the Autopsy only against local DuckDB and SHALL make no network call.

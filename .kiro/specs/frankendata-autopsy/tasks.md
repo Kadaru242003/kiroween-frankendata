@@ -66,11 +66,11 @@ Feature 4 adds "The Autopsy": a data quality report for any loaded table or stit
 - [x] 10. **Checkpoint**
   - Run `npm run build` and the autopsy, TablePreview, and Specimen tests; fix any failures
 
-- [ ] 11. DuckDB property tests
+- [x] 11. DuckDB property tests
   - Determinism, no-mutation, applier acceptance, and adversarial identifiers, each in its own file with small run counts
   - _Design: Correctness properties and tests; Requirements 9.3 to 9.6_
 
-- [ ] 12. Golden test and performance test
+- [x] 12. Golden test and performance test
   - `autopsy-golden.duckdb.test.ts`: pin the mismatched demo monsters findings (14 rows, 2 duplicate rows, species whitespace and case variants, score) and the experiments table
   - Performance test: 100,000 rows by 20 columns measured against `AUTOPSY_TARGET_MS`
   - _Design: Performance, Correctness properties and tests; Requirements 7.4, 9.7_

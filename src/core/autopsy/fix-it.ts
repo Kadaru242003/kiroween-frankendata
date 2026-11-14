@@ -38,12 +38,17 @@ export async function loadCleaningProposals(
   target: AutopsyTarget
 ): Promise<CleaningProposal[]> {
   const reader = createSampleReader(db);
+  // The cleaning rules read value samples for STRING columns only (everything
+  // else they compute with SQL over the full table), so sample just those and
+  // keep the full schema for the duplicate and outlier rules.
   const sample = await reader.readTable({
     tableName: target.tableName,
-    schema: target.schema,
+    schema: target.schema.filter((c) => c.type === "string"),
     rowCount: target.rowCount,
   });
-  const proposals = await cleanTables(db, [sample]);
+  const proposals = await cleanTables(db, [
+    { ...sample, schema: target.schema.map((c) => ({ ...c })) },
+  ]);
   return proposals.filter((p) => p.target.tableName === target.tableName);
 }
 
@@ -51,7 +56,9 @@ export async function loadCleaningProposals(
 function labelFor(p: CleaningProposal): string {
   const col = p.target.columnName ?? "";
   if (p.kind === "duplicate-rows") {
-    return "Remove duplicate rows";
+    // The existing rule compares rows after trimming and collapsing whitespace,
+    // so it can remove slightly more than the exact duplicates in the report.
+    return "Remove duplicate rows (ignoring extra whitespace)";
   }
   if (p.kind === "category-standardize") {
     return `Standardize categories in ${col}`;

@@ -100,11 +100,21 @@ export function buildStringVariantsSql(
 ): string {
   const t = quoteIdent(tableName);
   const c = quoteIdent(columnName);
+  // The normalized keys are PROJECTED in an inner query and the outer query
+  // groups on the plain projected column. Grouping directly on a regexp_replace
+  // expression crashes the DuckDB-WASM MVP bundle (see the note on
+  // countDuplicateRows in cleaning-rules.ts), so this form is used instead.
+  // Performance: group the RAW values first (a plain column), then normalize
+  // each DISTINCT value once instead of every row. Row counts are carried as
+  // `cnt`, so `ws` is still an exact row count.
   return (
+    `WITH v AS (SELECT ${c} AS raw, COUNT(*) AS cnt FROM ${t} ` +
+    `WHERE ${c} IS NOT NULL GROUP BY ${c}), ` +
+    `n AS (SELECT raw, cnt, ${norm("raw")} AS f FROM v) ` +
     `SELECT ` +
-    `(SELECT COUNT(*) FROM ${t} WHERE ${c} IS NOT NULL AND ${c} <> ${norm(c)}) AS ws, ` +
-    `(SELECT COUNT(*) FROM (SELECT 1 FROM ${t} WHERE ${c} IS NOT NULL ` +
-    `GROUP BY LOWER(${norm(c)}) HAVING COUNT(DISTINCT ${norm(c)}) > 1)) AS cg`
+    `(SELECT CAST(COALESCE(SUM(cnt), 0) AS BIGINT) FROM n WHERE raw <> f) AS ws, ` +
+    `(SELECT COUNT(*) FROM (SELECT k FROM (SELECT LOWER(f) AS k, f FROM n) ` +
+    `GROUP BY k HAVING COUNT(DISTINCT f) > 1)) AS cg`
   );
 }
 
