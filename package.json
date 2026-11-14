@@ -19,7 +19,7 @@
     "papaparse": "5.7.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "xlsx": "0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

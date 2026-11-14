@@ -129,3 +129,7 @@ dev the app therefore runs rules-only; an AI call would simply 404 and fall
 back to the rules engine. Leave `VITE_AI_ENABLED` unset (or `false`) for a
 clean offline dev loop. To exercise the function locally, use `vercel dev`,
 which serves `api/ai.ts` alongside the Vite app.
+
+## SheetJS install source
+
+`xlsx` is installed from the official SheetJS CDN tarball (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`), not from the npm registry. The registry copy (0.18.5) is frozen and has unfixed advisories (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9). The URL is pinned in `package.json` and recorded in `package-lock.json`, so `npm ci` on Vercel downloads it from cdn.sheetjs.com during install. The build machine needs outbound access to that host. If the CDN is ever unreachable, installs fail rather than falling back to the vulnerable package.
