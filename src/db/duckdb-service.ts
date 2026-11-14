@@ -74,6 +74,11 @@ import type { DuckDBBundles } from "@duckdb/duckdb-wasm";
 export interface DuckDBConnectionAdapter {
   /** Execute `sql` and return the result rows as plain objects (empty for DDL/DML). */
   run(sql: string): Promise<Record<string, unknown>[]>;
+  /**
+   * Optional (Feature 5): run a COPY statement that writes `virtualFileName`,
+   * return the file's bytes, and drop the virtual file.
+   */
+  exportFileBytes?(copySql: string, virtualFileName: string): Promise<Uint8Array>;
 }
 
 /**
@@ -169,6 +174,19 @@ export function createDuckDBService(
     async query<T = Record<string, unknown>>(sql: string): Promise<T[]> {
       const connection = requireConn();
       return (await connection.run(sql)) as T[];
+    },
+
+    // File export (Feature 5): delegates to the connection when it can reach
+    // the DuckDB file system (the browser bundle and the test harness).
+    async exportFileBytes(
+      copySql: string,
+      virtualFileName: string
+    ): Promise<Uint8Array> {
+      const connection = requireConn();
+      if (!connection.exportFileBytes) {
+        throw new Error("File export is not available in this environment");
+      }
+      return connection.exportFileBytes(copySql, virtualFileName);
     },
   };
 }
@@ -494,6 +512,21 @@ async function createBrowserConnection(): Promise<DuckDBConnectionAdapter> {
       const table = await connection.query(sql);
       // Arrow Table → plain row objects.
       return table.toArray().map((row) => row.toJSON() as Record<string, unknown>);
+    },
+    async exportFileBytes(
+      copySql: string,
+      virtualFileName: string
+    ): Promise<Uint8Array> {
+      try {
+        await connection.query(copySql);
+        return await db.copyFileToBuffer(virtualFileName);
+      } finally {
+        try {
+          await db.dropFile(virtualFileName);
+        } catch {
+          /* the file may not exist if COPY failed */
+        }
+      }
     },
   };
 }

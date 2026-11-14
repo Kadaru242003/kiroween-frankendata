@@ -208,7 +208,7 @@ export function isHardGated(
  * refs are sorted by `(tableName, columnName)` so `(A, B)` and `(B, A)` yield
  * the same id, giving symmetric dedup.
  */
-function pairId(a: ColumnRef, b: ColumnRef): string {
+export function pairId(a: ColumnRef, b: ColumnRef): string {
   const keyA = `${a.tableName}.${a.columnName}`;
   const keyB = `${b.tableName}.${b.columnName}`;
   const [first, second] = keyA <= keyB ? [keyA, keyB] : [keyB, keyA];

@@ -111,6 +111,12 @@ export interface DuckDBService {
     limit: number
   ): Promise<Record<string, unknown>[]>;
   query<T = Record<string, unknown>>(sql: string): Promise<T[]>;
+  /**
+   * Optional (Feature 5, Parquet export): run a `COPY ... TO '<virtualFileName>'`
+   * statement, read the written virtual file's bytes, and drop the file again.
+   * Only environments with access to the DuckDB file system provide it.
+   */
+  exportFileBytes?(copySql: string, virtualFileName: string): Promise<Uint8Array>;
 }
 
 /** Bundled demo datasets (no network access). */
