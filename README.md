@@ -54,28 +54,56 @@ Only column names and a few sample values ever leave the browser.
 
 ## How we used Kiro
 
-This project was built spec-first with Kiro.
+Built spec-first with Kiro. Everything below is checked into the repo.
 
-**Specs** (`.kiro/specs`), each with requirements, design, and tasks:
-- `frankendata-file-intake`: drag-and-drop CSV/XLSX intake, type inference, DuckDB table loading, and the demo data.
-- `frankendata-ai-stitching`: the deterministic rules engine, the approval screen, non-destructive apply and undo, and the optional `/api/ai` enhancement with its safety limits.
-- `frankendata-chat-sql`: Ask the Lab, the SQL validator, result conversion and CSV export, hand-built charts, and the `/api/sql` proxy.
+**Specs** (`.kiro/specs/<name>/` with `requirements.md`, `design.md`, `tasks.md`, and `NOTES.md` where an autonomous run recorded decisions)
 
-**Steering docs** (`.kiro/steering`), loaded in different modes:
-- `product.md`, `tech.md`, `structure.md`: product intent, the stack, and the framework-agnostic core structure.
-- `security.md` (always on): data-stays-in-browser, fail-closed proxies, no client-visible secrets, SQL validator rules.
-- `api-conventions.md` (loads when editing `api/**`): Node handlers, explicit `.js` imports, the shared adapter, `check:api`.
-- `testing.md` (loads when editing test files): vitest settings, property tests, golden DuckDB tests.
+| Spec | What it covers |
+| --- | --- |
+| `frankendata-file-intake` | CSV/XLSX intake, type inference, DuckDB tables, demo data |
+| `frankendata-ai-stitching` | rules engine, approval screen, apply and undo, optional `/api/ai` |
+| `frankendata-chat-sql` | Ask the Lab, SQL validator, charts, `/api/sql` |
+| `frankendata-autopsy` | data quality report, health score, Fix it |
+| `frankendata-recipes` | export, save and apply recipes, SQL script, next-month demo |
+| `frankendata-mcp` | local MCP server for agents |
 
-**Hooks** (`.kiro/hooks`):
-- `run-test-suite.json`: manual full test run.
-- `check-api.json`: manual check that the serverless function graph resolves.
-- `pre-commit-quality-gate.json`: manual build, lint, and test gate.
-- `sql-validator-guard.json`: fires when the SQL validator is edited and re-runs its tests to confirm no safety check was weakened.
+**Steering** (`.kiro/steering/`)
 
-We drove each spec through spec-driven task execution in small batches, running the build, tests, lint, and the serverless graph check at each checkpoint, and used focused bug-fix prompts for follow-up issues.
+| File | Inclusion |
+| --- | --- |
+| `product.md`, `tech.md`, `structure.md` | always (no front matter) |
+| `security.md` | always |
+| `api-conventions.md` | fileMatch `api/**` |
+| `testing.md` | fileMatch `**/*.test.*` |
+| `design-system.md` | fileMatch `src/components/**` |
+| `data-engine.md` | fileMatch `src/core/**` |
+| `mcp-conventions.md` | fileMatch `mcp/**` |
+| `release-checklist.md` | manual (`#release-checklist`) |
 
-Prompts for the Kiro agent were drafted with help from Claude (Anthropic) outside of Kiro; all implementation was done by Kiro agents from the specs.
+**Hooks** (`.kiro/hooks/`)
+
+| File | Trigger |
+| --- | --- |
+| `run-test-suite.json`, `check-api.json`, `pre-commit-quality-gate.json` | user triggered |
+| `demo-smoke.json`, `readme-sync.json` | user triggered |
+| `sql-validator-guard.json` | file edited: `src/core/chat/sql-validator.ts` |
+| `spec-sync.json` | file edited: `src/core/**/*.ts` |
+| `a11y-check.json` | file edited: `src/components/**/*.tsx` |
+| `mcp-rebuild.json` | file edited: `mcp/src/**/*.ts` |
+
+**MCP servers** (`.kiro/settings/mcp.json`)
+
+- `frankendata`: our own server (`mcp/`), enabled. See the next section.
+- `playwright`: `@playwright/mcp`, disabled by default, for agent-driven browser checks.
+
+**Custom agents** (`.kiro/agents/`, Markdown with front matter)
+
+- `spec-reviewer.md`: read-only review of a spec against the steering docs and the code.
+- `security-auditor.md`: read-only audit of a change against `security.md`, the SQL validator and the MCP path guard.
+
+**Tests:** Vitest unit, property (fast-check) and DuckDB golden tests under `npm test`, plus one Playwright browser spec, `e2e/demo.spec.ts`, under `npm run test:e2e`.
+
+We drove each spec through spec-driven task execution, ran the build, tests, lint and the serverless graph check at every checkpoint, and used focused bug-fix prompts for follow-ups. Prompts for the Kiro agent were drafted with help from Claude (Anthropic) outside of Kiro; all implementation was done by Kiro agents from the specs.
 
 ## Use FrankenData from Kiro (MCP)
 
