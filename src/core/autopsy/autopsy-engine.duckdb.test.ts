@@ -181,7 +181,8 @@ describe("runAutopsy safety and progress", () => {
     await runAutopsy(spy, await target("t2"));
     expect(seen.length).toBeGreaterThan(3);
     for (const sql of seen) {
-      expect(sql.trimStart()).toMatch(/^SELECT\b/i);
+      // Read-only: a SELECT, or a WITH (CTE) that feeds a SELECT.
+      expect(sql.trimStart()).toMatch(/^(SELECT|WITH)\b/i);
       expect(sql).not.toMatch(/\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|ATTACH|COPY|PRAGMA)\b/i);
     }
   });
