@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Demo smoke test",
+  "description": "Manually runs the golden tests for stitching, Ask the Lab, Autopsy, Recipes and the MCP server and summarizes pass or fail. User-triggered only.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run these golden and end-to-end tests and summarize pass or fail for each area: stitching (npx vitest --run src/core/stitching/stitch-golden.duckdb.test.ts), Ask the Lab (npx vitest --run src/core/chat/ask-golden.duckdb.test.ts), Autopsy (npx vitest --run src/core/autopsy/autopsy-golden.duckdb.test.ts), Recipes (npx vitest --run src/core/recipes/recipes-golden.duckdb.test.ts) and the MCP server (npx vitest --run mcp/src/e2e.test.ts mcp/src/parity.duckdb.test.ts). Use a table with one row per area. For any failure, show the failing assertion and the most likely cause. Do not modify any files."
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Spec sync",
+  "description": "Fires when a file under src/core is edited and asks the agent to check whether the related design document still matches, listing any drift. It only reports; it never edits files.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/core/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A file under src/core was edited. Find the spec in .kiro/specs/ that covers this module (frankendata-file-intake, frankendata-ai-stitching, frankendata-chat-sql, frankendata-autopsy, frankendata-recipes or frankendata-mcp) by matching the module path against each design.md module layout. Read that design.md and compare it with the edited code: module names and exports, SQL strategy, ids and naming conventions, constants, and error handling. List any drift as a short bullet list (what the design says, what the code does). If there is no drift, say so in one line. Do not modify any files."
+  }
+}

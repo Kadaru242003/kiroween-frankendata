@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "MCP rebuild",
+  "description": "Fires when a file under mcp/src is edited and asks the agent to rebuild the MCP server, run the MCP tests, and remind the user to reconnect the server in Kiro.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "mcp/src/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A file under mcp/src was edited. Run `npm run mcp:build` and then the MCP tests with `npx vitest --run mcp`. Report pass or fail with the failing test names if any. If both pass, remind the user to reconnect the frankendata server from the MCP Server view in Kiro (or toggle it off and on), because Kiro keeps using the previous build until it reconnects. Also confirm the change still follows .kiro/steering/mcp-conventions.md (path guard on every path, no network, no AI, structured errors). Do not modify any files."
+  }
+}

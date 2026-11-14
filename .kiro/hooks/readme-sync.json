@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "README sync",
+  "description": "Manually compares README.md (features and the How we used Kiro section) with the actual specs, steering docs, hooks, MCP config and e2e tests, and reports or fixes differences. User-triggered only.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Compare README.md with what actually exists in the repository. List the real files in .kiro/specs/, .kiro/steering/ (with each front matter inclusion mode), .kiro/hooks/ (with each trigger), .kiro/settings/mcp.json (servers and whether disabled), .kiro/agents/ if it exists, and the e2e spec under e2e/. Then check the Features section and the How we used Kiro section of README.md against that inventory and the specs. Report every difference (missing item, wrong trigger or inclusion mode, stale file name, feature that no longer exists). Then fix README.md so it matches reality, keeping it scannable and without em dashes. Do not change any other file."
+  }
+}

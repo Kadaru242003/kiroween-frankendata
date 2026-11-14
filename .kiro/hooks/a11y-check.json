@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Accessibility check",
+  "description": "Fires when a React component file under src/components is edited and asks the agent to review the change for aria labels, focus handling, keyboard access, live regions and reduced motion. It only reports.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/components/**/*.tsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A component under src/components was edited. Review only the changed code against .kiro/steering/design-system.md: accessible names (aria-label on ambiguous buttons), real buttons and labels, polite live regions for feedback, visible focus, full keyboard operation, aria-hidden on decorative SVG, plain-text rendering of untrusted text, no automatic scrolling or focus moves except from an explicit button, and prefers-reduced-motion handling in the matching .css file. Report pass or a short list of concrete issues with file and line. Do not modify any files."
+  }
+}
