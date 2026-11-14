@@ -47,6 +47,12 @@ export interface SpecimenProps {
    * while it shows. Optional, default false.
    */
   autopsyOpen?: boolean;
+  /**
+   * A recipe has been applied: Little Frank holds a small recipe scroll. Same
+   * hand as the other held items; priority is magnifying glass, then scroll,
+   * then chart sign, then clipboard. Optional, default false.
+   */
+  recipeApplied?: boolean;
 }
 
 /** A transient reaction the Specimen plays for a short time, then clears. */
@@ -118,6 +124,7 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     intakeError,
   } = props;
   const autopsyOpen = props.autopsyOpen ?? false;
+  const recipeApplied = props.recipeApplied ?? false;
 
   const reduced = prefersReducedMotion();
   const awake = tableCount > 0;
@@ -253,9 +260,15 @@ export function Specimen(props: SpecimenProps): JSX.Element {
   const wearGoggles = proposalsShowing && !askResult;
   // The magnifying glass, chart sign, and clipboard share the same hand, so
   // only one shows at a time, with the magnifying glass taking priority.
-  const holdChart = askResult && !autopsyOpen;
+  const holdScroll = recipeApplied && !autopsyOpen;
+  const holdChart = askResult && !autopsyOpen && !holdScroll;
   const holdClipboard =
-    awake && approvedCount > 0 && !stitched && !holdChart && !autopsyOpen;
+    awake &&
+    approvedCount > 0 &&
+    !stitched &&
+    !holdChart &&
+    !autopsyOpen &&
+    !holdScroll;
 
   return (
     <div className="specimen-layer">
@@ -366,6 +379,15 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               </g>
             ) : null}
 
+            {/* Recipe scroll held after a recipe is applied (decorative). */}
+            {holdScroll ? (
+              <g className="specimen__scroll" aria-hidden="true">
+                <rect x="47" y="48" width="13" height="16" rx="3" />
+                <line x1="50" y1="53" x2="57" y2="53" />
+                <line x1="50" y1="57" x2="57" y2="57" />
+                <line x1="50" y1="61" x2="54" y2="61" />
+              </g>
+            ) : null}
             {/* Clipboard with a check (approved count > 0). */}
             {holdClipboard ? (
               <g className="specimen__clipboard">

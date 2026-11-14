@@ -415,3 +415,15 @@
   stroke-width: 2.4;
   stroke-linecap: round;
 }
+
+/* Recipe scroll held after a recipe is applied. Static: no animation. */
+.specimen__scroll rect {
+  fill: rgba(240, 220, 160, 0.9);
+  stroke: var(--amber-accent);
+  stroke-width: 1.4;
+}
+.specimen__scroll line {
+  stroke: #39ff14;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}

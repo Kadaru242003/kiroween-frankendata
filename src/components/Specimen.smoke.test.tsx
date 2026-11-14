@@ -128,4 +128,18 @@ describe("isAskResultShown", () => {
     expect(isAskResultShown({ kind: "error" }, false)).toBe(false);
     expect(isAskResultShown({ kind: "ai-unavailable" }, false)).toBe(false);
   });
+  it("holds a recipe scroll after a recipe is applied, off by default", () => {
+    const on = renderSpecimen({ tableCount: 2, recipeApplied: true, askResult: true, approvedCount: 2 });
+    expect(on.container.querySelector(".specimen__scroll")).not.toBeNull();
+    expect(on.container.querySelector(".specimen__sign")).toBeNull();
+    expect(on.container.querySelector(".specimen__clipboard")).toBeNull();
+    on.unmount();
+    const off = renderSpecimen({ tableCount: 2 });
+    expect(off.container.querySelector(".specimen__scroll")).toBeNull();
+  });
+  it("the magnifying glass takes priority over the recipe scroll", () => {
+    const { container } = renderSpecimen({ tableCount: 2, recipeApplied: true, autopsyOpen: true });
+    expect(container.querySelector(".specimen__magnifier")).not.toBeNull();
+    expect(container.querySelector(".specimen__scroll")).toBeNull();
+  });
 });

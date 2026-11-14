@@ -1,0 +1,132 @@
+.export-buttons {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.export-buttons__label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.export-buttons__button,
+.recipe-panel__button {
+  padding: 5px 10px;
+  border: 1px solid var(--accent-border, #2f6b2f);
+  border-radius: 6px;
+  background: var(--accent-bg, #112211);
+  color: var(--text-primary, inherit);
+  cursor: pointer;
+  font-size: 13px;
+}
+.export-buttons__button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.export-buttons__button:focus-visible,
+.recipe-panel__button:focus-within,
+.recipe-panel__button:focus-visible {
+  outline: 2px solid #39ff14;
+  outline-offset: 2px;
+}
+.export-buttons__message {
+  font-size: 12px;
+  min-height: 1em;
+}
+.export-buttons__message--error {
+  color: #ff6b6b;
+}
+.export-buttons__hint {
+  flex-basis: 100%;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.recipe-panel {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border, #333);
+  border-radius: 8px;
+}
+.recipe-panel__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.recipe-panel__drop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px dashed var(--border, #444);
+  border-radius: 6px;
+}
+.recipe-panel__drop--active {
+  border-color: #39ff14;
+}
+.recipe-panel__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.recipe-panel__button {
+  position: relative;
+  display: inline-block;
+}
+.recipe-panel__hint {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.recipe-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.recipe-panel__message {
+  min-height: 1.2em;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.recipe-panel__errors {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #a33;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.recipe-panel__errors-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.recipe-panel__result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+.recipe-not-applied {
+  margin-top: 6px;
+  font-size: 13px;
+}
+.recipe-not-applied__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.recipe-not-applied__list {
+  margin: 0;
+  padding-left: 18px;
+}
+.recipe-not-applied__item {
+  margin-bottom: 4px;
+}
+.recipe-not-applied__what {
+  display: block;
+  font-weight: 600;
+}
+.recipe-not-applied__why {
+  display: block;
+  opacity: 0.85;
+}

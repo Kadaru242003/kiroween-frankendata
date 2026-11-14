@@ -87,6 +87,24 @@ import { createSampleReader } from './core/stitching/sample-reader'
 import type { QueryableTable } from './core/chat/types'
 import { AskStore } from './state/ask-store'
 import { AskTheLabPanel } from './components/chat/AskTheLabPanel'
+import { applyRecipeText } from './core/recipes/recipe-apply'
+import {
+  buildRecipe,
+  recipeFileName,
+  serializeRecipe,
+} from './core/recipes/recipe-builder'
+import { applyRecipeOverrides } from './core/recipes/recipe-mapper'
+import { buildSqlScript, sqlScriptFileName } from './core/recipes/sql-script'
+import type { RecipeIssue, RecipeOverrides } from './core/recipes/types'
+import type { StitchedTable } from './core/stitching/types'
+import { downloadText } from './components/autopsy/download'
+import { ExportButtons } from './components/recipes/ExportButtons'
+import { RecipeNotApplied } from './components/recipes/RecipeNotApplied'
+import {
+  RecipePanel,
+  type RecipeApplyOutcome,
+} from './components/recipes/RecipePanel'
+import { scrollToStitchScreen } from './components/recipes/review'
 import './App.css'
 
 /**
@@ -103,6 +121,8 @@ const PREVIEW_ROW_LIMIT = 20
 
 /** Idle label for the second demo action: the mismatched stitching dataset (Req 8.4). */
 const LOAD_MISMATCHED_DEMO_LABEL = 'Load mismatched demo'
+/** Idle label for the third demo action: next month's files (Recipes demo). */
+const LOAD_NEXT_MONTH_DEMO_LABEL = "Load next month's files"
 
 /**
  * The lab stack: the single DuckDB service plus the controller wired to it and
@@ -287,6 +307,20 @@ function App() {
     () => new Set(),
   )
 
+  // Recipes (Feature 5): the last successful apply outcome, the last error, the
+  // anchor/key overrides to apply on confirm, and the stitched table that was
+  // current when the recipe was applied (for Little Frank's scroll).
+  const [recipeSuccess, setRecipeSuccess] = useState<Extract<
+    RecipeApplyOutcome,
+    { ok: true }
+  > | null>(null)
+  const [recipeErrors, setRecipeErrors] = useState<RecipeIssue[] | null>(null)
+  const [recipeOverrides, setRecipeOverrides] = useState<RecipeOverrides | null>(
+    null,
+  )
+  const [recipeBase, setRecipeBase] = useState<{
+    stitched: StitchedTable | null
+  } | null>(null)
   // Initialize DuckDB + controller once on mount. The module-level singleton
   // promise makes this safe under StrictMode's double-invoke.
   useEffect(() => {
@@ -370,6 +404,10 @@ function App() {
     [loadDemo],
   )
 
+  const handleLoadNextMonthDemo = useCallback(
+    () => loadDemo('nextMonth'),
+    [loadDemo],
+  )
   // Reset the whole lab: drop every DuckDB table (originals, cleaned copies,
   // stitch results), clear the intake store, stitch state + undo, the Ask the
   // Lab history/outcome, and re-enable the demo buttons. Never throws, even if
@@ -401,6 +439,10 @@ function App() {
     setStitchOpen(false)
     setCleanupOnly(false)
     setAutopsyTable(null)
+    setRecipeSuccess(null)
+    setRecipeErrors(null)
+    setRecipeOverrides(null)
+    setRecipeBase(null)
     queryableTableNamesHolder = []
     queryableSchemaSourceHolder = []
   }, [stack])
@@ -513,9 +555,121 @@ function App() {
   // The user confirmed on the approval screen: hold the assembled plan so the
   // JoinControls can adjust the anchor / join keys before applying. Nothing is
   // applied yet (Req 3.5 — apply only on an explicit action).
-  const handleConfirmPlan = useCallback((plan: StitchPlan) => {
-    setWorkingPlan(plan)
-  }, [])
+  // A recipe's anchor and join keys are applied here, to the plan the user just
+  // confirmed. They are only proposals: JoinControls still lets the user change
+  // them, and nothing is applied until "Apply & stitch".
+  const handleConfirmPlan = useCallback(
+    (plan: StitchPlan) => {
+      setWorkingPlan(
+        recipeOverrides === null
+          ? plan
+          : applyRecipeOverrides(
+              plan,
+              recipeOverrides,
+              tables
+                .map((t) => t.tableName)
+                .filter((name) => !uncheckedTableNames.has(name)),
+            ),
+      )
+    },
+    [recipeOverrides, tables, uncheckedTableNames],
+  )
+
+  // Apply recipe: validate, map onto the loaded tables, and record pre-approved
+  // decisions in the existing StitchStore. It never opens the approval screen,
+  // scrolls, or applies anything (Recipes Req 4.7, 4.9, 8.2).
+  const handleApplyRecipe = useCallback(
+    async (text: string): Promise<RecipeApplyOutcome> => {
+      if (stack === null) {
+        const errors = [{ path: '$', message: 'The lab is not ready yet.' }]
+        setRecipeErrors(errors)
+        return { ok: false, errors }
+      }
+      const result = await applyRecipeText(text, {
+        tables,
+        store: stack.stitchStore,
+        selectTables: (names) => {
+          setUncheckedTableNames((prev) =>
+            names.reduce((acc, name) => toggleUnchecked(acc, name, true), prev),
+          )
+          const checked = new Set(
+            tables
+              .map((t) => t.tableName)
+              .filter((name) => !uncheckedTableNames.has(name)),
+          )
+          for (const name of names) {
+            checked.add(name)
+          }
+          selectedTableNamesHolder = checked
+        },
+        computeProposals: () => stack.stitchController.computeProposals(),
+      })
+      if (!result.ok) {
+        setRecipeErrors(result.errors)
+        return { ok: false, errors: result.errors }
+      }
+      const outcome = {
+        ok: true as const,
+        preApproved: result.mapping.mappedCount,
+        notApplied: result.mapping.notApplied,
+      }
+      setRecipeErrors(null)
+      setRecipeSuccess(outcome)
+      setRecipeOverrides(result.mapping.overrides)
+      setRecipeBase({ stitched: stack.stitchStore.getState().stitchedTable })
+      setWorkingPlan(null)
+      return outcome
+    },
+    [stack, tables, uncheckedTableNames],
+  )
+
+  // The explicit "Review in stitching table" button: open the approval screen
+  // the same way the existing flow does, then scroll to it.
+  const handleReviewRecipe = useCallback(() => {
+    if (!canStitch) {
+      setCleanupOnly(true)
+    }
+    setStitchOpen(true)
+    scrollToStitchScreen()
+  }, [canStitch])
+
+  const getRecipeDownload = useCallback(() => {
+    if (stack === null) {
+      return null
+    }
+    const state = stack.stitchStore.getState()
+    if (state.plan === null || state.stitchedTable === null) {
+      return null
+    }
+    const now = new Date()
+    const recipe = buildRecipe({
+      plan: state.plan,
+      tables,
+      decisions: state.decisions,
+      now,
+    })
+    return {
+      fileName: recipeFileName(now),
+      mime: 'application/json',
+      text: serializeRecipe(recipe),
+    }
+  }, [stack, tables])
+
+  const getSqlDownload = useCallback(() => {
+    if (stack === null) {
+      return null
+    }
+    const state = stack.stitchStore.getState()
+    if (state.plan === null || state.stitchedTable === null) {
+      return null
+    }
+    const now = new Date()
+    return {
+      fileName: sqlScriptFileName(now),
+      mime: 'application/sql',
+      text: buildSqlScript({ plan: state.plan, tables, now }),
+    }
+  }, [stack, tables])
 
   // Change the anchor table (Req 7.2): reshape the working plan only.
   const handleChangeAnchor = useCallback((nextAnchorTableName: string) => {
@@ -635,6 +789,16 @@ function App() {
                 alreadyLoaded={loadedDemos.has('mismatched')}
                 tag="Start here"
               />
+              {/*
+                Third demo action: next month's files (Recipes demo). Same
+                headers and messy patterns as the mismatched demo, new rows.
+              */}
+              <DemoDataControl
+                onLoadDemo={handleLoadNextMonthDemo}
+                label={LOAD_NEXT_MONTH_DEMO_LABEL}
+                caption="Same messy patterns, new rows: try applying a recipe"
+                alreadyLoaded={loadedDemos.has('nextMonth')}
+              />
             </div>
             {/*
               Reset lab: shown only when at least one table is loaded. Drops all
@@ -678,6 +842,9 @@ function App() {
               >
                 Back to tables
               </button>
+              {recipeSuccess !== null && recipeSuccess.notApplied.length > 0 ? (
+                <RecipeNotApplied items={recipeSuccess.notApplied} />
+              ) : null}
               <ApprovalScreen
                 store={status.stack.stitchStore}
                 tables={selectedTables as readonly ApprovalScreenTable[]}
@@ -724,6 +891,26 @@ function App() {
             computed locally with read-only SQL (no AI, no network). Closes
             itself when its table disappears (Reset lab, undone stitch).
           */}
+          {/*
+            Recipes and export: Apply recipe (any time a table is loaded), and,
+            once a stitch is applied, Save recipe, Export SQL script, and the
+            stitched result export. All feedback stays in place.
+          */}
+          {tables.length > 0 ? (
+            <RecipeRegion
+              duckDBService={status.stack.duckDBService}
+              stitchStore={status.stack.stitchStore}
+              onApplyRecipe={handleApplyRecipe}
+              getRecipeDownload={getRecipeDownload}
+              getSqlDownload={getSqlDownload}
+              onReview={handleReviewRecipe}
+              outcome={
+                recipeErrors !== null
+                  ? { ok: false, errors: recipeErrors }
+                  : recipeSuccess
+              }
+            />
+          ) : null}
           <AutopsyRegion
             target={autopsyTable}
             loadedTables={tables}
@@ -746,6 +933,7 @@ function App() {
             changes app logic. See SpecimenRegion.
           */}
           <SpecimenRegion
+            recipeBase={recipeBase}
             tableCount={tables.length}
             autopsyOpen={autopsyTable !== null}
             intakeError={errors.length > 0}
@@ -821,6 +1009,7 @@ function AutopsyRegion({
 
 /** Props for {@link SpecimenRegion}. */
 interface SpecimenRegionProps {
+  recipeBase: { stitched: StitchedTable | null } | null
   autopsyOpen: boolean
   tableCount: number
   intakeError: boolean
@@ -835,6 +1024,7 @@ interface SpecimenRegionProps {
  * and the Ask the Lab pending/result states. No app logic changes.
  */
 function SpecimenRegion({
+  recipeBase,
   autopsyOpen,
   tableCount,
   intakeError,
@@ -860,6 +1050,9 @@ function SpecimenRegion({
     <Specimen
       tableCount={tableCount}
       autopsyOpen={autopsyOpen}
+      recipeApplied={
+        recipeBase !== null && stitch.stitchedTable === recipeBase.stitched
+      }
       proposalsShowing={proposalsShowing}
       approvedCount={approvedCount}
       stitched={stitch.stitchedTable !== null}
@@ -1024,7 +1217,51 @@ function TablePreviewRegion({
     }
   }, [tables, duckDBService])
 
-  return <TablePreview tables={previews} onAutopsy={onAutopsy} />
+  return (
+    <TablePreview
+      tables={previews}
+      onAutopsy={onAutopsy}
+      renderActions={(table) => (
+        <ExportButtons db={duckDBService} table={table} />
+      )}
+    />
+  )
+}
+
+/** Props for {@link RecipeRegion}. */
+interface RecipeRegionProps {
+  duckDBService: DuckDBService
+  stitchStore: StitchStore
+  onApplyRecipe: (text: string) => Promise<RecipeApplyOutcome>
+  getRecipeDownload: () => { fileName: string; mime: string; text: string } | null
+  getSqlDownload: () => { fileName: string; mime: string; text: string } | null
+  onReview: () => void
+  outcome: RecipeApplyOutcome | null
+}
+
+/** Subscribes to the stitch store so the panel knows when a stitched result exists. */
+function RecipeRegion({
+  duckDBService,
+  stitchStore,
+  onApplyRecipe,
+  getRecipeDownload,
+  getSqlDownload,
+  onReview,
+  outcome,
+}: RecipeRegionProps) {
+  const { stitchedTable } = useStitchStore(stitchStore)
+  return (
+    <RecipePanel
+      db={duckDBService}
+      stitchedTable={stitchedTable}
+      onApplyRecipe={onApplyRecipe}
+      getRecipeDownload={getRecipeDownload}
+      getSqlDownload={getSqlDownload}
+      onReview={onReview}
+      outcome={outcome}
+      download={downloadText}
+    />
+  )
 }
 
 /** Props for {@link StitchStage}. */

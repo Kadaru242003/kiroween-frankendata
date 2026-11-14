@@ -20,6 +20,7 @@
  * task 14.3; the markup here uses classNames and semantic <table> structure so
  * that styling can target thead / separators without further changes.
  */
+import type { ReactNode } from 'react'
 import type { LoadedTable } from '../core/types'
 import './TablePreview.css'
 
@@ -45,6 +46,11 @@ export interface TablePreviewProps {
    * its table here (Autopsy Req 1.1). Omitted, the cards are unchanged.
    */
   onAutopsy?: (table: LoadedTable) => void
+  /**
+   * Optional: extra per-table controls (for example export buttons) rendered in
+   * each card's header. Omitted, the cards are unchanged.
+   */
+  renderActions?: (table: LoadedTable) => ReactNode
 }
 
 /**
@@ -75,7 +81,11 @@ function TablePreviewCard({
   table,
   previewRows,
   onAutopsy,
-}: TablePreviewData & { onAutopsy?: (table: LoadedTable) => void }) {
+  renderActions,
+}: TablePreviewData & {
+  onAutopsy?: (table: LoadedTable) => void
+  renderActions?: (table: LoadedTable) => ReactNode
+}) {
   const { tableName, sourceFileName, schema, rowCount } = table
   // Guard defensively: never render more than 20 rows even if the caller
   // passed more (Req 7.2).
@@ -98,6 +108,7 @@ function TablePreviewCard({
             Autopsy
           </button>
         ) : null}
+        {renderActions ? renderActions(table) : null}
       </header>
 
       <div className="table-preview-card__scroll">
@@ -168,7 +179,11 @@ function TablePreviewCard({
  * are no tables, renders nothing so the App can decide what empty-state UI to
  * show.
  */
-export function TablePreview({ tables, onAutopsy }: TablePreviewProps) {
+export function TablePreview({
+  tables,
+  onAutopsy,
+  renderActions,
+}: TablePreviewProps) {
   if (tables.length === 0) {
     return null
   }
@@ -180,6 +195,7 @@ export function TablePreview({ tables, onAutopsy }: TablePreviewProps) {
           table={table}
           previewRows={previewRows}
           onAutopsy={onAutopsy}
+          renderActions={renderActions}
         />
       ))}
     </div>
