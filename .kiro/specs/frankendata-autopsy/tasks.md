@@ -75,7 +75,7 @@ Feature 4 adds "The Autopsy": a data quality report for any loaded table or stit
   - Performance test: 100,000 rows by 20 columns measured against `AUTOPSY_TARGET_MS`
   - _Design: Performance, Correctness properties and tests; Requirements 7.4, 9.7_
 
-- [ ] 13. Final checks and notes
+- [x] 13. Final checks and notes
   - Run the full `npm test`, `npm run build`, `npm run lint`, and `npm run check:api`; fix failures
   - Write `NOTES.md`
   - _Requirements: all_

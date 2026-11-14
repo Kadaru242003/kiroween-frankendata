@@ -15,7 +15,7 @@ import type { AutopsyReport, ColumnFinding } from "./types.js";
 export function escapeMarkdown(text: string): string {
   return text
     .replace(/\\/g, "\\\\")
-    .replace(/[`*_{}\[\]()#+\-!|~>]/g, (ch) => `\\${ch}`)
+    .replace(/[`*_{}[\]()#+\-!|~>]/g, (ch) => `\\${ch}`)
     .replace(/</g, "&lt;")
     .replace(/&(?!lt;)/g, "&amp;")
     .replace(/[\r\n]+/g, " ");

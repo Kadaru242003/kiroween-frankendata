@@ -37,7 +37,8 @@ const nameArb = fc.oneof(
   fc.constantFrom(...HOSTILE),
   fc
     .string({ minLength: 1, maxLength: 12 })
-    .filter((s) => s.trim().length > 0 && !/[\u0000-\u001f]/.test(s))
+    // Printable only: skip control characters (code points below 32).
+    .filter((s) => s.trim().length > 0 && [...s].every((ch) => ch.charCodeAt(0) >= 32))
 );
 
 let duck: TestDuckDB;
