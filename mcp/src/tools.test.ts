@@ -120,6 +120,10 @@ describe("query", () => {
       "SELECT * FROM nope",
       "SELECT * FROM read_csv('x.csv')",
       "",
+      // DuckDB FROM-first shorthand is not allowed (pinned counterexample).
+      "FROM",
+      "FROM monsters",
+      "FROM monsters SELECT *",
     ]) {
       const r = await h.call("frankendata_query", { sql });
       expect(r.data.error.code).toBe("sql-rejected");

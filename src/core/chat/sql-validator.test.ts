@@ -246,3 +246,23 @@ describe("rejected: unknown tables (incl. comma / join lists)", () => {
     expect(accept("WITH t AS (SELECT * FROM monsters) SELECT * FROM t")).toBeTruthy();
   });
 });
+
+describe("FROM-first statements (DuckDB shorthand) are rejected", () => {
+  it.each([
+    "FROM",
+    "from",
+    "FROM monsters",
+    "FROM monsters SELECT *",
+    "FROM monsters SELECT Species LIMIT 1",
+    "FROM monsters;",
+    "  -- comment\n FROM monsters",
+    "FROM (SELECT 1)",
+  ])("rejects %j as not-select", (sql) => {
+    expect(rejectReason(sql)).toBe("not-select");
+  });
+  it("still accepts FROM after SELECT or inside WITH", () => {
+    accept("SELECT * FROM monsters");
+    accept("WITH x AS (SELECT * FROM monsters) SELECT * FROM x");
+  });
+});
+

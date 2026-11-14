@@ -56,8 +56,11 @@ describe("Feature: frankendata-mcp, Property 2: query respects the validator", (
         if (!verdict.ok) {
           expect(r.isError).toBe(true);
           expect(r.data.error.code).toBe("sql-rejected");
-          expect(log.some((s) => s.includes("AS q LIMIT"))).toBe(false);
-          if (sql.trim().length > 3) expect(log.some((s) => s.includes(sql))).toBe(false);
+          // The only statements allowed to run are the tool's own catalog
+          // lookups (information_schema). Anything else would be derived from
+          // the rejected SQL. (A substring check on the SQL text is wrong: a
+          // fragment such as "FROM" also appears in those lookups.)
+          expect(log.filter((s) => !s.includes("information_schema"))).toEqual([]);
         } else {
           expect(r.data.error?.code).not.toBe("sql-rejected");
           expect(log.some((s) => s.includes(verdict.sql))).toBe(true);
