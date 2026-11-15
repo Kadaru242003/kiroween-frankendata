@@ -13,6 +13,7 @@ import type {
 } from "../../core/recipes/types";
 import { RECIPE_MAX_BYTES } from "../../core/recipes/types";
 import type { DuckDBService, LoadedTable } from "../../core/types";
+import { frankBus } from "../../state/frank-bus";
 import { RecipeNotApplied } from "./RecipeNotApplied";
 import "./Recipes.css";
 
@@ -193,6 +194,8 @@ export function RecipePanel({
     }
     download(d.fileName, d.mime, d.text);
     setMsg(`Saved ${d.fileName}`);
+    // Little Frank: a saved recipe is written on the scroll, a SQL script is exported.
+    frankBus.emit({ type: get === getRecipeDownload ? "save-recipe" : "export" });
   };
 
   return (

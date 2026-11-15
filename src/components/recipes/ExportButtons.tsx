@@ -10,6 +10,7 @@ import {
 } from "../../core/recipes/table-exporter";
 import type { ExportFormat } from "../../core/recipes/types";
 import type { DuckDBService, LoadedTable } from "../../core/types";
+import { frankBus } from "../../state/frank-bus";
 import { downloadBytes } from "./download";
 import "./Recipes.css";
 
@@ -48,6 +49,7 @@ export function ExportButtons({
         download(file.fileName, file.mime, file.data);
         setIsError(false);
         setMessage(`Exported ${file.fileName}`);
+        frankBus.emit({ type: "export" });
       } catch (error) {
         setIsError(true);
         setMessage(error instanceof Error ? error.message : "The export failed.");

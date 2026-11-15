@@ -1,7 +1,7 @@
 /**
  * Smoke test for the Little Frank mascot (component name: Specimen).
  *
- * Confirms it renders as a real "Poke Little Frank" button (keyboard reachable),
+ * Confirms it renders as a real "Ask Little Frank" button (keyboard reachable),
  * shows the asleep pose with no tables and the awake pose with tables, wears
  * bandages (the alive kit) when a stitched result exists, holds a bar-chart
  * sign when an Ask result is shown, connects its legs to the body, derives the
@@ -9,7 +9,7 @@
  */
 
 import { fireEvent, render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Specimen, isAskResultShown, type SpecimenProps } from "./Specimen";
 
 const base: SpecimenProps = {
@@ -27,10 +27,15 @@ function renderSpecimen(overrides: Partial<SpecimenProps> = {}) {
 }
 
 describe("Specimen (Little Frank)", () => {
-  it("renders a 'Poke Little Frank' button with aria-hidden body art", () => {
+  it("renders a 'Poke Little Frank' button and a separate '?' button, with aria-hidden body art", () => {
     const { getByRole, container } = renderSpecimen();
-    const button = getByRole("button", { name: "Poke Little Frank" });
-    expect(button).toBeInTheDocument();
+    expect(getByRole("button", { name: "Poke Little Frank" })).toBeInTheDocument();
+    const ask = getByRole("button", { name: "Ask Little Frank" });
+    expect(ask).toHaveAttribute("aria-haspopup", "dialog");
+    expect(ask).toHaveAttribute("aria-expanded", "false");
+    expect(ask).toHaveTextContent("?");
+    // Buttons do not nest.
+    expect(ask.closest(".specimen-button")).toBeNull();
     // The creature art itself is hidden from assistive tech.
     expect(container.querySelector(".specimen")).toHaveAttribute(
       "aria-hidden",
@@ -84,33 +89,87 @@ describe("Specimen (Little Frank)", () => {
     expect(legTop).toBeLessThanOrEqual(frameBottom);
   });
 
-  it("holds a magnifying glass while an Autopsy is open and not otherwise", () => {
+  it("holds a stethoscope and clipboard while an Autopsy is open and not otherwise", () => {
     const open = renderSpecimen({ tableCount: 2, autopsyOpen: true });
-    expect(open.container.querySelector(".specimen__magnifier")).not.toBeNull();
+    expect(open.container.querySelector(".specimen__stethoscope")).not.toBeNull();
+    expect(open.container.querySelector(".specimen__clipboard")).not.toBeNull();
+    expect(open.container.querySelector(".specimen__magnifier")).toBeNull();
     expect(open.container.querySelector(".specimen--investigating")).not.toBeNull();
     open.unmount();
 
     const closed = renderSpecimen({ tableCount: 2 });
-    expect(closed.container.querySelector(".specimen__magnifier")).toBeNull();
+    expect(closed.container.querySelector(".specimen__stethoscope")).toBeNull();
     expect(closed.container.querySelector(".specimen--investigating")).toBeNull();
   });
 
-  it("suppresses the chart sign and clipboard while the magnifying glass shows", () => {
+  it("suppresses the chart sign and approval clipboard while the Autopsy gear shows", () => {
     const { container } = renderSpecimen({
       tableCount: 2,
       autopsyOpen: true,
       askResult: true,
       approvedCount: 2,
     });
-    expect(container.querySelector(".specimen__magnifier")).not.toBeNull();
+    expect(container.querySelector(".specimen__stethoscope")).not.toBeNull();
     expect(container.querySelector(".specimen__sign")).toBeNull();
-    expect(container.querySelector(".specimen__clipboard")).toBeNull();
+    // Only the Autopsy clipboard (with text lines), not the approval one (with a check).
+    expect(container.querySelectorAll(".specimen__clipboard")).toHaveLength(1);
+    expect(container.querySelector(".specimen__clipboard polyline")).toBeNull();
   });
 
-  it("does not throw when poked", () => {
-    const { getByRole } = renderSpecimen({ tableCount: 2 });
-    const button = getByRole("button", { name: "Poke Little Frank" });
-    expect(() => fireEvent.click(button)).not.toThrow();
+  it("pokes when Frank is clicked, and toggles the guide only from the '?' button", () => {
+    const onPoke = vi.fn();
+    const onToggleGuide = vi.fn();
+    const { getByRole, rerender } = renderSpecimen({ tableCount: 2, onPoke, onToggleGuide });
+    fireEvent.click(getByRole("button", { name: "Poke Little Frank" }));
+    expect(onPoke).toHaveBeenCalledTimes(1);
+    expect(onToggleGuide).not.toHaveBeenCalled();
+    fireEvent.click(getByRole("button", { name: "Ask Little Frank" }));
+    expect(onToggleGuide).toHaveBeenCalledTimes(1);
+    expect(onPoke).toHaveBeenCalledTimes(1);
+    rerender(<Specimen {...base} tableCount={2} guideOpen onToggleGuide={onToggleGuide} />);
+    expect(getByRole("button", { name: "Ask Little Frank" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("holds a bubbling flask while a question is pending, and no chart sign", () => {
+    const { container } = renderSpecimen({ tableCount: 2, askPending: true, askResult: true });
+    expect(container.querySelector(".specimen__flask")).not.toBeNull();
+    expect(container.querySelectorAll(".specimen__flask-bubble").length).toBeGreaterThanOrEqual(3);
+    expect(container.querySelector(".specimen__sign")).toBeNull();
+  });
+
+  it("sleeps when idle, even with tables loaded", () => {
+    const { container } = renderSpecimen({ tableCount: 2, idle: true });
+    expect(container.querySelector(".specimen--asleep")).not.toBeNull();
+    expect(container.querySelector(".specimen__zzz")).not.toBeNull();
+  });
+
+  it("has neck bolts and temple nubs", () => {
+    const { container } = renderSpecimen({ tableCount: 2 });
+    expect(container.querySelectorAll(".specimen__neckbolt")).toHaveLength(2);
+    expect(container.querySelectorAll(".specimen__nub")).toHaveLength(2);
+  });
+
+  it("is a patchwork: 3 to 4 patch colors, seams, one bigger eye, a satchel with a book, a long sleeve", () => {
+    const { container } = renderSpecimen({ tableCount: 2 });
+    const classes = new Set(Array.from(container.querySelectorAll(".pc")).map((e) => Array.from(e.classList).find((c) => /^pc--\d$/.test(c))));
+    expect(classes.size).toBeGreaterThanOrEqual(3);
+    expect(classes.size).toBeLessThanOrEqual(4);
+    expect(container.querySelectorAll(".specimen__seam").length).toBeGreaterThanOrEqual(4);
+    const left = Number(container.querySelector(".specimen__eye--l")!.getAttribute("r"));
+    const right = Number(container.querySelector(".specimen__eye--r")!.getAttribute("r"));
+    expect(left).toBeGreaterThan(right);
+    expect(container.querySelector(".specimen__satchel")).not.toBeNull();
+    expect(container.querySelector(".specimen__book")).not.toBeNull();
+    expect(container.querySelector(".specimen__sleeve")).not.toBeNull();
+  });
+
+  it("draws a new seam when stitched, and none before", () => {
+    const before = renderSpecimen({ tableCount: 2 });
+    expect(before.container.querySelector(".specimen__newseam")).toBeNull();
+    before.unmount();
+    const after = renderSpecimen({ tableCount: 2, stitched: true });
+    expect(after.container.querySelector(".specimen__newseam-line")).not.toBeNull();
+    expect(after.container.querySelectorAll(".specimen__newseam-ticks line").length).toBeGreaterThanOrEqual(4);
   });
 });
 
@@ -137,9 +196,80 @@ describe("isAskResultShown", () => {
     const off = renderSpecimen({ tableCount: 2 });
     expect(off.container.querySelector(".specimen__scroll")).toBeNull();
   });
-  it("the magnifying glass takes priority over the recipe scroll", () => {
+  it("the Autopsy gear takes priority over the recipe scroll", () => {
     const { container } = renderSpecimen({ tableCount: 2, recipeApplied: true, autopsyOpen: true });
-    expect(container.querySelector(".specimen__magnifier")).not.toBeNull();
+    expect(container.querySelector(".specimen__stethoscope")).not.toBeNull();
     expect(container.querySelector(".specimen__scroll")).toBeNull();
+  });
+});
+
+describe("reactions are drawn from props", () => {
+  const wake = { id: "wake" as const, bubble: "It's alive!", durationMs: 1400 };
+
+  it("the wake draws the lightning and the flash, shows the bubble, and sets the reaction class", () => {
+    const { container, getByTestId } = renderSpecimen({ tableCount: 2, reaction: wake, reactionSeq: 1, bubble: wake.bubble, reducedMotion: false });
+    expect(getByTestId("frank-lightning")).toBeInTheDocument();
+    expect(getByTestId("frank-flash")).toBeInTheDocument();
+    expect(container.querySelector(".specimen--react-wake")).not.toBeNull();
+    expect(container.querySelector(".specimen__bubble")?.textContent).toBe("It's alive!");
+    expect(container.querySelector(".specimen__fx")).not.toBeNull();
+  });
+
+  it("under reduced motion there is no lightning, no flash and no effects, but the pose and bubble remain", () => {
+    const { container, queryByTestId } = renderSpecimen({ tableCount: 2, reaction: wake, reactionSeq: 1, bubble: wake.bubble, reducedMotion: true });
+    expect(queryByTestId("frank-lightning")).toBeNull();
+    expect(queryByTestId("frank-flash")).toBeNull();
+    expect(container.querySelector(".specimen__fx")).toBeNull();
+    expect(container.querySelector(".specimen--still")).not.toBeNull();
+    expect(container.querySelector(".specimen--react-wake")).not.toBeNull();
+    expect(container.querySelector(".specimen__bubble")?.textContent).toBe("It's alive!");
+  });
+
+  it("Calm Frank does the same as reduced motion", () => {
+    const { container, queryByTestId } = renderSpecimen({ tableCount: 2, reaction: wake, reactionSeq: 1, bubble: wake.bubble, calm: true, reducedMotion: false });
+    expect(queryByTestId("frank-lightning")).toBeNull();
+    expect(container.querySelector(".specimen--still")).not.toBeNull();
+    expect(container.querySelector(".specimen__bubble")).not.toBeNull();
+  });
+
+  it("restarts an effect for the same reaction twice (the sequence is its key)", () => {
+    const first = renderSpecimen({ tableCount: 2, reaction: wake, reactionSeq: 1, reducedMotion: false });
+    const a = first.getByTestId("frank-lightning");
+    first.rerender(<Specimen {...base} tableCount={2} reaction={wake} reactionSeq={2} reducedMotion={false} />);
+    expect(first.getByTestId("frank-lightning")).not.toBe(a);
+  });
+
+  it("draws effects for other reactions and none for pose-only ones", () => {
+    const sew = renderSpecimen({ tableCount: 2, reaction: { id: "sew", bubble: null, durationMs: 1400 }, reactionSeq: 1, reducedMotion: false });
+    expect(sew.container.querySelector(".fx-thread")).not.toBeNull();
+    expect(sew.container.querySelector(".fx-needle")).not.toBeNull();
+    sew.unmount();
+    const nod = renderSpecimen({ tableCount: 2, reaction: { id: "nod", bubble: null, durationMs: 600 }, reactionSeq: 1, reducedMotion: false });
+    expect(nod.container.querySelector(".specimen__fx")).toBeNull();
+    expect(nod.container.querySelector(".specimen--react-nod")).not.toBeNull();
+  });
+
+  it("steps the bubble aside while the guide is open", () => {
+    const { container } = renderSpecimen({ tableCount: 2, bubble: "Hi!", guideOpen: true });
+    expect(container.querySelector(".specimen__bubble")).toBeNull();
+  });
+
+  it("follows the cursor with the eyes only when awake and motion is allowed", () => {
+    const on = renderSpecimen({ tableCount: 2, reducedMotion: false });
+    const root = on.container.querySelector(".specimen") as HTMLElement;
+    root.getBoundingClientRect = () => ({ left: 0, top: 0, width: 94, height: 140, right: 94, bottom: 140, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => { cb(0); return 1; });
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 160, clientY: 30 }));
+    expect(root.style.getPropertyValue("--eye-x")).not.toBe("");
+    expect(parseFloat(root.style.getPropertyValue("--eye-x"))).toBeGreaterThan(0);
+    // Out of range: no offset.
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 2000, clientY: 30 }));
+    expect(parseFloat(root.style.getPropertyValue("--eye-x"))).toBe(0);
+    on.unmount();
+    const off = renderSpecimen({ tableCount: 2, calm: true });
+    const root2 = off.container.querySelector(".specimen") as HTMLElement;
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 160, clientY: 30 }));
+    expect(root2.style.getPropertyValue("--eye-x")).toBe("");
+    raf.mockRestore();
   });
 });

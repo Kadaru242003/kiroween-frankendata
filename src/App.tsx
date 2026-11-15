@@ -37,9 +37,9 @@ import type { DuckDBService, IntakeController, LoadedTable } from './core/types'
 import { DropZone } from './components/DropZone'
 import { DemoDataControl } from './components/DemoDataControl'
 import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
-import { Specimen, isAskResultShown } from './components/Specimen'
+import { FrankRegion } from './components/frank/FrankRegion'
+import { frankBus } from './state/frank-bus'
 import { CaseFilePanel } from './components/autopsy/CaseFilePanel'
-import { useAskStore } from './state/ask-store'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
 import { ErrorDisplay } from './components/ErrorDisplay'
 import { StitchStore } from './core/stitching/stitch-store'
@@ -708,6 +708,7 @@ function App() {
         notApplied: result.mapping.notApplied,
       }
       setRecipeErrors(null)
+      frankBus.emit({ type: 'apply-recipe' })
       setRecipeSuccess(outcome)
       setRecipeOverrides(result.mapping.overrides)
       setRecipeBase({ stitched: stack.stitchStore.getState().stitchedTable })
@@ -1104,15 +1105,18 @@ function App() {
           {/*
             The Specimen mascot. Rendered here (inside the ready block) so the
             stores exist; it reads read-only state and renders nothing that
-            changes app logic. See SpecimenRegion.
+            changes app logic. See FrankRegion.
           */}
-          <SpecimenRegion
+          <FrankRegion
             recipeBase={recipeBase}
             tableCount={tables.length}
             autopsyOpen={autopsyTable !== null}
             intakeError={errors.length > 0}
             stitchStore={status.stack.stitchStore}
             askStore={status.stack.askStore}
+            aiOn={aiOn}
+            stitchOpen={stitchOpen}
+            resetting={resetting}
             quietResetRef={quietResetRef}
           />
         </>
@@ -1198,65 +1202,6 @@ function AutopsyRegion({
         onReview={onReview}
       />
     </section>
-  )
-}
-
-/** Props for {@link SpecimenRegion}. */
-interface SpecimenRegionProps {
-  recipeBase: { stitched: StitchedTable | null } | null
-  autopsyOpen: boolean
-  tableCount: number
-  intakeError: boolean
-  stitchStore: StitchStore
-  askStore: AskStore
-  quietResetRef: { current: boolean }
-}
-
-/**
- * Derives the Specimen's read-only story-state props from existing state and
- * renders the mascot. Subscribes to the stitch and ask stores (read only) so
- * the Specimen reacts to proposals showing, approvals, the stitched result,
- * and the Ask the Lab pending/result states. No app logic changes.
- */
-function SpecimenRegion({
-  recipeBase,
-  autopsyOpen,
-  tableCount,
-  intakeError,
-  stitchStore,
-  askStore,
-  quietResetRef,
-}: SpecimenRegionProps) {
-  const stitch = useStitchStore(stitchStore)
-  const { outcome, loading } = useAskStore(askStore)
-
-  const proposals = stitch.proposals
-  const proposalsShowing =
-    proposals !== null &&
-    (proposals.matches.length > 0 || proposals.cleanings.length > 0)
-  // Count decisions that are an applied approval ("approved" or "edited").
-  let approvedCount = 0
-  for (const decision of Object.values(stitch.decisions)) {
-    if (decision.decision === 'approved' || decision.decision === 'edited') {
-      approvedCount += 1
-    }
-  }
-
-  return (
-    <Specimen
-      tableCount={tableCount}
-      autopsyOpen={autopsyOpen}
-      recipeApplied={
-        recipeBase !== null && stitch.stitchedTable === recipeBase.stitched
-      }
-      proposalsShowing={proposalsShowing}
-      approvedCount={approvedCount}
-      stitched={stitch.stitchedTable !== null}
-      askPending={loading}
-      askResult={isAskResultShown(outcome, loading)}
-      intakeError={intakeError}
-      quietResetRef={quietResetRef}
-    />
   )
 }
 

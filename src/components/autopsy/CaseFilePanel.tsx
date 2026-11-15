@@ -24,6 +24,7 @@ import type {
   ColumnFinding,
   FixAction,
 } from "../../core/autopsy/types";
+import { frankBus } from "../../state/frank-bus";
 import { downloadText, fileStem } from "./download";
 import "./CaseFilePanel.css";
 
@@ -174,6 +175,11 @@ export function CaseFilePanel({
     // The target is identified by its name and row count.
   }, [db, target.tableName, target.rowCount, fixable, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Little Frank reacts to the finished report: happy, neutral or fainting.
+  const reportScore = report?.complete === true && report.status === "ok" ? report.health.score : null;
+  useEffect(() => {
+    if (reportScore !== null) frankBus.emit({ type: "autopsy", score: reportScore });
+  }, [reportScore, target.tableName, attempt]);
   // Proposal ids already handed to the approval flow, so a second click cannot
   // add a duplicate. Reset when the panel moves to another table.
   const [added, setAdded] = useState<ReadonlySet<string>>(new Set());
@@ -204,6 +210,7 @@ export function CaseFilePanel({
   const handleFixAll = useCallback(async () => {
     const todo = pendingFixes;
     if (todo.length === 0) return;
+    frankBus.emit({ type: "autopsy-fix-all" });
     setAdded((prev) => new Set([...prev, ...todo.map((f) => f.proposalId)]));
     setAddedOrder((prev) => [...prev, ...todo.map((f) => f.proposalId)]);
     setAnnouncement(`Added ${todo.length} ${todo.length === 1 ? "fix" : "fixes"} to the stitching table`);
