@@ -168,95 +168,6 @@
   font-weight: 700;
 }
 
-/* ── Bolt / sign / bubble ────────────────────────────────────────────────── */
-.specimen__bolt {
-  position: absolute;
-  left: 42%;
-  top: -6px;
-  width: 18px;
-  height: 34px;
-  transform: translateX(-50%);
-  opacity: 0;
-}
-
-.specimen__bolt-path {
-  stroke: var(--lab-green);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.9));
-}
-
-.specimen__sign {
-  position: absolute;
-  /* Held up beside the right arm, above the shoulder, clear of the head. */
-  left: 66px;
-  top: 48px;
-  width: 28px;
-  height: 21px;
-  z-index: 3;
-}
-
-.specimen__sign-bg {
-  fill: var(--surface-raised);
-  stroke: var(--amber-accent);
-  stroke-width: 1;
-}
-
-.specimen__bar {
-  fill: var(--lab-green);
-}
-
-.specimen__bubble {
-  position: absolute;
-  left: 50%;
-  top: -14px;
-  transform: translateX(-50%);
-  padding: 2px 8px;
-  border: 1px solid var(--lab-green);
-  border-radius: 10px;
-  background: var(--surface-raised);
-  color: var(--text-primary);
-  font-size: 11px;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-.specimen__bubble--dots i {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  margin: 0 1px;
-  border-radius: 50%;
-  background: var(--text-primary);
-  animation: specimen-dot 1.2s ease-in-out infinite;
-}
-
-.specimen__bubble--dots i:nth-child(2) { animation-delay: 0.2s; }
-.specimen__bubble--dots i:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes specimen-dot {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
-
-.specimen__zzz {
-  position: absolute;
-  left: 62%;
-  top: 30px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-style: italic;
-  opacity: 0.7;
-  animation: specimen-zzz 3s ease-in-out infinite;
-}
-
-@keyframes specimen-zzz {
-  0% { transform: translateY(0); opacity: 0; }
-  30% { opacity: 0.8; }
-  100% { transform: translateY(-10px); opacity: 0; }
-}
-
 /* ── Resting poses ───────────────────────────────────────────────────────── */
 
 /* a. Asleep: grey, lids closed, slumped onto the slab, Zzz floating. */
@@ -313,109 +224,6 @@
   stroke: var(--lab-green);
 }
 
-/* ── Reactions (short, time-boxed by JS) ─────────────────────────────────── */
-.specimen--react-alive .specimen__bolt,
-.specimen--react-stitched .specimen__bolt,
-.specimen--react-poke-jolt .specimen__bolt {
-  opacity: 1;
-  animation: specimen-bolt 500ms ease-out 1;
-}
-
-@keyframes specimen-bolt {
-  0% { opacity: 1; }
-  70% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.specimen--react-poke-jolt .specimen__body {
-  animation: specimen-jolt 300ms ease-in-out 3;
-}
-
-@keyframes specimen-jolt {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
-}
-
-.specimen--react-poke-wave .specimen__arm--right {
-  transform-box: fill-box;
-  transform-origin: left center;
-  animation: specimen-wave 300ms ease-in-out 3;
-}
-
-@keyframes specimen-wave {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-35deg); }
-}
-
-.specimen--react-poke-spin .specimen__body {
-  transform-origin: 50% 60%;
-  animation: specimen-spin 1000ms ease-in-out 1;
-}
-
-@keyframes specimen-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.specimen--react-poke-giggle .specimen__body,
-.specimen--react-hmm .specimen__eye {
-  animation: specimen-giggle 300ms ease-in-out 3;
-}
-
-@keyframes specimen-giggle {
-  0%, 100% { transform: rotate(0deg); }
-  33% { transform: rotate(-3deg); }
-  66% { transform: rotate(3deg); }
-}
-
-.specimen--react-ugh .specimen__body {
-  animation: specimen-shake 120ms ease-in-out 6;
-}
-
-@keyframes specimen-shake {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(-3px); }
-}
-
-/* i. Reset: X eyes and a flop. */
-.specimen--react-reset .specimen__eye { opacity: 0; }
-.specimen--react-reset .specimen__lid {
-  opacity: 1;
-  stroke: var(--amber-accent);
-}
-
-/* ── Responsive + reduced motion ─────────────────────────────────────────── */
-@media (max-width: 639px) {
-  .specimen-layer { display: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .specimen__body,
-  .specimen__eye,
-  .specimen__electrode-spark,
-  .specimen__arm--right,
-  .specimen__bolt,
-  .specimen__zzz,
-  .specimen__bubble--dots i {
-    animation: none !important;
-  }
-  .specimen__bolt { opacity: 0; }
-}
-
-/* Magnifying glass held while an Autopsy case file is open. */
-.specimen__magnifier circle {
-  fill: rgba(57, 255, 20, 0.14);
-  stroke: var(--amber-accent);
-  stroke-width: 1.8;
-}
-
-.specimen__magnifier line {
-  stroke: var(--text-secondary);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-
 /* Recipe scroll held after a recipe is applied. Static: no animation. */
 .specimen__scroll rect {
   fill: rgba(240, 220, 160, 0.9);
@@ -426,4 +234,787 @@
   stroke: #39ff14;
   stroke-width: 1.2;
   stroke-linecap: round;
+}
+
+/* ── Sign, bubble, eyes ──────────────────────────────────────────────────── */
+.specimen__sign {
+  position: absolute;
+  /* Held up beside the right arm, above the shoulder, clear of the head. */
+  left: 66px;
+  top: 48px;
+  width: 28px;
+  height: 21px;
+  z-index: 3;
+}
+.specimen__sign-bg {
+  fill: var(--surface-raised);
+  stroke: var(--amber-accent);
+  stroke-width: 1;
+}
+.specimen__bar {
+  fill: var(--lab-green);
+}
+
+/* Speech bubble: above his head, growing to the right so it never leaves the
+   viewport at the left edge. It never takes the pointer. */
+.specimen__bubble {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 2px);
+  width: max-content;
+  max-width: 190px;
+  padding: 3px 9px;
+  border: 1px solid var(--lab-green);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Eyes follow the cursor by a small offset (set by script, only when allowed). */
+.specimen__eye {
+  transform: translate(var(--eye-x, 0px), var(--eye-y, 0px));
+}
+
+/* Neck bolts, and the static poses a reaction can show (fades only). */
+.specimen__neckbolt {
+  fill: var(--surface-raised);
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+  transition: fill 150ms, filter 150ms;
+}
+.specimen__smile,
+.specimen__mask,
+.specimen__pumpkin {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+}
+.specimen__smile {
+  stroke: var(--text-primary);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.specimen__mask rect {
+  fill: #cfe8e6;
+  stroke: #8db7b3;
+  stroke-width: 0.8;
+}
+.specimen__mask line {
+  stroke: #8db7b3;
+  stroke-width: 0.8;
+}
+.specimen__pumpkin ellipse {
+  fill: #f08a1c;
+  stroke: #b85f00;
+  stroke-width: 1;
+}
+.specimen__pumpkin line {
+  stroke: #4c7a1e;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.specimen__pumpkin polyline {
+  fill: none;
+  stroke: #3b2200;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+/* Held items: stethoscope, flask. */
+.specimen__stethoscope path {
+  stroke: var(--text-secondary);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.specimen__stethoscope circle {
+  fill: var(--amber-accent);
+  stroke: var(--text-secondary);
+  stroke-width: 0.8;
+}
+.specimen__clipboard line {
+  stroke: var(--lab-green);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+.specimen__flask path:first-child {
+  fill: rgba(57, 255, 20, 0.1);
+  stroke: var(--text-secondary);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+.specimen__flask line {
+  stroke: var(--text-secondary);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+.specimen__flask-liquid {
+  stroke: var(--lab-green);
+  stroke-width: 5;
+  opacity: 0.55;
+}
+.specimen__flask-bubble {
+  fill: var(--lab-green);
+  opacity: 0.9;
+  transform-box: fill-box;
+  animation: frank-bubble-up 1200ms ease-in infinite;
+}
+.specimen__flask-bubble--2 { animation-delay: 400ms; }
+.specimen__flask-bubble--3 { animation-delay: 800ms; }
+
+/* Sleeping and thinking poses. */
+.specimen__zzz {
+  position: absolute;
+  left: 62%;
+  top: 30px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+  animation: frank-zzz 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Effect layers (all pointer-events: none) ────────────────────────────── */
+.specimen__fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 94px;
+  height: 140px;
+  overflow: visible;
+  pointer-events: none;
+}
+.specimen__fx * {
+  pointer-events: none;
+}
+.specimen__fx .fx {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The wake: screen flash and lightning. Fixed, outside the page flow. */
+.specimen-layer--open {
+  z-index: 30; /* the open guide sits above sticky bars */
+}
+.frank-flash,
+.frank-lightning {
+  position: fixed;
+  pointer-events: none;
+}
+.frank-flash {
+  inset: 0;
+  z-index: 1;
+  background: rgba(210, 255, 205, 0.6);
+  opacity: 0;
+  animation: frank-flash 260ms ease-out 300ms both;
+}
+.frank-lightning {
+  /* Over his head (the layer is 12px from the left, the head 59px across). */
+  left: 39px;
+  top: 0;
+  width: 40px;
+  height: calc(100vh - 140px);
+  overflow: visible;
+  z-index: 1;
+}
+.frank-lightning path {
+  stroke-dasharray: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  animation: frank-bolt-draw 800ms ease-out both;
+}
+.frank-lightning__bolt {
+  stroke: #eaffe5;
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 5px rgba(57, 255, 20, 0.95));
+}
+.frank-lightning__glow {
+  stroke: rgba(57, 255, 20, 0.45);
+  stroke-width: 8;
+}
+
+/* ── Reactions (poses fade; motion is below and switched off when still) ── */
+
+/* wake: neck bolts light up, he jolts upright after the strike. */
+.specimen--react-wake .specimen__neckbolt {
+  fill: var(--amber-accent);
+  filter: drop-shadow(0 0 3px rgba(255, 179, 0, 0.9));
+}
+.specimen--react-wake .specimen__body {
+  transform-origin: 50% 90%;
+  animation: frank-jolt-up 900ms ease-out 380ms both;
+}
+
+/* catch: arms come up to catch the file. */
+.specimen--react-catch .specimen__arm--left {
+  transform-box: fill-box;
+  transform-origin: right center;
+  animation: frank-arm-left-up 1000ms ease-in-out both;
+}
+.specimen--react-catch .specimen__arm--right {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: frank-arm-up 1000ms ease-in-out both;
+}
+
+/* peer, nod, tilt */
+.specimen--react-peer .specimen__headg,
+.specimen--react-autopsy-neutral .specimen__headg {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: frank-head-tilt 1200ms ease-in-out both;
+}
+.specimen--react-nod .specimen__headg {
+  animation: frank-nod 600ms ease-in-out both;
+}
+
+/* thumbs-up, shrug */
+.specimen--react-thumbs-up .specimen__arm--right {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: frank-arm-up 1000ms ease-in-out both;
+}
+.specimen--react-shrug .specimen__arm {
+  animation: frank-shrug-arm 800ms ease-in-out both;
+}
+.specimen--react-shrug .specimen__body {
+  transform-origin: 50% 90%;
+  animation: frank-shrug-body 800ms ease-in-out both;
+}
+
+/* head-grab: both hands to the head, then a shake. */
+.specimen--react-head-grab .specimen__arm--left {
+  animation: frank-grab-left 1300ms ease-in-out both;
+}
+.specimen--react-head-grab .specimen__arm--right {
+  animation: frank-grab-right 1300ms ease-in-out both;
+}
+.specimen--react-head-grab .specimen__headg {
+  animation: frank-head-shake 1300ms ease-in-out both;
+}
+
+/* autopsy: happy hop with a smile, faint then get up. */
+.specimen--react-autopsy-happy .specimen__smile {
+  opacity: 1;
+}
+.specimen--react-autopsy-happy .specimen__body {
+  transform-origin: 50% 100%;
+  animation: frank-hop 1100ms ease-out both;
+}
+.specimen--react-autopsy-faint .specimen__eye {
+  opacity: 0;
+}
+.specimen--react-autopsy-faint .specimen__lid {
+  opacity: 1;
+}
+.specimen--react-autopsy-faint .specimen__body {
+  transform-origin: 50% 100%;
+  animation: frank-faint 1500ms ease-in-out both;
+}
+.specimen--react-surgeon .specimen__mask {
+  opacity: 1;
+}
+
+/* sew, bandage, unravel */
+.specimen--react-sew .specimen__body {
+  transform-origin: 50% 90%;
+  animation: frank-sew-body 1400ms ease-in-out both;
+}
+.specimen--react-bandage .specimen__alive-kit {
+  animation: frank-fade-in 700ms ease-out 300ms both;
+}
+.specimen--react-unravel .specimen__stitches line {
+  stroke-dasharray: 5;
+  animation: frank-unravel 1000ms ease-in both;
+}
+
+/* write-scroll, stamp (the fx draw the rest) */
+.specimen--react-write-scroll .specimen__arm--right,
+.specimen--react-stamp .specimen__arm--right {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: frank-arm-small 1100ms ease-in-out both;
+}
+
+/* wave-file, pokes */
+.specimen--react-wave-file .specimen__arm--right,
+.specimen--react-poke-1 .specimen__arm--right {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: frank-wave 300ms ease-in-out 3;
+}
+.specimen--react-wave-file .specimen__arm--right {
+  animation-iteration-count: 4;
+}
+.specimen--react-poke-2 .specimen__body {
+  animation: frank-giggle 300ms ease-in-out 3;
+}
+.specimen--react-poke-3 .specimen__body {
+  animation: frank-shake 120ms ease-in-out 5;
+}
+.specimen--react-poke-4 .specimen__arm--left {
+  animation: frank-cross-left 1000ms ease-in-out both;
+}
+.specimen--react-poke-4 .specimen__arm--right {
+  animation: frank-cross-right 1000ms ease-in-out both;
+}
+.specimen--react-poke-4 .specimen__body {
+  animation: frank-shake 120ms ease-in-out 6 200ms;
+}
+.specimen--react-poke-5 .specimen__body {
+  animation: frank-shake 100ms ease-in-out 10;
+}
+.specimen--react-poke-egg .specimen__pumpkin {
+  opacity: 1;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: frank-pop 1400ms ease-out both;
+}
+
+/* reset: the lights flicker, then the existing death (X eyes and a flop). */
+.specimen--react-reset {
+  animation: frank-flicker 600ms steps(1, end) both;
+}
+.specimen--react-reset .specimen__eye {
+  opacity: 0;
+}
+.specimen--react-reset .specimen__lid {
+  opacity: 1;
+  stroke: var(--amber-accent);
+}
+.specimen--react-reset .specimen__body {
+  transform-origin: 50% 100%;
+  animation: frank-flop 800ms ease-in 600ms both;
+}
+
+/* ── Effect drawings ─────────────────────────────────────────────────────── */
+.fx-sparks polyline {
+  fill: none;
+  stroke: var(--amber-accent);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(255, 179, 0, 0.9));
+}
+.fx-sparks {
+  opacity: 0;
+  animation: frank-spark 500ms ease-out both;
+}
+.fx-wake-delay { animation-delay: 380ms; }
+
+.fx-file__paper {
+  fill: #e9efe9;
+  stroke: #b9c7b9;
+  stroke-width: 0.6;
+}
+.fx-file__fold,
+.fx-file__line {
+  fill: none;
+  stroke: #8da08d;
+  stroke-width: 0.6;
+}
+.fx-file-drop {
+  animation: frank-file-drop 800ms ease-in both;
+}
+.fx-file-away {
+  animation: frank-file-away 1400ms ease-in both;
+}
+
+.fx-glass__lens {
+  fill: rgba(57, 255, 20, 0.14);
+  stroke: var(--amber-accent);
+  stroke-width: 1.6;
+}
+.fx-glass__handle {
+  stroke: var(--text-secondary);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.fx-peer-glass {
+  animation: frank-peer-glass 1200ms ease-in-out both;
+}
+
+.fx-thumb__fist,
+.fx-thumb__finger {
+  fill: var(--lab-purple);
+  stroke: var(--lab-green-deep);
+  stroke-width: 0.8;
+}
+.fx-thumb {
+  animation: frank-fade-in 250ms ease-out 250ms both;
+}
+
+.fx-thread {
+  stroke: var(--lab-green);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 2px rgba(57, 255, 20, 0.7));
+  animation: frank-draw 1000ms linear both;
+}
+.fx-needle {
+  animation: frank-needle 1000ms linear both;
+}
+.fx-needle__body {
+  stroke: #dfe6df;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+.fx-needle__eye {
+  fill: none;
+  stroke: #dfe6df;
+  stroke-width: 0.6;
+}
+
+.fx-curl {
+  stroke: var(--lab-green);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  animation: frank-curl 1100ms ease-in both;
+}
+.fx-curl-2 { animation-delay: 120ms; }
+
+.fx-star {
+  fill: var(--amber-accent);
+  font-size: 8px;
+  font-weight: 700;
+  animation: frank-fade-in 200ms ease-out both;
+}
+.fx-star-2 { animation-delay: 100ms; }
+
+.fx-scroll__paper {
+  fill: rgba(240, 220, 160, 0.95);
+  stroke: var(--amber-accent);
+  stroke-width: 1.2;
+}
+.fx-line {
+  stroke: #1f6f10;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+.fx-scroll--write { animation: frank-fade-in 200ms ease-out both; }
+.fx-scroll--write .fx-line { animation: frank-draw 350ms ease-out both; }
+.fx-scroll--write .fx-line-1 { animation-delay: 150ms; }
+.fx-scroll--write .fx-line-2 { animation-delay: 500ms; }
+.fx-scroll--write .fx-line-3 { animation-delay: 850ms; }
+.fx-scroll--read .fx-line { stroke-dashoffset: 0; }
+.fx-pen {
+  stroke: var(--text-primary);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  animation: frank-pen 1100ms ease-in-out both;
+}
+.fx-lift {
+  animation: frank-lift 1100ms ease-in-out both;
+}
+.fx-stamp {
+  animation: frank-stamp 450ms ease-out 550ms both;
+}
+.fx-stamp__box {
+  fill: rgba(57, 255, 20, 0.2);
+  stroke: var(--lab-green);
+  stroke-width: 1.2;
+}
+.fx-stamp__tick {
+  stroke: var(--lab-green);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fx-flask { animation: frank-fade-in 200ms ease-out both; }
+.fx-flask__glass {
+  fill: rgba(57, 255, 20, 0.1);
+  stroke: var(--text-secondary);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+.fx-flask__rim {
+  stroke: var(--text-secondary);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+.fx-flask__liquid {
+  stroke: var(--lab-green);
+  stroke-width: 5;
+  opacity: 0.55;
+}
+.fx-puff {
+  fill: rgba(190, 190, 200, 0.85);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: frank-puff 1100ms ease-out both;
+}
+.fx-puff-2 { animation-delay: 150ms; }
+.fx-puff-3 { animation-delay: 300ms; }
+.fx-puff-4 { animation-delay: 450ms; }
+.fx-steam .fx-puff { fill: rgba(235, 235, 245, 0.8); }
+
+.fx-socket {
+  fill: var(--surface-raised);
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+}
+.fx-wire {
+  stroke: var(--text-secondary);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.fx-plug {
+  fill: var(--surface-raised);
+  stroke: var(--text-secondary);
+  stroke-width: 1.2;
+}
+.fx-prong {
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+}
+.fx-plug-group {
+  animation: frank-unplug 800ms ease-in both;
+}
+
+.fx-brows line {
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.fx-brows {
+  animation: frank-fade-in 150ms ease-out both;
+}
+
+/* ── Keyframes (every duration is at most 1.5s; only transform, opacity,
+      stroke-dashoffset, filter animate) ─────────────────────────────────── */
+@keyframes frank-zzz {
+  0% { transform: translateY(0); opacity: 0; }
+  30% { opacity: 0.8; }
+  100% { transform: translateY(-10px); opacity: 0; }
+}
+@keyframes frank-bubble-up {
+  0% { transform: translateY(0); opacity: 0.9; }
+  100% { transform: translateY(-9px); opacity: 0; }
+}
+@keyframes frank-flash {
+  0% { opacity: 0; }
+  30% { opacity: 0.12; }
+  100% { opacity: 0; }
+}
+@keyframes frank-bolt-draw {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  50% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes frank-spark {
+  0% { opacity: 0; transform: scale(0.5); }
+  35% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+@keyframes frank-jolt-up {
+  0% { transform: translateY(8px) rotate(-5deg) scale(0.96); }
+  35% { transform: translateY(-6px) rotate(3deg) scale(1.06); }
+  70% { transform: translateY(1px) rotate(-1deg) scale(1); }
+  100% { transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes frank-arm-up {
+  0%, 100% { transform: rotate(0deg); }
+  30%, 70% { transform: rotate(-70deg); }
+}
+@keyframes frank-arm-left-up {
+  0%, 100% { transform: rotate(0deg); }
+  30%, 70% { transform: rotate(70deg); }
+}
+@keyframes frank-arm-small {
+  0%, 100% { transform: rotate(0deg); }
+  30%, 70% { transform: rotate(-25deg); }
+}
+@keyframes frank-head-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  30%, 70% { transform: rotate(-7deg); }
+}
+@keyframes frank-nod {
+  0%, 100% { transform: translateY(0); }
+  25%, 75% { transform: translateY(2.5px); }
+  50% { transform: translateY(0); }
+}
+@keyframes frank-shrug-arm {
+  0%, 100% { transform: translateY(0); }
+  30%, 70% { transform: translateY(-5px); }
+}
+@keyframes frank-shrug-body {
+  0%, 100% { transform: scaleY(1); }
+  30%, 70% { transform: scaleY(0.96); }
+}
+@keyframes frank-grab-left {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20%, 85% { transform: translate(9px, -34px) rotate(-75deg); }
+}
+@keyframes frank-grab-right {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20%, 85% { transform: translate(-9px, -34px) rotate(75deg); }
+}
+@keyframes frank-head-shake {
+  0%, 20%, 100% { transform: translateX(0); }
+  30%, 50%, 70% { transform: translateX(-1.5px); }
+  40%, 60%, 80% { transform: translateX(1.5px); }
+}
+@keyframes frank-hop {
+  0%, 40%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-7px); }
+  60% { transform: translateY(-5px); }
+}
+@keyframes frank-faint {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(86deg); }
+  70% { transform: rotate(86deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes frank-sew-body {
+  0%, 100% { transform: translateX(0); }
+  25%, 75% { transform: translateX(0.8px); }
+  50% { transform: translateX(-0.8px); }
+}
+@keyframes frank-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes frank-unravel {
+  0% { stroke-dashoffset: 0; opacity: 1; }
+  70% { stroke-dashoffset: 5; opacity: 0.2; }
+  100% { stroke-dashoffset: 5; opacity: 0.2; }
+}
+@keyframes frank-curl {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  60% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; transform: translateY(8px); }
+}
+@keyframes frank-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes frank-needle {
+  0% { transform: translate(18px, 32px); }
+  11% { transform: translate(24px, 38px); }
+  22% { transform: translate(18px, 44px); }
+  33% { transform: translate(24px, 50px); }
+  44% { transform: translate(30px, 44px); }
+  55% { transform: translate(36px, 50px); }
+  66% { transform: translate(42px, 44px); }
+  77% { transform: translate(36px, 38px); }
+  88% { transform: translate(42px, 32px); }
+  100% { transform: translate(36px, 26px); opacity: 0; }
+}
+@keyframes frank-file-drop {
+  0% { transform: translateY(-4px); opacity: 0; }
+  15% { opacity: 1; }
+  80% { transform: translateY(54px); opacity: 1; }
+  100% { transform: translateY(56px); opacity: 0; }
+}
+@keyframes frank-file-away {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(20px, -30px) rotate(25deg); opacity: 0; }
+}
+@keyframes frank-peer-glass {
+  0% { transform: translate(16px, 26px) scale(0.8); opacity: 0; }
+  30%, 70% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(16px, 26px) scale(0.8); opacity: 0; }
+}
+@keyframes frank-lift {
+  0% { transform: translate(0, 0); }
+  35%, 100% { transform: translate(-10px, -18px); }
+}
+@keyframes frank-stamp {
+  0% { transform: scale(2); opacity: 0; }
+  60% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes frank-pen {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  35% { transform: translate(3px, 0); }
+  60% { transform: translate(5px, 4px); }
+  85% { transform: translate(1px, 8px); opacity: 1; }
+  100% { transform: translate(1px, 8px); opacity: 0; }
+}
+@keyframes frank-puff {
+  0% { transform: translateY(0) scale(0.4); opacity: 0.9; }
+  100% { transform: translateY(-12px) scale(1.7); opacity: 0; }
+}
+@keyframes frank-unplug {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-12px, 7px); }
+}
+@keyframes frank-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-35deg); }
+}
+@keyframes frank-giggle {
+  0%, 100% { transform: rotate(0deg); }
+  33% { transform: rotate(-3deg); }
+  66% { transform: rotate(3deg); }
+}
+@keyframes frank-shake {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-2.5px); }
+}
+@keyframes frank-cross-left {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25%, 85% { transform: translate(10px, -2px) rotate(-8deg); }
+}
+@keyframes frank-cross-right {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25%, 85% { transform: translate(-10px, 2px) rotate(8deg); }
+}
+@keyframes frank-pop {
+  0% { transform: scale(0) rotate(-20deg); }
+  35% { transform: scale(1.25) rotate(6deg); }
+  55% { transform: scale(0.95) rotate(-3deg); }
+  70%, 100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes frank-flicker {
+  0% { opacity: 1; }
+  10% { opacity: 0.2; }
+  20% { opacity: 1; }
+  30% { opacity: 0.4; }
+  45% { opacity: 0.1; }
+  60%, 100% { opacity: 1; }
+}
+@keyframes frank-flop {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(78deg); }
+}
+
+/* ── Responsive + motion safety ──────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .specimen-layer { display: none; }
+}
+
+/* Calm Frank (and reduced motion): no animation at all. Poses, fades and the
+   bubble text remain. */
+.specimen--still,
+.specimen--still * {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .specimen,
+  .specimen *,
+  .frank-flash,
+  .frank-lightning,
+  .frank-lightning * {
+    animation: none !important;
+  }
+  .frank-flash,
+  .frank-lightning {
+    display: none;
+  }
 }

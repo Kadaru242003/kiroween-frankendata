@@ -252,3 +252,45 @@ for (const [label, width] of [['100% zoom', 1280], ['67% zoom', 1910]] as const)
     }
   })
 }
+
+test('Little Frank wakes with lightning and "IT\'S ALIVE!" when the business demo loads', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByTestId('frank-lightning')).toBeAttached()
+  await expect(page.locator('.specimen__bubble')).toHaveText("IT'S ALIVE!")
+})
+
+test('Ask Little Frank: the privacy answer shows, and Esc closes the guide', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Ask Little Frank' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ask Little Frank' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('textbox', { name: 'Your question' }).fill('is my data safe')
+  await dialog.getByRole('button', { name: 'Ask', exact: true }).click()
+  await expect(page.getByTestId('frank-answer')).toContainText('Your rows are never sent')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+})
+
+test('reduced motion: no lightning element and no running Frank animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.locator('.specimen__bubble')).toHaveText("IT'S ALIVE!")
+  await expect(page.getByTestId('frank-lightning')).toHaveCount(0)
+  const running = await page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((a) => 'animationName' in a && String((a as CSSAnimation).animationName).startsWith('frank-'))
+      .filter((a) => a.playState === 'running').length,
+  )
+  expect(running).toBe(0)
+})
+
+test('Frank effects never intercept a click: Stitch tables works while the wake plays', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByTestId('frank-lightning')).toBeAttached()
+  await page.getByRole('button', { name: 'Stitch tables' }).click({ timeout: 5000 })
+  await expect(page.getByRole('button', { name: 'Approve all suggestions' })).toBeVisible()
+})

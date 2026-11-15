@@ -1,102 +1,78 @@
 /**
- * Specimen (shown to users as "Little Frank") — a presentational lab mascot
- * fixed in the bottom-left corner.
+ * Specimen (shown to users as "Little Frank"): a presentational lab mascot fixed
+ * in the bottom-left corner.
  *
- * Little Frank is a tiny creature built from spreadsheet cells, standing on a
- * simple SVG operating slab. It draws no movie monster: no flat head, no neck
- * bolts, no green-skinned humanoid face, just cells, stitches, an electrode,
- * and the occasional spark.
+ * He is a tiny creature built from spreadsheet cells on a simple SVG operating
+ * slab: cells, stitches, an electrode, two little neck bolts and the occasional
+ * spark. The whole creature is a real `<button aria-label="Ask Little Frank">`
+ * (keyboard reachable, visible focus ring) that opens the guide panel; the art
+ * is aria-hidden.
  *
- * It is decorative but interactive: the whole creature is wrapped in a real
- * <button aria-label="Poke Little Frank"> so it is keyboard reachable with a
- * visible focus ring, while the slab and body SVGs are aria-hidden. It changes
- * no app state: all story states come from read-only props, and poking only
- * plays a short local animation.
+ * He draws what he is told and decides nothing:
+ *  - held Poses come from state props (asleep, awake, bandaged, chart sign,
+ *    stethoscope and clipboard, bubbling flask, recipe scroll);
+ *  - one transient Reaction at a time comes from the pure reaction queue
+ *    (`reaction`, `reactionSeq`) with its speech bubble (`bubble`).
  *
- * Story states (resting poses) and short reactions (about 2s on a transition,
- * detected with previous-value refs) are driven from props. Accessories are
- * small SVG pieces layered on the body that persist while their state holds.
- *
- * Fixed bottom-left, about 140px tall, below the sticky action bar z-index,
- * hidden below 640px. Under prefers-reduced-motion there is no walking,
- * swinging, or timed reaction animation: it swaps the static pose and shows the
- * bubble text only.
+ * Every Effect has `pointer-events: none`. Under reduced motion or Calm Frank
+ * (`specimen--still`) no animation runs and the Effects are not rendered: only
+ * the static pose of the reaction (a class) and the bubble text show. His eyes
+ * follow the cursor when it is near, through one throttled pointer listener.
+ * Fixed bottom-left, about 140px tall, hidden below 640px.
  */
 
-import { useCallback, useEffect, useRef, useState, type JSX } from "react";
+import {
+  useEffect,
+  useRef,
+  type JSX,
+  type ReactNode,
+  type Ref,
+} from "react";
+import { FRANK_EYE_RANGE_PX } from "../core/frank/constants";
+import type { Reaction } from "../core/frank/reactions";
+import { FrankFx, FrankViewportFx } from "./frank/FrankFx";
 import "./Specimen.css";
 
 export interface SpecimenProps {
   /** Number of loaded tables. 0 means asleep/dormant. */
   tableCount: number;
-  /** Stitch proposals are currently showing (wears goggles, scans). */
+  /** Stitch proposals are currently showing (wears goggles). */
   proposalsShowing: boolean;
-  /** Number of approved proposals (an increase triggers a thumbs-up). */
+  /** Number of approved proposals (shows the approval clipboard). */
   approvedCount: number;
   /** A stitched result exists (bandages, patch, extra cell). */
   stitched: boolean;
-  /** An Ask the Lab request is pending (taps chin, three-dot bubble). */
+  /** An Ask the Lab request is pending (holds a bubbling flask). */
   askPending: boolean;
   /** An Ask the Lab result is shown (holds a bar-chart sign). */
   askResult: boolean;
-  /** An intake error exists (plaster, dizzy stars, head shake). */
+  /** An intake error exists (plaster, dizzy stars). */
   intakeError: boolean;
-  /**
-   * An Autopsy case file is open: Little Frank holds a magnifying glass. It
-   * uses the same hand as the chart sign and clipboard, so those are hidden
-   * while it shows. Optional, default false.
-   */
+  /** An Autopsy case file is open (stethoscope and clipboard). Default false. */
   autopsyOpen?: boolean;
-  /**
-   * A recipe has been applied: Little Frank holds a small recipe scroll. Same
-   * hand as the other held items; priority is magnifying glass, then scroll,
-   * then chart sign, then clipboard. Optional, default false.
-   */
+  /** A recipe has been applied (holds a recipe scroll). Default false. */
   recipeApplied?: boolean;
-  /**
-   * While `current` is true a drop to zero tables is a quiet replace (a demo
-   * loading over the loaded tables), so the reset/flop reaction is skipped.
-   * Read when the table count changes, so it needs no re-render. Optional.
-   */
-  quietResetRef?: { current: boolean };
+  /** The Reaction playing now, or null. */
+  reaction?: Reaction | null;
+  /** Bumps when a Reaction starts, so the same one twice restarts. */
+  reactionSeq?: number;
+  /** The speech-bubble text, or null. */
+  bubble?: string | null;
+  /** No activity for a while: he sleeps. */
+  idle?: boolean;
+  /** Calm Frank: no animations, poses and bubble text stay. */
+  calm?: boolean;
+  /** Override for reduced motion (default: the media query). */
+  reducedMotion?: boolean;
+  /** The guide panel is open (his button reports it; the bubble steps aside). */
+  guideOpen?: boolean;
+  /** Clicking him asks the owner to toggle the guide. */
+  onToggleGuide?: () => void;
+  /** The button, so the guide can return focus to it. */
+  buttonRef?: Ref<HTMLButtonElement>;
+  /** The guide panel, rendered inside his layer. */
+  children?: ReactNode;
 }
-
-/** A transient reaction the Specimen plays for a short time, then clears. */
-type Reaction =
-  | "alive"
-  | "hmm"
-  | "approved"
-  | "stitched"
-  | "ugh"
-  | "reset"
-  | "poke-jolt"
-  | "poke-wave"
-  | "poke-spin"
-  | "poke-giggle"
-  | "poke-stop"
-  | "poke-sleep"
-  | "hint";
-
-const REACTION_BUBBLE: Partial<Record<Reaction, string>> = {
-  alive: "It's alive!",
-  hmm: "Hmm...",
-  approved: "Approved!",
-  stitched: "Stitched!",
-  ugh: "Ugh!",
-  "poke-jolt": "Bzzt!",
-  "poke-wave": "Hi!",
-  "poke-giggle": "Hehe",
-  "poke-stop": "Stop poking me!",
-  "poke-sleep": "5 more minutes...",
-  hint: "Poke me!",
-};
-
-const POKE_REACTIONS: Reaction[] = [
-  "poke-jolt",
-  "poke-wave",
-  "poke-spin",
-  "poke-giggle",
-];
 
 /**
  * Whether an Ask the Lab answer is currently on screen. The ask store keeps the
@@ -111,7 +87,8 @@ export function isAskResultShown(
   return !loading && outcome !== null && outcome.kind === "ok";
 }
 
-function prefersReducedMotion(): boolean {
+/** Whether the user asked the system for reduced motion. */
+export function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
@@ -128,133 +105,84 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     askPending,
     askResult,
     intakeError,
+    reaction = null,
+    reactionSeq = 0,
+    bubble = null,
+    idle = false,
+    calm = false,
+    guideOpen = false,
+    onToggleGuide,
+    buttonRef,
+    children,
   } = props;
   const autopsyOpen = props.autopsyOpen ?? false;
   const recipeApplied = props.recipeApplied ?? false;
+  const reduced = props.reducedMotion ?? prefersReducedMotion();
+  // No motion at all: reduced motion or Calm Frank. Poses and fades remain.
+  const still = reduced || calm;
+  const awake = tableCount > 0 && !idle;
+  const hasTables = tableCount > 0;
 
-  const reduced = prefersReducedMotion();
-  const awake = tableCount > 0;
+  const rootRef = useRef<HTMLSpanElement>(null);
 
-  const [reaction, setReaction] = useState<Reaction | null>(null);
-  const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const play = useCallback((next: Reaction, ms: number) => {
-    setReaction(next);
-    if (reactionTimer.current !== null) {
-      clearTimeout(reactionTimer.current);
-    }
-    reactionTimer.current = setTimeout(() => setReaction(null), ms);
-  }, []);
-
+  // Eyes follow the cursor when it is near him. One passive pointer listener,
+  // throttled with requestAnimationFrame; sets two CSS variables, no re-render.
+  const followEyes = awake && !still;
   useEffect(() => {
+    const el = rootRef.current;
+    if (!followEyes || el === null) return;
+    let raf = 0;
+    let pending = false;
+    let lastX = 0;
+    let lastY = 0;
+    const apply = () => {
+      raf = 0;
+      pending = false;
+      const box = el.getBoundingClientRect();
+      const cx = box.left + box.width * 0.5;
+      const cy = box.top + box.height * 0.18;
+      const dx = lastX - cx;
+      const dy = lastY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist > FRANK_EYE_RANGE_PX || dist === 0) {
+        el.style.setProperty("--eye-x", "0px");
+        el.style.setProperty("--eye-y", "0px");
+        return;
+      }
+      const reach = Math.min(1, dist / 90) * 1.4;
+      el.style.setProperty("--eye-x", `${((dx / dist) * reach).toFixed(2)}px`);
+      el.style.setProperty("--eye-y", `${((dy / dist) * reach).toFixed(2)}px`);
+    };
+    const onMove = (e: PointerEvent) => {
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (pending) return;
+      pending = true;
+      const id = requestAnimationFrame(apply);
+      if (pending) raf = id;
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
-      if (reactionTimer.current !== null) {
-        clearTimeout(reactionTimer.current);
-      }
+      window.removeEventListener("pointermove", onMove);
+      if (raf !== 0) cancelAnimationFrame(raf);
+      el.style.removeProperty("--eye-x");
+      el.style.removeProperty("--eye-y");
     };
-  }, []);
+  }, [followEyes]);
 
-  // Previous-value refs so we can detect transitions.
-  const prev = useRef({
-    tableCount,
-    proposalsShowing,
-    approvedCount,
-    stitched,
-    intakeError,
-  });
-
-  useEffect(() => {
-    const p = prev.current;
-
-    // b. 0 -> 1+: comes alive. i. 1+ -> 0: reset/flop.
-    if (p.tableCount === 0 && tableCount > 0) {
-      play("alive", 2000);
-    } else if (p.tableCount > 0 && tableCount === 0) {
-      if (!props.quietResetRef?.current) play("reset", 2000);
-    } else if (stitched && !p.stitched) {
-      // e. stitched result appeared.
-      play("stitched", 2000);
-    } else if (intakeError && !p.intakeError) {
-      // h. intake error appeared.
-      play("ugh", 2000);
-    } else if (approvedCount > p.approvedCount) {
-      // d. approved count increased.
-      play("approved", 2000);
-    } else if (proposalsShowing && !p.proposalsShowing) {
-      // c. proposals started showing.
-      play("hmm", 2000);
-    }
-
-    prev.current = {
-      tableCount,
-      proposalsShowing,
-      approvedCount,
-      stitched,
-      intakeError,
-    };
-  }, [tableCount, proposalsShowing, approvedCount, stitched, intakeError, play]);
-
-  // Poke handling: random reaction, never the same twice in a row; a 5-in-3s
-  // burst triggers the "stop poking me" easter egg; a poke while asleep stirs.
-  const lastPoke = useRef<Reaction | null>(null);
-  const pokeTimes = useRef<number[]>([]);
-  const pokedOnce = useRef(false);
-
-  const handlePoke = useCallback(() => {
-    pokedOnce.current = true;
-    const now = Date.now();
-    pokeTimes.current = pokeTimes.current.filter((t) => now - t < 3000);
-    pokeTimes.current.push(now);
-
-    if (!awake) {
-      play("poke-sleep", 1600);
-      return;
-    }
-    if (pokeTimes.current.length >= 5) {
-      pokeTimes.current = [];
-      play("poke-stop", 2000);
-      return;
-    }
-    let next = POKE_REACTIONS[Math.floor(Math.random() * POKE_REACTIONS.length)];
-    if (next === lastPoke.current) {
-      const idx =
-        (POKE_REACTIONS.indexOf(next) + 1) % POKE_REACTIONS.length;
-      next = POKE_REACTIONS[idx];
-    }
-    lastPoke.current = next;
-    play(next, 1200);
-  }, [awake, play]);
-
-  // Discoverability: once per page load, if awake and not poked within 8s of
-  // waking, show "Poke me!" for 3s, then never again this session.
-  const hintShown = useRef(false);
-  useEffect(() => {
-    if (!awake || reduced || hintShown.current) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (!pokedOnce.current && !hintShown.current) {
-        hintShown.current = true;
-        play("hint", 3000);
-      }
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [awake, reduced, play]);
-
-  // Resting state class (pose that holds while the state holds).
+  // Resting pose (holds while the state holds).
   const stateClass = !awake
     ? "specimen--asleep"
     : stitched
       ? "specimen--alive"
       : "specimen--awake";
 
-  const bubbleText = reaction ? REACTION_BUBBLE[reaction] ?? "" : "";
-  const showDots = askPending && !reaction;
-
+  const reactionId = reaction?.id ?? null;
   const className = [
     "specimen",
     stateClass,
-    reaction ? `specimen--react-${reaction}` : "",
+    reactionId ? `specimen--react-${reactionId}` : "",
+    still ? "specimen--still" : "",
     reduced ? "specimen--reduced" : "",
     askPending ? "specimen--thinking" : "",
     autopsyOpen ? "specimen--investigating" : "",
@@ -262,50 +190,47 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     .filter(Boolean)
     .join(" ");
 
-  // Accessory flags that persist while their state holds.
-  const wearGoggles = proposalsShowing && !askResult;
-  // The magnifying glass, chart sign, and clipboard share the same hand, so
-  // only one shows at a time, with the magnifying glass taking priority.
-  const holdScroll = recipeApplied && !autopsyOpen;
-  const holdChart = askResult && !autopsyOpen && !holdScroll;
+  // Held items share one hand: autopsy gear, then the flask, then the scroll,
+  // then the chart sign, then the approval clipboard.
+  const holdFlask = askPending && !autopsyOpen;
+  const holdScroll = recipeApplied && !autopsyOpen && !holdFlask;
+  const holdChart = askResult && !autopsyOpen && !holdScroll && !holdFlask;
   const holdClipboard =
-    awake &&
+    hasTables &&
     approvedCount > 0 &&
     !stitched &&
     !holdChart &&
     !autopsyOpen &&
-    !holdScroll;
+    !holdScroll &&
+    !holdFlask;
+  const wearGoggles = proposalsShowing && !askResult;
+  const showBubble = bubble !== null && !guideOpen;
+
+  const effectsOn = !still;
 
   return (
-    <div className="specimen-layer">
+    <div className={`specimen-layer${guideOpen ? " specimen-layer--open" : ""}`}>
+      {effectsOn ? <FrankViewportFx id={reactionId} seq={reactionSeq} /> : null}
       <button
         type="button"
+        ref={buttonRef}
         className="specimen-button"
-        aria-label="Poke Little Frank"
-        onClick={handlePoke}
+        aria-label="Ask Little Frank"
+        aria-haspopup="dialog"
+        aria-expanded={guideOpen}
+        onClick={onToggleGuide}
       >
-        <span className={className} aria-hidden="true">
-          {/* Speech bubble (reaction text) / three-dot thinking bubble. */}
-          {bubbleText ? (
-            <span className="specimen__bubble">{bubbleText}</span>
-          ) : null}
-          {showDots ? (
-            <span className="specimen__bubble specimen__bubble--dots">
-              <i /><i /><i />
-            </span>
-          ) : null}
+        <span
+          ref={rootRef}
+          className={className}
+          aria-hidden="true"
+          data-reaction={reactionId ?? undefined}
+        >
+          {/* Speech bubble (reaction text). */}
+          {showBubble ? <span className="specimen__bubble">{bubble}</span> : null}
 
           {/* Zzz when asleep. */}
           {!awake ? <span className="specimen__zzz">Zzz</span> : null}
-
-          {/* Lightning bolt for the alive / poke-jolt reactions. */}
-          <svg className="specimen__bolt" viewBox="0 0 24 44">
-            <polyline
-              className="specimen__bolt-path"
-              points="14,0 6,20 12,20 4,44 20,16 13,16 18,0"
-              fill="none"
-            />
-          </svg>
 
           {/* The creature + slab. */}
           <svg className="specimen__body" viewBox="0 0 64 96">
@@ -317,24 +242,42 @@ export function Specimen(props: SpecimenProps): JSX.Element {
             {/* Arms (one a different color), joined by cross-stitches. */}
             <rect className="specimen__arm specimen__arm--left" x="4" y="52" width="12" height="6" rx="3" />
             <rect className="specimen__arm specimen__arm--right" x="48" y="52" width="12" height="6" rx="3" />
-            {/* Legs. */}
             {/* Legs run from under the body (y 64) down onto the slab (y 84)
                 so there is no gap between the grid and the feet. */}
             <rect className="specimen__leg specimen__leg--left" x="22" y="64" width="7" height="22" rx="3" />
             <rect className="specimen__leg specimen__leg--right" x="35" y="64" width="7" height="22" rx="3" />
+
+            {/* Neck bolts. */}
+            <circle className="specimen__neckbolt" cx="17.5" cy="28" r="1.8" />
+            <circle className="specimen__neckbolt" cx="46.5" cy="28" r="1.8" />
 
             {/* Electrode on top of the head (sparks when awake). */}
             <line className="specimen__electrode" x1="32" y1="6" x2="32" y2="1" />
             <circle className="specimen__electrode-tip" cx="32" cy="1" r="1.6" />
             <polyline className="specimen__electrode-spark" points="32,1 38,4 34,7 42,9" fill="none" />
 
-            {/* Head: a single cell with two mismatched eyes. */}
-            <rect className="specimen__head" x="22" y="8" width="20" height="18" rx="2" />
-            <circle className="specimen__eye specimen__eye--l" cx="29" cy="17" r="2.6" />
-            <rect className="specimen__eye specimen__eye--r" x="35" y="14.5" width="5" height="5" rx="1.2" />
-            {/* Closed lids (asleep) and X eyes (reset) are toggled via CSS. */}
-            <line className="specimen__lid specimen__lid--l" x1="26" y1="17" x2="32" y2="17" />
-            <line className="specimen__lid specimen__lid--r" x1="35" y1="17" x2="40" y2="17" />
+            {/* Head group: a single cell with two mismatched eyes. */}
+            <g className="specimen__headg">
+              <rect className="specimen__head" x="22" y="8" width="20" height="18" rx="2" />
+              <circle className="specimen__eye specimen__eye--l" cx="29" cy="17" r="2.6" />
+              <rect className="specimen__eye specimen__eye--r" x="35" y="14.5" width="5" height="5" rx="1.2" />
+              {/* Closed lids (asleep, fainted) and X eyes (reset). */}
+              <line className="specimen__lid specimen__lid--l" x1="26" y1="17" x2="32" y2="17" />
+              <line className="specimen__lid specimen__lid--r" x1="35" y1="17" x2="40" y2="17" />
+              {/* Static poses shown by a reaction class: smile, surgeon mask, pumpkin. */}
+              <path className="specimen__smile" d="M27.5 21.5 Q32 26.5 36.5 21.5" fill="none" />
+              <g className="specimen__mask">
+                <rect x="24" y="19.5" width="16" height="6.5" rx="1.5" />
+                <line x1="24" y1="21" x2="22" y2="19" />
+                <line x1="40" y1="21" x2="42" y2="19" />
+              </g>
+              <g className="specimen__pumpkin">
+                <ellipse cx="32" cy="5" rx="8" ry="5.5" />
+                <line x1="32" y1="-0.5" x2="33.5" y2="-3" />
+                <polyline points="29,4 30.5,2.5 31.5,4.5" />
+                <polyline points="35,4 33.5,2.5 32.5,4.5" />
+              </g>
+            </g>
 
             {/* Body: a 3x3 grid of table cells. */}
             <g className="specimen__grid">
@@ -363,7 +306,6 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               <g className="specimen__goggles">
                 <circle cx="29" cy="17" r="4" />
                 <circle cx="37" cy="17" r="4" />
-                <line x1="33" y1="17" x2="33" y2="17" />
               </g>
             ) : null}
 
@@ -377,23 +319,43 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               </g>
             ) : null}
 
-            {/* Magnifying glass held in the right hand while an Autopsy is open. */}
+            {/* Stethoscope and clipboard while an Autopsy case file is open. */}
             {autopsyOpen ? (
-              <g className="specimen__magnifier">
-                <circle cx="56" cy="44" r="6.5" />
-                <line x1="52" y1="49" x2="49" y2="55" />
+              <>
+                <g className="specimen__stethoscope">
+                  <path d="M24 27 Q20 41 28 46 Q36 50 41 43" fill="none" />
+                  <circle cx="41" cy="43" r="2.4" />
+                </g>
+                <g className="specimen__clipboard">
+                  <rect x="47" y="50" width="12" height="15" rx="1" />
+                  <line x1="50" y1="55" x2="56" y2="55" />
+                  <line x1="50" y1="59" x2="56" y2="59" />
+                </g>
+              </>
+            ) : null}
+
+            {/* Bubbling flask while an Ask the Lab question is pending. */}
+            {holdFlask ? (
+              <g className="specimen__flask">
+                <path d="M52 46 L52 52 L47 62 Q46 65 49 65 L58 65 Q61 65 60 62 L55 52 L55 46 Z" />
+                <line x1="51" y1="46" x2="56" y2="46" />
+                <path className="specimen__flask-liquid" d="M48.5 60 L58.5 60" />
+                <circle className="specimen__flask-bubble specimen__flask-bubble--1" cx="51.5" cy="58" r="1.2" />
+                <circle className="specimen__flask-bubble specimen__flask-bubble--2" cx="55" cy="59" r="1" />
+                <circle className="specimen__flask-bubble specimen__flask-bubble--3" cx="53.5" cy="57" r="1.4" />
               </g>
             ) : null}
 
             {/* Recipe scroll held after a recipe is applied (decorative). */}
             {holdScroll ? (
-              <g className="specimen__scroll" aria-hidden="true">
+              <g className="specimen__scroll">
                 <rect x="47" y="48" width="13" height="16" rx="3" />
                 <line x1="50" y1="53" x2="57" y2="53" />
                 <line x1="50" y1="57" x2="57" y2="57" />
                 <line x1="50" y1="61" x2="54" y2="61" />
               </g>
             ) : null}
+
             {/* Clipboard with a check (approved count > 0). */}
             {holdClipboard ? (
               <g className="specimen__clipboard">
@@ -412,10 +374,13 @@ export function Specimen(props: SpecimenProps): JSX.Element {
             ) : null}
           </svg>
 
+          {/* The reaction's Effects (not rendered under reduced motion or Calm). */}
+          {effectsOn ? <FrankFx id={reactionId} seq={reactionSeq} /> : null}
+
           {/*
-            Bar-chart sign held up while an Ask result is shown. It is drawn
-            AFTER the body SVG (and given a z-index in CSS) because the body has
-            an animated transform, which creates a stacking context that would
+            Bar-chart sign held up while an Ask result is shown. Drawn AFTER the
+            body SVG (and given a z-index in CSS) because the body has an
+            animated transform, which creates a stacking context that would
             otherwise paint over an earlier sibling and hide the sign.
           */}
           {holdChart ? (
@@ -428,6 +393,7 @@ export function Specimen(props: SpecimenProps): JSX.Element {
           ) : null}
         </span>
       </button>
+      {children}
     </div>
   );
 }

@@ -1,0 +1,163 @@
+/*
+ * "Ask Little Frank" panel: a speech bubble above Frank at the bottom-left. It
+ * scrolls inside itself and never moves the page. No animation. The tail points
+ * down at him.
+ */
+.frank-guide {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(60vh, calc(100vh - 190px));
+  overflow-y: auto;
+  padding: 12px 14px 12px;
+  border: 1px solid var(--lab-green);
+  border-radius: 14px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+
+/* The speech-bubble tail, pointing down at his head. */
+.frank-guide::after {
+  content: "";
+  position: absolute;
+  left: 38px;
+  bottom: -8px;
+  width: 14px;
+  height: 14px;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--lab-green);
+  border-bottom: 1px solid var(--lab-green);
+  transform: rotate(45deg);
+}
+
+.frank-guide__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.frank-guide__title {
+  margin: 0;
+  font-size: 15px;
+  color: var(--lab-green);
+}
+
+.frank-guide__close {
+  min-width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.frank-guide__tip {
+  margin: 8px 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--amber-accent);
+  background: rgba(255, 179, 0, 0.08);
+  color: var(--text-primary);
+}
+
+.frank-guide__label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.frank-guide__row {
+  display: flex;
+  gap: 6px;
+}
+
+.frank-guide__input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.frank-guide__ask,
+.frank-guide__poke {
+  padding: 6px 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.frank-guide__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frank-guide__chip {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.frank-guide__chip:hover,
+.frank-guide__ask:hover,
+.frank-guide__poke:hover,
+.frank-guide__close:hover {
+  border-color: var(--accent);
+}
+
+.frank-guide__answer {
+  margin-top: 10px;
+  min-height: 1.4em;
+}
+
+.frank-guide__answer p {
+  margin: 0 0 6px;
+}
+
+.frank-guide__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.frank-guide__calm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.frank-guide button:focus-visible,
+.frank-guide input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
