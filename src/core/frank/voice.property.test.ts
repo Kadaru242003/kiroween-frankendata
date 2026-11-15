@@ -26,7 +26,7 @@ describe("Feature: frankendata-little-frank, Property 8: voice", () => {
 
   it("has no dash in any Reaction bubble", () => {
     const events: FrankEvent[] = [
-      { type: "wake" }, { type: "files-loaded", tableCount: 3 }, { type: "stitch-open" }, { type: "approve" },
+      { type: "wake" }, { type: "whole" }, { type: "files-loaded", tableCount: 3 }, { type: "stitch-open" }, { type: "approve" },
       { type: "approve-all" }, { type: "reject" }, { type: "confirm-stitch" }, { type: "stitch-applied" },
       { type: "undo-stitch" }, { type: "fan-out" }, { type: "autopsy-open" }, { type: "autopsy", score: 10 },
       { type: "autopsy", score: 70 }, { type: "autopsy", score: 99 }, { type: "autopsy-fix-all" },

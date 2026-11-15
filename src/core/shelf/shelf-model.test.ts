@@ -7,7 +7,14 @@ import {
   STATIC_ARC_MIN_MS,
   STATIC_ARC_RADIUS_PX,
   buildSectionJars,
+  SECTION_SPECIMEN,
+  SPECIMEN_IDS,
+  SPECIMEN_MIN_BRIGHTNESS,
   generateStaticArcs,
+  heartBeats,
+  specimenBrightness,
+  stepWhole,
+  wholeReady,
   nextCrackleDelayMs,
   nextStaticArcDelayMs,
   pickActiveSection,
@@ -167,5 +174,81 @@ describe("timing and static arcs", () => {
       }
     }
     expect(generateStaticArcs(1)).not.toEqual(generateStaticArcs(2));
+  });
+});
+
+describe("jar specimens", () => {
+  it("gives each section its own specimen", () => {
+    expect(SECTION_SPECIMEN).toEqual({
+      intake: "hand",
+      tables: "bones",
+      stitching: "arm",
+      result: "heart",
+      recipes: "brain",
+      ask: "ear",
+      autopsy: "eye",
+    });
+    expect(new Set(Object.values(SECTION_SPECIMEN)).size).toBe(SPECIMEN_IDS.length);
+    const all = { ...stitched, recipeDone: true, autopsy: { tableName: "x", score: 9 } };
+    for (const jar of buildSectionJars(all)) expect(jar.specimen).toBe(SECTION_SPECIMEN[jar.id]);
+  });
+  it("is dim in an empty jar and brightens as the liquid rises", () => {
+    expect(specimenBrightness(0)).toBe(SPECIMEN_MIN_BRIGHTNESS);
+    expect(specimenBrightness(1)).toBe(1);
+    expect(specimenBrightness(0.5)).toBeGreaterThan(specimenBrightness(0));
+    expect(specimenBrightness(0.5)).toBeLessThan(specimenBrightness(1));
+    expect(specimenBrightness(-3)).toBe(SPECIMEN_MIN_BRIGHTNESS);
+    expect(specimenBrightness(9)).toBe(1);
+    const jars = buildSectionJars(stitched);
+    expect(jars.find((j) => j.id === "result")!.brightness).toBe(1);
+    expect(jars.find((j) => j.id === "recipes")!.brightness).toBe(SPECIMEN_MIN_BRIGHTNESS);
+  });
+  it("the heart beats only when its jar is full", () => {
+    expect(heartBeats("full")).toBe(true);
+    expect(heartBeats("half")).toBe(false);
+    expect(heartBeats("empty")).toBe(false);
+  });
+});
+
+describe("the whole moment", () => {
+  const full = (n: number) => Array.from({ length: n }, () => ({ progress: "full" as const }));
+  it("needs at least 5 visible jars, all full", () => {
+    expect(wholeReady(full(4))).toBe(false);
+    expect(wholeReady(full(5))).toBe(true);
+    expect(wholeReady(full(7))).toBe(true);
+    expect(wholeReady([...full(5), { progress: "half" as const }])).toBe(false);
+    expect(wholeReady([...full(5), { progress: "empty" as const }])).toBe(false);
+    expect(wholeReady([])).toBe(false);
+  });
+  it("fires once when ready, then not again until the lab is reset", () => {
+    let armed = true;
+    const step = (jars: { progress: "full" | "half" | "empty" }[], tables: number) => {
+      const r = stepWhole(armed, jars, tables);
+      armed = r.armed;
+      return r.fire;
+    };
+    expect(step(full(4), 2)).toBe(false);
+    expect(step([...full(5), { progress: "half" }], 2)).toBe(false);
+    expect(step(full(5), 2)).toBe(true);
+    expect(step(full(5), 2)).toBe(false);
+    expect(step(full(7), 2)).toBe(false);
+    // The jars change and become full again: still once per session.
+    expect(step([...full(5), { progress: "half" }], 2)).toBe(false);
+    expect(step(full(6), 2)).toBe(false);
+    // Reset lab (no tables) re-arms it.
+    expect(step([], 0)).toBe(false);
+    expect(armed).toBe(true);
+    expect(step(full(5), 2)).toBe(true);
+  });
+  it("fires from the real jars once the lab is complete, and not before", () => {
+    const early = { ...stitched, recipeDone: false, ask: { answered: true, loading: false } };
+    expect(wholeReady(buildSectionJars(early))).toBe(false);
+    const done = { ...early, recipeDone: true };
+    expect(buildSectionJars(done).length).toBeGreaterThanOrEqual(5);
+    expect(wholeReady(buildSectionJars(done))).toBe(true);
+    // An open Autopsy that has no score yet holds it back.
+    const withAutopsy = { ...done, autopsy: { tableName: "crm_customers", score: null } };
+    expect(wholeReady(buildSectionJars(withAutopsy))).toBe(false);
+    expect(wholeReady(buildSectionJars({ ...withAutopsy, autopsy: { tableName: "crm_customers", score: 80 } }))).toBe(true);
   });
 });

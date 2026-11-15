@@ -689,6 +689,9 @@
   transform-origin: 50% 100%;
   animation: frank-faint 1500ms ease-in-out both;
 }
+.specimen--react-whole .specimen__smile {
+  opacity: 1;
+}
 .specimen--react-surgeon .specimen__mask {
   opacity: 1;
 }

@@ -301,6 +301,166 @@ button.shelf-jar:focus-visible + .shelf-tip {
   100% { opacity: 0; }
 }
 
+/* ── Specimens: cartoon line art floating in each jar ───────────────────────── */
+.shelf-spec {
+  opacity: var(--bright, 0.3);
+  transition: opacity 700ms ease-out, filter 300ms ease-out;
+  animation: shelf-bob 5s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+.shelf-spec__body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.shelf-spec path,
+.shelf-spec circle {
+  fill: none;
+  stroke: #d9fbe0;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shelf-spec .soft {
+  fill: rgba(217, 251, 224, 0.14);
+}
+.shelf-spec .thick {
+  stroke-width: 2.4;
+}
+.shelf-spec .arm-outline {
+  stroke-width: 8;
+}
+.shelf-spec .arm-fill {
+  stroke: #17301f;
+  stroke-width: 5.4;
+}
+.shelf-spec .stitch {
+  stroke: #ffd36b;
+  stroke-width: 1;
+}
+.shelf-spec .pupil {
+  fill: #17301f;
+  stroke: none;
+}
+.shelf-spec .shine {
+  fill: #ffffff;
+  stroke: none;
+}
+.shelf-brain__spark {
+  stroke: #ffd36b;
+  opacity: 0;
+}
+.shelf-eye__look,
+.shelf-heart,
+.shelf-bone {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* The eye slowly looks around. */
+.shelf-eye__look {
+  animation: shelf-look 7s ease-in-out infinite;
+}
+/* The heart gently beats, about every 1.2s, once its jar is full. */
+.shelf-spec--beating .shelf-heart {
+  animation: shelf-beat 1200ms ease-in-out infinite;
+}
+
+/* One short reaction (each under 600ms) on hover or keyboard focus. */
+button.shelf-jar:hover .shelf-spec--hand .shelf-spec__body,
+button.shelf-jar:focus-visible .shelf-spec--hand .shelf-spec__body {
+  transform-origin: 50% 100%;
+  animation: shelf-wave 520ms ease-in-out;
+}
+button.shelf-jar:hover .shelf-spec--bones .shelf-bone,
+button.shelf-jar:focus-visible .shelf-spec--bones .shelf-bone {
+  animation: shelf-rattle 100ms ease-in-out 5;
+}
+button.shelf-jar:hover .shelf-spec--bones .shelf-bone--2,
+button.shelf-jar:focus-visible .shelf-spec--bones .shelf-bone--2 {
+  animation-direction: reverse;
+}
+button.shelf-jar:hover .shelf-spec--arm .shelf-spec__body,
+button.shelf-jar:focus-visible .shelf-spec--arm .shelf-spec__body {
+  transform-origin: 20% 80%;
+  animation: shelf-flex 520ms ease-in-out;
+}
+button.shelf-jar:hover .shelf-spec--heart .shelf-heart,
+button.shelf-jar:focus-visible .shelf-spec--heart .shelf-heart {
+  animation: shelf-double-beat 550ms ease-in-out;
+}
+button.shelf-jar:hover .shelf-spec--brain .shelf-brain__spark,
+button.shelf-jar:focus-visible .shelf-spec--brain .shelf-brain__spark {
+  animation: shelf-spark-flash 500ms ease-out;
+}
+button.shelf-jar:hover .shelf-spec--ear .shelf-spec__body,
+button.shelf-jar:focus-visible .shelf-spec--ear .shelf-spec__body {
+  transform-origin: 50% 20%;
+  animation: shelf-twitch 500ms ease-in-out;
+}
+/* The eye blinks and looks at the cursor (the offset is set by the jar's pointer handler). */
+button.shelf-jar:hover .shelf-spec--eye .shelf-spec__body,
+button.shelf-jar:focus-visible .shelf-spec--eye .shelf-spec__body {
+  animation: shelf-blink 300ms ease-in-out;
+}
+button.shelf-jar:hover .shelf-eye__look {
+  animation: none;
+  transform: translate(var(--look-x, 0), var(--look-y, 0));
+  transition: transform 120ms ease-out;
+}
+
+/* The whole moment: every specimen glows together (static under Calm Frank and reduced motion). */
+.lab-shelf--whole .shelf-spec {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(120, 255, 200, 0.95));
+}
+
+@keyframes shelf-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+@keyframes shelf-look {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(3px, -1px); }
+  45% { transform: translate(-3px, 0.5px); }
+  70% { transform: translate(1px, 2px); }
+}
+@keyframes shelf-beat {
+  0%, 40%, 100% { transform: scale(1); }
+  15% { transform: scale(1.12); }
+}
+@keyframes shelf-double-beat {
+  0%, 30%, 60%, 100% { transform: scale(1); }
+  15%, 45% { transform: scale(1.2); }
+}
+@keyframes shelf-wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(18deg); }
+  50% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+@keyframes shelf-rattle {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(1.2px) rotate(3deg); }
+}
+@keyframes shelf-flex {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  40%, 60% { transform: scale(1.18) rotate(-12deg); }
+}
+@keyframes shelf-spark-flash {
+  0%, 100% { opacity: 0; }
+  30%, 60% { opacity: 1; }
+}
+@keyframes shelf-twitch {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(5deg); }
+}
+@keyframes shelf-blink {
+  0%, 100% { transform: scaleY(1); }
+  40%, 60% { transform: scaleY(0.1); }
+}
+
 /* Calm Frank and reduced motion: static jars. No bubbles, arcs, pops, rises or fades. */
 .lab-shelf--still,
 .lab-shelf--still * {

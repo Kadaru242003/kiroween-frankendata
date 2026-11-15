@@ -333,4 +333,137 @@ describe("LabShelf (page navigation)", () => {
     expect(view.container.querySelector(".shelf-arc--crackle")).not.toBeNull();
     vi.restoreAllMocks();
   });
+
+  it("floats a cartoon specimen in each jar: hand, bones, arm, heart, brain, eye and ear, aria-hidden", () => {
+    const { view, stitchStore, update } = setup({ stitchOpen: true });
+    act(() => stitchStore.setProposals(proposalSet, "v1", false));
+    act(() => stitchStore.setApplied(...applied("stitch_1_result", 48)));
+    update({ autopsyTableName: "crm_customers" });
+    const kinds = Array.from(view.container.querySelectorAll("button.shelf-jar")).map((b) => [
+      b.getAttribute("data-section"),
+      b.querySelector(".shelf-spec")?.getAttribute("data-specimen"),
+    ]);
+    expect(kinds).toEqual([
+      ["intake", "hand"],
+      ["stitching", "arm"],
+      ["result", "heart"],
+      ["recipes", "brain"],
+      ["ask", "ear"],
+      ["autopsy", "eye"],
+      ["tables", "bones"],
+    ]);
+    for (const art of view.container.querySelectorAll(".shelf-jar__art")) expect(art).toHaveAttribute("aria-hidden", "true");
+    for (const spec of view.container.querySelectorAll(".shelf-spec")) expect(spec.closest("[aria-hidden='true']")).not.toBeNull();
+  });
+
+  it("dims an empty jar's specimen and brightens it as the liquid rises", () => {
+    const { view, askStore } = setup();
+    const bright = () => parseFloat((view.container.querySelector('button[data-section="ask"] .shelf-spec') as SVGElement).style.getPropertyValue("--bright"));
+    expect(bright()).toBeCloseTo(0.3, 2);
+    act(() => askStore.setLoading(true));
+    const half = bright();
+    expect(half).toBeGreaterThan(0.3);
+    act(() => askStore.setOutcome({ kind: "ok" } as never));
+    expect(bright()).toBe(1);
+  });
+
+  it("the heart beats only once the Result jar is full, and never under Calm Frank", () => {
+    const { view, stitchStore } = setup({ stitchOpen: true });
+    act(() => stitchStore.setProposals(proposalSet, "v1", false));
+    expect(view.container.querySelector(".shelf-spec--beating")).toBeNull();
+    act(() => stitchStore.setApplied(...applied("stitch_1_result", 48)));
+    expect(view.container.querySelector(".shelf-spec--heart.shelf-spec--beating")).not.toBeNull();
+    rest(true, false);
+    expect(view.container.querySelector(".shelf-spec--beating")).toBeNull();
+    expect(view.container.querySelector(".shelf-spec--heart")).not.toBeNull();
+  });
+
+  describe("the whole moment", () => {
+    /** Every visible jar full: stitched, recipe saved, a question answered (6 jars). */
+    function complete() {
+      const ctx = setup({ stitchOpen: true });
+      const events: string[] = [];
+      const off = frankBus.subscribe((e) => events.push(e.type));
+      act(() => ctx.stitchStore.setProposals(proposalSet, "v1", false));
+      act(() => ctx.stitchStore.setApplied(...applied("stitch_1_result", 48)));
+      return { ...ctx, events, off };
+    }
+    const finish = (ctx: ReturnType<typeof complete>) => {
+      act(() => frankBus.emit({ type: "save-recipe" }));
+      act(() => ctx.askStore.setOutcome({ kind: "ok" } as never));
+    };
+    const moments = (c: HTMLElement) => c.querySelector(".lab-shelf")!.getAttribute("data-whole-moments");
+
+    it("fires once when every visible jar is full (5 or more): glow, one small arc, Frank's bubble", () => {
+      vi.useFakeTimers();
+      const ctx = complete();
+      expect(moments(ctx.view.container)).toBe("0");
+      act(() => frankBus.emit({ type: "save-recipe" }));
+      // Recipes is full but Ask is not: not whole yet.
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(0);
+      act(() => ctx.askStore.setOutcome({ kind: "ok" } as never));
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(1);
+      expect(moments(ctx.view.container)).toBe("1");
+      expect(ctx.view.container.querySelector(".lab-shelf--whole")).not.toBeNull();
+      expect(ctx.view.container.querySelectorAll(".shelf-arc--spark")).toHaveLength(1);
+      // The glow lasts about 1.5 seconds.
+      act(() => {
+        vi.advanceTimersByTime(1400);
+      });
+      expect(ctx.view.container.querySelector(".lab-shelf--whole")).not.toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(ctx.view.container.querySelector(".lab-shelf--whole")).toBeNull();
+      // More happens (an Autopsy opens and finishes, another answer): not again.
+      ctx.update({ autopsyTableName: "crm_customers" });
+      act(() => frankBus.emit({ type: "autopsy", score: 80 }));
+      act(() => ctx.askStore.setOutcome({ kind: "ok" } as never));
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(1);
+      expect(moments(ctx.view.container)).toBe("1");
+      ctx.off();
+    });
+
+    it("waits for a jar that is not full, such as an Autopsy with no score yet", () => {
+      const ctx = complete();
+      ctx.update({ autopsyTableName: "crm_customers" });
+      finish(ctx);
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(0);
+      act(() => frankBus.emit({ type: "autopsy", score: 90 }));
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(1);
+      ctx.off();
+    });
+
+    it("does not fire with fewer than 5 visible jars", () => {
+      const ctx = setup();
+      const events: string[] = [];
+      const off = frankBus.subscribe((e) => events.push(e.type));
+      act(() => ctx.askStore.setOutcome({ kind: "ok" } as never));
+      // Intake, Ask and Tables are full, but there are only 3 jars.
+      expect(events).not.toContain("whole");
+      off();
+    });
+
+    it("is re-armed by Reset lab", () => {
+      const ctx = complete();
+      finish(ctx);
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(1);
+      ctx.update({ tables: [] });
+      ctx.update({ tables: two });
+      finish(ctx);
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(2);
+      expect(moments(ctx.view.container)).toBe("2");
+      ctx.off();
+    });
+
+    it("under Calm Frank it is a static glow (no arc) plus Frank's bubble event", () => {
+      rest(true, false);
+      const ctx = complete();
+      finish(ctx);
+      expect(ctx.events.filter((t) => t === "whole")).toHaveLength(1);
+      expect(ctx.view.container.querySelector(".lab-shelf--whole.lab-shelf--still")).not.toBeNull();
+      expect(ctx.view.container.querySelector(".shelf-arc")).toBeNull();
+      ctx.off();
+    });
+  });
 });

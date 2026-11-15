@@ -65,6 +65,17 @@ function StaticArcs(): JSX.Element {
   );
 }
 
+/** A small spark off the top ball. */
+function Spark(): JSX.Element {
+  return (
+    <g className="shelf-arc shelf-arc--spark">
+      <polyline points="42,10 47,4 43,0 49,-5" fill="none" />
+      <circle cx="50" cy="-6" r="1.4" />
+      <circle cx="38" cy="2" r="1" />
+    </g>
+  );
+}
+
 export interface TeslaCoilProps {
   powered: boolean;
   /** Frank is alive (tables loaded and awake): the ball dances with static. */
@@ -77,9 +88,11 @@ export interface TeslaCoilProps {
   wakeSeq: number;
   /** The sequence number of the stitch spark now playing, or 0. */
   sparkSeq: number;
+  /** How many whole moments have happened (each throws one small arc), or 0. */
+  wholeSeq: number;
 }
 
-export function TeslaCoil({ powered, alive, still, crackleSeq, wakeSeq, sparkSeq }: TeslaCoilProps): JSX.Element {
+export function TeslaCoil({ powered, alive, still, crackleSeq, wakeSeq, sparkSeq, wholeSeq }: TeslaCoilProps): JSX.Element {
   return (
     <svg
       className={`shelf-coil${powered ? " shelf-coil--powered" : ""}`}
@@ -118,13 +131,8 @@ export function TeslaCoil({ powered, alive, still, crackleSeq, wakeSeq, sparkSeq
             />
           ) : null}
           {wakeSeq > 0 ? <BigArc key={`w${wakeSeq}`} seq={wakeSeq} /> : null}
-          {sparkSeq > 0 ? (
-            <g key={`s${sparkSeq}`} className="shelf-arc shelf-arc--spark">
-              <polyline points="42,10 47,4 43,0 49,-5" fill="none" />
-              <circle cx="50" cy="-6" r="1.4" />
-              <circle cx="38" cy="2" r="1" />
-            </g>
-          ) : null}
+          {sparkSeq > 0 ? <Spark key={`s${sparkSeq}`} /> : null}
+          {wholeSeq > 0 ? <Spark key={`h${wholeSeq}`} /> : null}
         </>
       )}
     </svg>
