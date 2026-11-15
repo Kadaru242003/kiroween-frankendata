@@ -128,7 +128,7 @@ Built spec-first with Kiro. Everything below is checked into the repo.
 
 **Tests:** Vitest unit, property (fast-check) and DuckDB golden tests under `npm test`, plus one Playwright browser spec, `e2e/demo.spec.ts`, under `npm run test:e2e`.
 
-We drove each spec through spec-driven task execution, ran the build, tests, lint and the serverless graph check at every checkpoint, and used focused bug-fix prompts for follow-ups. Prompts for the Kiro agent were drafted with help from Claude (Anthropic) outside of Kiro; all implementation was done by Kiro agents from the specs.
+We drove each spec through spec-driven task execution, ran the build, tests, lint and the serverless graph check at every checkpoint, and used focused bug-fix prompts for follow-ups. All implementation was done by Kiro agents from the specs.
 
 ## Use FrankenData from Kiro (MCP)
 
