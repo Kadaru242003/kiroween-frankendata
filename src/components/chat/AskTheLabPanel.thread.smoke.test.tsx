@@ -150,11 +150,56 @@ describe("AI switched off by the user", () => {
         store={new AskStore()}
         chips={[{ tableName: "t", question: "How many rows are in t?", sql: "SELECT 1", kind: "row-count" }]}
         aiAvailable={false}
-        aiUserOff
       />
     );
-    expect(screen.getByText("AI is off. Starter questions still work.")).toBeInTheDocument();
+    expect(screen.getByText("AI is off here. Starter questions still work without it.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "How many rows are in t?" }));
     await waitFor(() => expect(screen.getByLabelText("Latest answer")).toBeInTheDocument());
   });
 });
+
+describe("Ask panel polish round 2", () => {
+  it("shows exactly one AI notice when the AI is unavailable, and not twice when a question hits it", async () => {
+    const c = { ask: vi.fn(async () => ({ kind: "ai-unavailable" }) as AskOutcome), runSql: vi.fn() } as unknown as AskController;
+    render(<AskTheLabPanel controller={c} store={new AskStore()} chips={[]} aiAvailable />);
+    expect(screen.queryByText(/AI is off here/)).toBeNull();
+    await submit("anything");
+    await waitFor(() => expect(screen.getAllByText("AI is off here. Starter questions still work without it.")).toHaveLength(1));
+    expect(screen.queryByText(/unavailable right now/)).toBeNull();
+  });
+
+  it("does not repeat the question above the SQL when the explanation is the question", async () => {
+    const chipQ = "How many rows are in t?";
+    const out: Ok = { ...ok(1), explanation: chipQ };
+    const c = controller([out]);
+    render(
+      <AskTheLabPanel
+        controller={c}
+        store={new AskStore()}
+        chips={[{ tableName: "t", question: chipQ, sql: "SELECT 1", kind: "row-count" }]}
+        aiAvailable
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: chipQ }));
+    await waitFor(() => expect(screen.getByLabelText("Latest answer")).toBeInTheDocument());
+    const answer = screen.getByLabelText("Latest answer");
+    expect(answer.textContent!.split(chipQ).length - 1).toBe(1);
+  });
+
+  it("hides a recent question that mentions a table that no longer exists", async () => {
+    const c = controller([ok(1), ok(2)]);
+    const store = new AskStore();
+    const { rerender } = render(
+      <AskTheLabPanel controller={c} store={store} chips={[]} aiAvailable knownTables={["monsters", "stitch_1_result"]} />
+    );
+    await submit("count rows in stitch_1_result");
+    await waitFor(() => expect(screen.getByLabelText("Recent questions")).toBeInTheDocument());
+    await submit("count rows in monsters");
+    await waitFor(() => expect(c.ask).toHaveBeenCalledTimes(2));
+    rerender(<AskTheLabPanel controller={c} store={store} chips={[]} aiAvailable knownTables={["monsters", "stitch_2_result"]} />);
+    const recent = screen.getByLabelText("Recent questions");
+    expect(recent).toHaveTextContent("count rows in monsters");
+    expect(recent).not.toHaveTextContent("stitch_1_result");
+  });
+});
+

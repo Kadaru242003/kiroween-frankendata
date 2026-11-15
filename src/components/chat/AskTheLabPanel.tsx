@@ -50,8 +50,11 @@ export interface AskTheLabPanelProps {
    * questions resolve to the "AI unavailable" message with no network call.
    */
   aiAvailable: boolean;
-  /** True when the user switched AI off (fully local) on a build that allows AI. */
-  aiUserOff?: boolean;
+  /**
+   * Names of the tables that exist now. A recent question that mentions a table
+   * that no longer exists (for example a replaced stitch_1_result) is hidden.
+   */
+  knownTables?: readonly string[];
   /**
    * "Ask about this" request from a table card: when `nonce` changes the input
    * is prefilled with `text`, brought into view, and focused.
@@ -63,8 +66,9 @@ export interface AskTheLabPanelProps {
 
 export const ASK_SUBMIT_LABEL = "Ask";
 export const ASK_PLACEHOLDER = "Ask a question about your tables…";
+/** The single notice shown when AI is off or unavailable (once, under the input). */
 export const AI_UNAVAILABLE_MESSAGE =
-  "The lab's AI is unavailable right now. Try one of the starter questions below: they run without AI.";
+  "AI is off here. Starter questions still work without it.";
 export const PRIVACY_NOTE =
   "Your data stays in the browser. When AI is on, it sees only column names and a few sample values, never your full rows.";
 
@@ -73,12 +77,26 @@ export function AskTheLabPanel({
   store,
   chips,
   aiAvailable,
-  aiUserOff = false,
+  knownTables,
   prefill = null,
   onPrefillHandled,
 }: AskTheLabPanelProps) {
   const { history, outcome, loading, turns, epoch } = useAskStore(store);
   const [question, setQuestion] = useState("");
+  // Recent questions that mention a table that no longer exists are hidden.
+  // Names seen during the session are remembered so any dropped table matches.
+  const seenTables = useRef(new Set<string>());
+  if (knownTables) for (const t of knownTables) seenTables.current.add(t);
+  const visibleHistory = knownTables
+    ? history.filter((h) => {
+        const gone = [...seenTables.current].filter((t) => !knownTables.includes(t));
+        const mentions = (name: string) =>
+          new RegExp(`(^|[^A-Za-z0-9_])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Za-z0-9_])`).test(h);
+        if (gone.some(mentions)) return false;
+        const stitch = h.match(/stitch_\d+_(?:result|clean_\w+)/g) ?? [];
+        return stitch.every((t) => knownTables.includes(t));
+      })
+    : history;
   const [topicNote, setTopicNote] = useState("");
   const panelRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -232,11 +250,16 @@ export function AskTheLabPanel({
       <p className="ask-panel__sr" role="status" aria-live="polite">
         {topicNote}
       </p>
-      {history.length > 0 ? (
+      {!aiAvailable || outcome?.kind === "ai-unavailable" ? (
+        <p className="ask-panel__ai-note" role="status">
+          {AI_UNAVAILABLE_MESSAGE}
+        </p>
+      ) : null}
+      {visibleHistory.length > 0 ? (
         <div className="ask-panel__history" aria-label="Recent questions">
           <p className="ask-panel__history-label">Recent:</p>
           <ul className="ask-panel__history-list">
-            {history.map((h, i) => (
+            {visibleHistory.map((h, i) => (
               <li key={`${i}:${h}`}>
                 <button
                   type="button"
@@ -278,13 +301,6 @@ export function AskTheLabPanel({
         </button>
       ) : null}
 
-      {!aiAvailable ? (
-        <p className="ask-panel__ai-note">
-          {aiUserOff
-            ? "AI is off. Starter questions still work."
-            : "AI is off, starter questions still work."}
-        </p>
-      ) : null}
 
       {loading ? (
         <div
@@ -337,13 +353,11 @@ export function AskTheLabPanel({
                 rows={outcome.rows}
                 capped={outcome.capped}
               />
-              <SqlBlock sql={outcome.sql} explanation={outcome.explanation} />
+              <SqlBlock
+                sql={outcome.sql}
+                explanation={outcome.explanation === history[0] ? "" : outcome.explanation}
+              />
             </>
-          ) : null}
-          {outcome.kind === "ai-unavailable" ? (
-            <p className="ask-panel__message" role="status">
-              {AI_UNAVAILABLE_MESSAGE}
-            </p>
           ) : null}
           {outcome.kind === "error" ? (
             <p className="ask-panel__message ask-panel__message--error" role="alert">

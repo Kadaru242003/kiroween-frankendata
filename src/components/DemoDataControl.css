@@ -62,10 +62,11 @@
   position: relative;
 }
 .frankendata-demo-control__tag {
+  /* Fully above the button's top edge, centered, touching the border. */
   position: absolute;
-  top: -10px;
+  top: 0;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, calc(-100% + 1px));
   margin: 0;
   white-space: nowrap;
   z-index: 1;

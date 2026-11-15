@@ -298,6 +298,9 @@ function App() {
   const [stitchOpen, setStitchOpen] = useState(false)
   // The table whose Autopsy case file is open, or null (Autopsy Req 1).
   const [autopsyTable, setAutopsyTable] = useState<LoadedTable | null>(null)
+  // Bumped on every Autopsy click so the panel scrolls into view even when the
+  // same table is clicked again (or the panel sits above the clicked card).
+  const [autopsyNonce, setAutopsyNonce] = useState(0)
   // True when the approval screen was opened by an Autopsy "Fix it" so it can
   // show with a single table (Autopsy Req 5.6). Does not affect stitching.
   const [cleanupOnly, setCleanupOnly] = useState(false)
@@ -557,6 +560,7 @@ function App() {
   // one panel is open at a time; opening another replaces it (Autopsy Req 1.4).
   const handleAutopsy = useCallback((table: LoadedTable) => {
     setAutopsyTable(table)
+    setAutopsyNonce((n) => n + 1)
   }, [])
 
   // Autopsy "Fix it": hand the existing cleaning proposal to the existing
@@ -1041,6 +1045,7 @@ function App() {
           */}
           <AutopsyRegion
             target={autopsyTable}
+            openNonce={autopsyNonce}
             loadedTables={tables}
             duckDBService={status.stack.duckDBService}
             stitchStore={status.stack.stitchStore}
@@ -1078,6 +1083,8 @@ function App() {
 /** Props for {@link AutopsyRegion}. */
 interface AutopsyRegionProps {
   target: LoadedTable | null
+  /** Changes on every Autopsy click; drives the scroll into view. */
+  openNonce: number
   loadedTables: readonly LoadedTable[]
   duckDBService: DuckDBService
   stitchStore: StitchStore
@@ -1095,6 +1102,7 @@ interface AutopsyRegionProps {
  */
 function AutopsyRegion({
   target,
+  openNonce,
   loadedTables,
   duckDBService,
   stitchStore,
@@ -1115,11 +1123,26 @@ function AutopsyRegion({
     }
   }, [target, exists, onClose])
 
+  const sectionRef = useRef<HTMLElement>(null)
+  const visible = target !== null && exists
+  // Clicking Autopsy on any card opens that table's panel and brings it into
+  // view: the panel sits above the table cards, so without this it can open
+  // off-screen. Smooth, instant under prefers-reduced-motion.
+  useEffect(() => {
+    if (!visible) return
+    const reduce =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    sectionRef.current?.scrollIntoView?.({
+      behavior: reduce ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }, [openNonce, visible])
   if (target === null || !exists) {
     return null
   }
   return (
-    <section className="lab-autopsy" aria-label="Autopsy">
+    <section className="lab-autopsy" aria-label="Autopsy" ref={sectionRef}>
       <CaseFilePanel
         db={duckDBService}
         target={{
@@ -1287,7 +1310,7 @@ function AskPanelRegion({
         store={askStore}
         chips={chips}
         aiAvailable={ASK_AI_AVAILABLE && aiOn}
-        aiUserOff={ASK_AI_AVAILABLE && !aiOn}
+        knownTables={queryable.map((t) => t.tableName)}
         prefill={prefill}
         onPrefillHandled={onPrefillHandled}
       />
