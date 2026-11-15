@@ -109,6 +109,19 @@ export interface SqlRequest {
   schema: SchemaSummary;
   /** Present only on a RepairCall: the failed SQL + DuckDB error to fix. */
   repair?: SqlRepair;
+  /**
+   * Optional short follow-up context (Smarter Ask): at most ASK_THREAD_MAX_TURNS
+   * earlier turns, holding ONLY question text, SQL text, result column names
+   * and a row count. Never result rows or values.
+   */
+  thread?: ThreadTurn[];
+}
+/** The privacy-reduced form of an earlier turn that may leave the browser. */
+export interface ThreadTurn {
+  question: string;
+  sql: string;
+  columns: string[];
+  rowCount: number;
 }
 
 export interface SqlRepair {
@@ -183,6 +196,8 @@ export type AskOutcome =
       capped: boolean;
       /** A validated chart spec, if one applies. */
       chart?: ChartSpec;
+      /** Names of the DATE / TIMESTAMP result columns (sorted). */
+      temporalColumns?: string[];
     }
   | { kind: "ai-unavailable" }
   | { kind: "error"; message: string };

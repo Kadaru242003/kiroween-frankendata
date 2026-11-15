@@ -8,23 +8,23 @@ Core first (thread, chart choice, reset lock, proxy and controller changes), the
 
 ## Tasks
 
-- [ ] 1. Thread module
+- [x] 1. Thread module
   - Create `src/core/chat/thread.ts`: constants, `ThreadTurn`, `toThreadTurn`, `toThread`, `fitRequestToCap`
   - Add `SqlRequest.thread?` and `temporalColumns?` on the ok outcome in `types.ts`
   - Unit tests; Property 1 and Property 2 tests
   - _Design: Data model, Request and budgeting; Requirements 1.1 to 1.4, 7.1, 7.2_
-- [ ] 2. Proxy thread support
+- [x] 2. Proxy thread support
   - Validate `thread` in `validateSqlRequestSchema`, include it in the prompt, update the chart and thread prompt lines
   - Unit tests (valid thread, each rejection, same codes, thread in the user prompt) and Property 5
   - _Design: Proxy changes; Requirements 1.5, 1.6, 7.5_
-- [ ] 3. Chart choice and controller
+- [x] 3. Chart choice and controller
   - Create `src/core/chat/chart-choice.ts`; update the controller (`ask(question, thread)`, `temporalColumns`, line choice)
   - Unit tests, controller thread tests, Property 3
   - _Design: Chart choice, Controller; Requirements 1.3, 3.1 to 3.4, 3.7, 3.8, 7.3_
-- [ ] 4. Reset lock
+- [x] 4. Reset lock
   - Create `src/state/reset-lock.ts`; unit tests and Property 4
   - _Design: Reset lock; Requirements 5, 7.4_
-- [ ] 5. Checkpoint: `npm run build`, `npm run check:api`, the touched tests; commit
+- [x] 5. Checkpoint: `npm run build`, `npm run check:api`, the touched tests; commit
 - [ ] 6. Store, line chart, thread cards
   - Extend `AskStore` (`turns`, `pushTurn`, `clearThread`); create `LineChart.tsx` and `ThreadCards.tsx` with CSS
   - Store tests, LineChart smoke test

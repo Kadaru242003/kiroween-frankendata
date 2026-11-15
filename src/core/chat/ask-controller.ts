@@ -38,6 +38,7 @@ import {
   type SchemaSummary,
   type SqlProvider,
   type SqlResponse,
+  type ThreadTurn,
 } from "./types.js";
 import { validateSql } from "./sql-validator.js";
 import {
@@ -46,6 +47,8 @@ import {
   type DateColumns,
 } from "./result-convert.js";
 import { validateChartSpec } from "./chart-spec.js";
+import { chooseChart } from "./chart-choice.js";
+import { fitRequestToCap } from "./thread.js";
 
 /** A single executed query's rows + ordered columns (post-conversion input). */
 export interface QueryExecResult {
@@ -82,7 +85,7 @@ export interface AskControllerDeps {
 
 export interface AskController {
   /** Answer a free-form question (LLM path when enabled). */
-  ask(question: string): Promise<AskOutcome>;
+  ask(question: string, thread?: ThreadTurn[]): Promise<AskOutcome>;
   /** Run a known, rule-built SQL (the StarterChip path). No LLM. */
   runSql(sql: string, explanation: string, chart?: ChartSpec): Promise<AskOutcome>;
 }
@@ -121,6 +124,15 @@ export function createAskController(deps: AskControllerDeps): AskController {
         exec.dateColumns,
       );
       const capped = rows.length >= ASK_MAX_FETCH_ROWS;
+      const temporal = new Set<string>([
+        ...(exec.dateColumns ?? []),
+        ...(exec.timestampColumns ?? []),
+      ]);
+      // A temporal plus numeric result is always a line chart; every other
+      // chart still comes from a validated bar spec, as before.
+      const auto = chooseChart(exec.columns, rows, temporal);
+      const resolvedChart =
+        auto?.type === "line" ? auto : validateChartSpec(chart, exec.columns, rows);
       return {
         outcome: {
           kind: "ok",
@@ -130,7 +142,8 @@ export function createAskController(deps: AskControllerDeps): AskController {
           rows,
           rowCount: rows.length,
           capped,
-          chart: validateChartSpec(chart, exec.columns, rows),
+          chart: resolvedChart,
+          ...(temporal.size > 0 ? { temporalColumns: [...temporal].sort() } : {}),
         },
       };
     } catch (err) {
@@ -152,7 +165,7 @@ export function createAskController(deps: AskControllerDeps): AskController {
     return outcome;
   }
 
-  async function ask(question: string): Promise<AskOutcome> {
+  async function ask(question: string, thread: ThreadTurn[] = []): Promise<AskOutcome> {
     const trimmed = question.slice(0, ASK_MAX_QUESTION_CHARS);
 
     // AI off → no network; point the user at the starter chips.
@@ -171,7 +184,9 @@ export function createAskController(deps: AskControllerDeps): AskController {
     // First LLM call.
     let first: SqlResponse;
     try {
-      first = await deps.provider.ask({ question: trimmed, schema });
+      first = await deps.provider.ask(
+        fitRequestToCap({ question: trimmed, schema, thread })
+      );
     } catch (err) {
       return isUnavailableError(err)
         ? { kind: "ai-unavailable" }
@@ -186,11 +201,14 @@ export function createAskController(deps: AskControllerDeps): AskController {
     // ONE RepairCall: send the failed SQL + error back to the model.
     let repaired: SqlResponse;
     try {
-      repaired = await deps.provider.ask({
-        question: trimmed,
-        schema,
-        repair: { previousSql: first.sql, error: firstRun.duckdbError },
-      });
+      repaired = await deps.provider.ask(
+        fitRequestToCap({
+          question: trimmed,
+          schema,
+          thread,
+          repair: { previousSql: first.sql, error: firstRun.duckdbError },
+        })
+      );
     } catch (err) {
       return isUnavailableError(err)
         ? { kind: "ai-unavailable" }
