@@ -106,3 +106,21 @@ the file in JavaScript) or a deliberate, reviewed change to `lockDownConnection`
 
 Not verified: that DuckDB-WASM in a browser can fetch `https://` URLs through `read_csv`. The
 audit said it can; nothing here ran it, and with the lock on it is moot.
+
+## Commit B: privacy, repair errors
+
+| # | Finding | Reproduced? | Fixed | Covering tests |
+| --- | --- | --- | --- | --- |
+| B1 | The repair request sent the raw DuckDB error, which quotes cell values (Medium). `Could not convert string 'TOP-SECRET-9931' to INT32` went to `/api/sql` verbatim. | Yes. `ask-controller.repair.test.ts` failed with the raw value in `provider.calls[1].repair.error`. | Yes: `redactDuckDbError` keeps the first line (error type and message), turns every quoted span into `'<value>'`, masks bare numbers, caps at 300 characters. | `redact-error.test.ts` (conversion error with a quoted value, escaped quotes, a value containing a quote, `can't`, unterminated quote, number masking, cap); `redact-error.property.test.ts` (no leak, cap, idempotent); `ask-controller.repair.test.ts` |
+| B2 | Server did not cap `repair.error`, `repair.previousSql`, `tableName` or column names (Low). | Yes. Over-limit values returned 200. | Yes: 300, 4000, 128, 128 characters, `400 bad_request` before any counter or LLM call. | `sql-proxy.repair.test.ts` (at the limit accepted, one over rejected, no Redis or LLM call) |
+| B3 | "What leaves the browser?" did not mention the error message. | Yes. | Yes: the line "If a query fails, the error message with values removed." was added to `describeEgress()`, which feeds the popover. | `egress-description.test.ts`; the existing `AiToggle.smoke.test.tsx` and `ai-off.duckdb.test.ts` still pass |
+
+Decisions to know about:
+
+- Double-quoted spans are redacted too, as asked, so a `Referenced column "foo" not found` error becomes `Referenced column '<value>' not found`. The model still gets the failed SQL and the error type, but loses the column name from the message. That is the price of the rule.
+- Beyond the request: bare numbers in the error become `<number>`, because an out-of-range cast prints its value without quotes (`Type INT64 with value 3000000000 can't be cast`). Type names such as `INT32` are untouched.
+- A quote only opens a value when it is not glued to a word, and only closes it when it is not followed by a word character. That keeps `can't` as text and redacts `'O'Brien'` whole. A value that contains a quote followed by a space can still end early. Nothing in a regex can fully fix that; the first-line cut and the 300-character cap limit what could leak.
+- The client truncates `previousSql` to 4000 characters before sending, and the schema builder now leaves out any table or column whose name is longer than 128 characters (`schema-builder.names.test.ts`). Without that, one very long CSV header would make the proxy refuse every Ask request. Those columns are invisible to the model.
+- No change to status codes, error codes, the shared `cap:<day>` key or the `rlsql:` prefix.
+
+Gate after commit B: `npm test` (173 files, 1082 tests), `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e` (5 passed).

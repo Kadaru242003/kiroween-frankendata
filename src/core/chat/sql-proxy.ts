@@ -55,6 +55,9 @@ import {
   ASK_SCHEMA_MAX_COLUMNS_PER_TABLE,
   ASK_SCHEMA_MAX_SAMPLES_PER_COLUMN,
   ASK_SCHEMA_MAX_SAMPLE_CHARS,
+  ASK_SCHEMA_MAX_NAME_CHARS,
+  ASK_REPAIR_ERROR_MAX_CHARS,
+  ASK_REPAIR_SQL_MAX_CHARS,
   type SqlRequest,
   type SqlResponse,
 } from "./types.js";
@@ -178,12 +181,14 @@ export function validateSqlRequestSchema(
     if (!isPlainObject(table)) return fail;
     if (hasUnknownKeys(table, ALLOWED_TABLE_KEYS)) return fail;
     if (typeof table.tableName !== "string") return fail;
+    if (table.tableName.length > ASK_SCHEMA_MAX_NAME_CHARS) return fail;
     if (!Array.isArray(table.columns)) return fail;
     if (table.columns.length > ASK_SCHEMA_MAX_COLUMNS_PER_TABLE) return fail;
     for (const col of table.columns) {
       if (!isPlainObject(col)) return fail;
       if (hasUnknownKeys(col, ALLOWED_COLUMN_KEYS)) return fail;
       if (typeof col.name !== "string") return fail;
+      if (col.name.length > ASK_SCHEMA_MAX_NAME_CHARS) return fail;
       if (typeof col.type !== "string" || !VALID_COLUMN_TYPES.has(col.type)) {
         return fail;
       }
@@ -200,7 +205,9 @@ export function validateSqlRequestSchema(
     if (!isPlainObject(repair)) return fail;
     if (hasUnknownKeys(repair, ALLOWED_REPAIR_KEYS)) return fail;
     if (typeof repair.previousSql !== "string") return fail;
+    if (repair.previousSql.length > ASK_REPAIR_SQL_MAX_CHARS) return fail;
     if (typeof repair.error !== "string") return fail;
+    if (repair.error.length > ASK_REPAIR_ERROR_MAX_CHARS) return fail;
   }
   if (thread !== undefined && !validThread(thread)) return fail;
 

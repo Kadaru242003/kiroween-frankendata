@@ -61,6 +61,16 @@ export const ASK_SCHEMA_MAX_SAMPLES_PER_COLUMN = 3;
 export const ASK_SCHEMA_MAX_SAMPLE_CHARS = 30;
 /** Max SchemaSummary size in bytes (16 KiB); the summary is trimmed to fit. */
 export const ASK_SCHEMA_MAX_PAYLOAD_BYTES = 16384;
+/**
+ * Max characters in a table or column name sent to the proxy. The client leaves
+ * out a longer name, and the proxy rejects it, so an honest client is never
+ * refused.
+ */
+export const ASK_SCHEMA_MAX_NAME_CHARS = 128;
+/** Max characters of the (redacted) DuckDB error in a repair request. */
+export const ASK_REPAIR_ERROR_MAX_CHARS = 300;
+/** Max characters of the failed SQL in a repair request. */
+export const ASK_REPAIR_SQL_MAX_CHARS = 4000;
 
 // ── Queryable tables ────────────────────────────────────────────────────────
 

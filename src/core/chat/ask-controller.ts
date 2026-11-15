@@ -33,6 +33,7 @@
 import {
   ASK_MAX_FETCH_ROWS,
   ASK_MAX_QUESTION_CHARS,
+  ASK_REPAIR_SQL_MAX_CHARS,
   type AskOutcome,
   type ChartSpec,
   type SchemaSummary,
@@ -49,6 +50,7 @@ import {
 import { validateChartSpec } from "./chart-spec.js";
 import { chooseChart } from "./chart-choice.js";
 import { fitRequestToCap } from "./thread.js";
+import { redactDuckDbError } from "./redact-error.js";
 
 /** A single executed query's rows + ordered columns (post-conversion input). */
 export interface QueryExecResult {
@@ -206,7 +208,11 @@ export function createAskController(deps: AskControllerDeps): AskController {
           question: trimmed,
           schema,
           thread,
-          repair: { previousSql: first.sql, error: firstRun.duckdbError },
+          repair: {
+            previousSql: first.sql.slice(0, ASK_REPAIR_SQL_MAX_CHARS),
+            // No cell value may leave the browser: DuckDB quotes offending values.
+            error: redactDuckDbError(firstRun.duckdbError),
+          },
         })
       );
     } catch (err) {

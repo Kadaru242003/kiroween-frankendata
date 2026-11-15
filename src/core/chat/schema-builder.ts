@@ -29,6 +29,7 @@ import {
   ASK_SCHEMA_MAX_SAMPLES_PER_COLUMN,
   ASK_SCHEMA_MAX_SAMPLE_CHARS,
   ASK_SCHEMA_MAX_PAYLOAD_BYTES,
+  ASK_SCHEMA_MAX_NAME_CHARS,
   type SchemaSummary,
   type SchemaTable,
   type SchemaColumn,
@@ -84,12 +85,17 @@ export async function buildSchemaSummary(
   reader: SampleReader,
   tables: SchemaSourceTable[]
 ): Promise<SchemaSummary> {
-  // Order by priority, then cap the number of tables.
-  const ordered = orderTablesForSchema(tables).slice(0, ASK_SCHEMA_MAX_TABLES) as SchemaSourceTable[];
+  // Leave out tables and columns whose name is longer than the proxy accepts,
+  // so one very long header never gets the whole request refused. Then order by
+  // priority and cap the number of tables.
+  const named = tables.filter((t) => t.tableName.length <= ASK_SCHEMA_MAX_NAME_CHARS);
+  const ordered = orderTablesForSchema(named).slice(0, ASK_SCHEMA_MAX_TABLES) as SchemaSourceTable[];
 
   const schemaTables: SchemaTable[] = [];
   for (const table of ordered) {
-    const cappedColumns = table.columns.slice(0, ASK_SCHEMA_MAX_COLUMNS_PER_TABLE);
+    const cappedColumns = table.columns
+      .filter((c) => c.name.length <= ASK_SCHEMA_MAX_NAME_CHARS)
+      .slice(0, ASK_SCHEMA_MAX_COLUMNS_PER_TABLE);
     const source: SampleSourceTable = {
       tableName: table.tableName,
       schema: cappedColumns.map((c) => ({ name: c.name, type: c.type })),
