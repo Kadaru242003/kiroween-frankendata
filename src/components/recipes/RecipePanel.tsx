@@ -199,7 +199,7 @@ export function RecipePanel({
   };
 
   return (
-    <section className="recipe-panel" aria-label="Recipes">
+    <section className="recipe-panel" aria-label="Recipes" data-lab-section="recipes">
       <h2 className="recipe-panel__title">Recipes</h2>
       <p className="recipe-panel__intro">
         Save this stitch as a recipe and reuse it on next month&apos;s files.

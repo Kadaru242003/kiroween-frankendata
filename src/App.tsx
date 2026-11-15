@@ -38,6 +38,7 @@ import { DropZone } from './components/DropZone'
 import { DemoDataControl } from './components/DemoDataControl'
 import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
 import { FrankRegion } from './components/frank/FrankRegion'
+import { LabShelf } from './components/shelf/LabShelf'
 import { frankBus } from './state/frank-bus'
 import { CaseFilePanel } from './components/autopsy/CaseFilePanel'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
@@ -871,7 +872,7 @@ function App() {
       {status.phase === 'ready' ? (
         <>
           {tables.length === 0 ? (
-          <section className="lab-intake" aria-label="File intake">
+          <section className="lab-intake" aria-label="File intake" data-lab-section="intake">
             <DropZone onFiles={handleFiles} disabled={resetting} />
             <div className="lab-intake__demos">
               {/*
@@ -933,7 +934,7 @@ function App() {
             </p>
           </section>
           ) : (
-          <section className="lab-toolbar" aria-label="Lab toolbar">
+          <section className="lab-toolbar" aria-label="Lab toolbar" data-lab-section="intake">
             <button
               type="button"
               className="lab-toolbar__button"
@@ -1014,7 +1015,7 @@ function App() {
           )}
 
           {(canStitch || cleanupOnly) && stitchOpen ? (
-            <section className="lab-stitch" aria-label="Stitching table">
+            <section className="lab-stitch" aria-label="Stitching table" data-lab-section="stitching">
               <button
                 type="button"
                 className="lab-stitch__close"
@@ -1100,6 +1101,7 @@ function App() {
             tables={tables}
             duckDBService={status.stack.duckDBService}
             onAutopsy={handleAutopsy}
+            sectionId="tables"
           />
 
           {/*
@@ -1118,6 +1120,14 @@ function App() {
             stitchOpen={stitchOpen}
             resetting={resetting}
             quietResetRef={quietResetRef}
+          />
+          {/* The decorative lab shelf (right gutter, 1440px and up). Read-only. */}
+          <LabShelf
+            tables={tables}
+            stitchStore={status.stack.stitchStore}
+            askStore={status.stack.askStore}
+            stitchOpen={stitchOpen}
+            autopsyTableName={autopsyTable?.tableName ?? null}
           />
         </>
       ) : null}
@@ -1188,7 +1198,7 @@ function AutopsyRegion({
     return null
   }
   return (
-    <section className="lab-autopsy" aria-label="Autopsy" ref={sectionRef}>
+    <section className="lab-autopsy" aria-label="Autopsy" ref={sectionRef} data-lab-section="autopsy">
       <CaseFilePanel
         db={duckDBService}
         target={{
@@ -1294,7 +1304,7 @@ function AskPanelRegion({
   if (queryable.length === 0) return null
 
   return (
-    <section className="lab-ask" aria-label="Ask the Lab">
+    <section className="lab-ask" aria-label="Ask the Lab" data-lab-section="ask">
       <AskTheLabPanel
         controller={askController}
         store={askStore}
@@ -1317,6 +1327,8 @@ interface TablePreviewRegionProps {
   duckDBService: DuckDBService
   /** Optional: shows an "Autopsy" button on each card (Autopsy Req 1.1). */
   onAutopsy?: (table: LoadedTable) => void
+  /** Marks the region as a page section the lab shelf can navigate to. */
+  sectionId?: string
 }
 
 /**
@@ -1332,6 +1344,7 @@ function TablePreviewRegion({
   tables,
   duckDBService,
   onAutopsy,
+  sectionId,
 }: TablePreviewRegionProps) {
   const askAbout = useContext(AskAboutContext)
   const [previews, setPreviews] = useState<TablePreviewData[]>([])
@@ -1376,6 +1389,7 @@ function TablePreviewRegion({
     <TablePreview
       tables={previews}
       onAutopsy={onAutopsy}
+      sectionId={sectionId}
       renderActions={(table) => (
         <>
           {askAbout ? (
@@ -1500,6 +1514,7 @@ function StitchStage({
           ref={resultRef}
           className="lab-stitch__result lab-stitch__result--alive"
           aria-label="Stitched result preview"
+          data-lab-section="result"
         >
           <h3 className="lab-stitch__result-title">Stitched result</h3>
           <TablePreviewRegion

@@ -360,3 +360,162 @@ test('Frank effects never intercept a click: Stitch tables works while the wake 
   await page.getByRole('button', { name: 'Stitch tables' }).click({ timeout: 5000 })
   await expect(page.getByRole('button', { name: 'Approve all suggestions' })).toBeVisible()
 })
+
+test.describe('lab shelf at 1600px', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  const jars = (page: Page) => page.locator('.lab-shelf button.shelf-jar')
+  const jarNames = (page: Page) => jars(page).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
+
+  test('landing: only the Intake jar, centred in the right gutter and in the window', async ({ page }) => {
+    await page.goto('/')
+    const nav = page.getByRole('navigation', { name: 'Lab sections' })
+    await expect(nav).toBeVisible()
+    expect(await jarNames(page)).toEqual(['Go to Intake'])
+    await expect(page.getByRole('button', { name: 'Go to Intake' })).toHaveAttribute('data-progress', 'empty')
+    // Centred in the gutter (between the 1200px column and the window edge) and in the window.
+    const box = (await nav.boundingBox())!
+    const gutterCentre = (800 + 600 + 1600) / 2
+    expect(Math.abs(box.x + box.width / 2 - gutterCentre)).toBeLessThan(6)
+    expect(Math.abs(box.y + box.height / 2 - 450)).toBeLessThan(6)
+  })
+
+  test('sections appear as the lab progresses; jars navigate, highlight, fill and explain themselves', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.locator('.shelf-arc--big')).toBeAttached()
+    await expect.poll(() => jarNames(page)).toEqual(['Go to Intake', 'Go to Ask the Lab', 'Go to Tables'])
+    await expect(page.getByRole('button', { name: 'Go to Intake' })).toHaveAttribute('data-progress', 'full')
+    await expect(page.getByRole('button', { name: 'Go to Ask the Lab' })).toHaveAttribute('data-progress', 'empty')
+
+    // Names are real text under the jars: at least 12px, never cut off.
+    const texts = page.locator('.lab-shelf .shelf-jar__text')
+    await expect(texts).toHaveText(['Intake', 'Ask', 'Tables'])
+    const sizes = await texts.evaluateAll((els) =>
+      els.map((e) => ({ px: parseFloat(getComputedStyle(e).fontSize), clipped: e.scrollWidth > e.clientWidth })),
+    )
+    for (const s of sizes) {
+      expect(s.px).toBeGreaterThanOrEqual(12)
+      expect(s.clipped).toBe(false)
+    }
+
+    // The Tables tooltip lists the tables and their rows, to the left of the jar.
+    const tablesJar = page.getByRole('button', { name: 'Go to Tables' })
+    await tablesJar.hover()
+    const tip = page.locator('#shelf-tip-tables')
+    await expect(tip).toBeVisible()
+    await expect(tip).toHaveText('Tables: crm_customers 22 rows, billing_invoices 48 rows')
+    const tipBox = (await tip.boundingBox())!
+    const jarBox = (await tablesJar.boundingBox())!
+    expect(tipBox.x + tipBox.width).toBeLessThanOrEqual(jarBox.x)
+
+    // Stitch: Stitching, Result and Recipes appear, and Stitching and Result are full.
+    await stitchEverything(page)
+    await expect
+      .poll(() => jarNames(page))
+      .toEqual(['Go to Intake', 'Go to Stitching', 'Go to Result', 'Go to Recipes', 'Go to Ask the Lab', 'Go to Tables'])
+    // The jars are in the page's real top-to-bottom order (DOM order and vertical position).
+    const pageOrder = await page.evaluate(() =>
+      (Array.from(document.querySelectorAll('[data-lab-section]')) as HTMLElement[])
+        .map((el, dom) => ({ id: el.dataset.labSection, dom, top: el.getBoundingClientRect().top + window.scrollY }))
+        .sort((a, b) => a.top - b.top || a.dom - b.dom)
+        .map((x) => x.id),
+    )
+    const jarOrder = await jars(page).evaluateAll((els) => els.map((e) => e.getAttribute('data-section')))
+    expect(jarOrder).toEqual(pageOrder)
+    expect(jarOrder).toEqual(['intake', 'stitching', 'result', 'recipes', 'ask', 'tables'])
+    await expect(page.getByRole('button', { name: 'Go to Result' })).toHaveAttribute('data-progress', 'full')
+    await expect(page.getByRole('button', { name: 'Go to Stitching' })).toHaveAttribute('data-progress', 'full')
+    await expect(page.getByRole('button', { name: 'Go to Recipes' })).toHaveAttribute('data-progress', 'empty')
+    await page.getByRole('button', { name: 'Go to Result' }).focus()
+    await expect(page.locator('#shelf-tip-result')).toHaveText('Result: 48 rows')
+
+    // Clicking the Ask jar scrolls Ask the Lab into view, moves focus to its heading, and the jar is current.
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const askJar = page.getByRole('button', { name: 'Go to Ask the Lab' })
+    await askJar.click()
+    await expect(page.locator('[data-lab-section="ask"]')).toBeInViewport()
+    await expect(page.getByRole('heading', { name: 'Ask the Lab', level: 2 })).toBeFocused()
+    await expect(askJar).toHaveAttribute('aria-current', 'true')
+    // It stays current once the smooth scroll has settled (not just while passing the section).
+    await page.waitForTimeout(1500)
+    await expect(askJar).toHaveAttribute('aria-current', 'true')
+    await expect(page.locator('.lab-shelf [aria-current="true"]')).toHaveCount(1)
+    // Scrolling by hand hands the highlight back to whatever is in view.
+    await page.mouse.move(400, 400)
+    await page.mouse.wheel(0, 1600)
+    await expect(askJar).not.toHaveAttribute('aria-current', 'true')
+    await expect(page.locator('.lab-shelf [aria-current="true"]')).toHaveCount(1)
+
+    // Keyboard: Enter on the Result jar goes to the result card.
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const resultJar = page.getByRole('button', { name: 'Go to Result' })
+    await resultJar.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('region', { name: 'Stitched result preview' })).toBeInViewport()
+    await expect(page.getByRole('heading', { name: 'Stitched result' })).toBeFocused()
+    await expect(resultJar).toHaveAttribute('aria-current', 'true')
+
+    // Saving the recipe fills the Recipes jar.
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Save recipe' }).click()
+    await download
+    await expect(page.getByRole('button', { name: 'Go to Recipes' })).toHaveAttribute('data-progress', 'full')
+
+    // In a short window the shelf scales down (not below 70%) instead of being clipped.
+    await page.setViewportSize({ width: 1600, height: 500 })
+    await expect
+      .poll(async () => {
+        const b = (await page.getByRole('navigation', { name: 'Lab sections' }).boundingBox())!
+        return b.y >= -1 && b.y + b.height <= 501
+      })
+      .toBe(true)
+    const scale = await page.getByRole('navigation', { name: 'Lab sections' }).evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue('--shelf-scale')))
+    expect(scale).toBeGreaterThanOrEqual(0.7)
+    expect(scale).toBeLessThan(1)
+
+    // Reset lab drains the jars back to Intake.
+    await page.setViewportSize({ width: 1600, height: 900 })
+    await page.getByRole('button', { name: 'Reset lab' }).click()
+    await expect.poll(() => jarNames(page)).toEqual(['Go to Intake'])
+    await expect(page.locator('.lab-shelf .shelf-item')).toHaveCount(1, { timeout: 5000 })
+  })
+
+  test('Calm Frank or reduced motion: static jars, no bubbles, no arcs, no running shelf animation', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect.poll(() => jars(page).count()).toBe(3)
+    await expect(page.locator('.shelf-jar__bubble')).toHaveCount(0)
+    await expect(page.locator('.shelf-arc')).toHaveCount(0)
+    await expect(page.getByTestId('shelf-static')).toHaveCount(0)
+    const running = await page.evaluate(() =>
+      document.getAnimations().filter((a) => a.playState === 'running' && 'animationName' in a && String((a as CSSAnimation).animationName).startsWith('shelf-')).length,
+    )
+    expect(running).toBe(0)
+    // The liquid is still drawn at its level, with no motion.
+    await expect(page.getByRole('button', { name: 'Go to Tables' })).toHaveAttribute('data-progress', 'full')
+  })
+
+  test('static dances on the coil while Frank is alive, and not before', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByTestId('shelf-static')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.getByTestId('shelf-static')).toHaveCount(1)
+    const arcs = page.locator('[data-testid="shelf-static"] polyline')
+    expect(await arcs.count()).toBeGreaterThanOrEqual(2)
+    expect(await arcs.count()).toBeLessThanOrEqual(3)
+  })
+})
+
+test('lab shelf: not rendered at 1280px', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.locator('.specimen--awake')).toHaveCount(1)
+  await expect(page.locator('.lab-shelf')).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Lab sections' })).toHaveCount(0)
+  // And it appears when the window grows.
+  await page.setViewportSize({ width: 1600, height: 800 })
+  await expect(page.locator('.lab-shelf button.shelf-jar')).toHaveCount(3)
+})

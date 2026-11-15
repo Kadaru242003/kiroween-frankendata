@@ -46,6 +46,8 @@ export interface TablePreviewProps {
    * its table here (Autopsy Req 1.1). Omitted, the cards are unchanged.
    */
   onAutopsy?: (table: LoadedTable) => void
+  /** Optional: marks the list as a page section the lab shelf can navigate to. */
+  sectionId?: string
   /**
    * Optional: extra per-table controls (for example export buttons) rendered in
    * each card's header. Omitted, the cards are unchanged.
@@ -183,12 +185,18 @@ export function TablePreview({
   tables,
   onAutopsy,
   renderActions,
+  sectionId,
 }: TablePreviewProps) {
   if (tables.length === 0) {
     return null
   }
+  // As a page section (the lab shelf navigates to it) it is a labelled region.
+  const section =
+    sectionId === undefined
+      ? {}
+      : { 'data-lab-section': sectionId, role: 'region', 'aria-label': 'Loaded tables' }
   return (
-    <div className="table-preview">
+    <div className="table-preview" {...section}>
       {tables.map(({ table, previewRows }) => (
         <TablePreviewCard
           key={table.tableName}

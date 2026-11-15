@@ -586,8 +586,9 @@
 }
 
 /* A short page shake on impact. It skips his own layer: a transform on an
-   ancestor of a fixed element would re-anchor it. */
-#lab.frank-shaking > :not(.specimen-layer) {
+   ancestor of a fixed element would re-anchor it. The shelf has its own
+   centering transform, so it sits the shake out. */
+#lab.frank-shaking > :not(.specimen-layer):not(.lab-shelf) {
   animation: frank-page-shake 150ms linear both;
 }
 

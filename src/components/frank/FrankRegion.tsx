@@ -12,7 +12,9 @@ import type { StitchedTable } from "../../core/stitching/types";
 import { useStitchStore } from "../../core/stitching/stitch-store";
 import type { AskStore } from "../../state/ask-store";
 import { useAskStore } from "../../state/ask-store";
-import { Specimen, isAskResultShown, prefersReducedMotion } from "../Specimen";
+import { Specimen, isAskResultShown } from "../Specimen";
+import { frankFeed } from "../../state/frank-feed";
+import { useReducedMotion } from "./useReducedMotion";
 import { FrankGuide } from "./FrankGuide";
 import { useFrankController, type FrankControllerOptions } from "./useFrankController";
 import { useFrankEvents } from "./useFrankEvents";
@@ -33,19 +35,6 @@ export interface FrankRegionProps {
   controller?: FrankControllerOptions;
 }
 
-/** Follows `prefers-reduced-motion`, including changes while the app is open. */
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(prefersReducedMotion);
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = () => setReduced(query.matches);
-    query.addEventListener?.("change", onChange);
-    return () => query.removeEventListener?.("change", onChange);
-  }, []);
-  return reduced;
-}
-
 export function FrankRegion(props: FrankRegionProps): JSX.Element {
   const { stitchStore, askStore, tableCount } = props;
   const stitch = useStitchStore(stitchStore);
@@ -54,6 +43,11 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
   const frank = useFrankController({ quipsEnabled: tableCount > 0, ...props.controller });
   const [guideOpen, setGuideOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Tell anything decorative that moves with him (the lab shelf) what he is doing.
+  useEffect(() => {
+    frankFeed.publish({ reaction: frank.reaction, seq: frank.reactionSeq, calm: frank.calm, idle: frank.idle });
+  }, [frank.reaction, frank.reactionSeq, frank.calm, frank.idle]);
 
   useFrankEvents({
     emit: frank.emit,

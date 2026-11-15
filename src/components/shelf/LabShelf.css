@@ -1,0 +1,316 @@
+/*
+ * The lab shelf: page navigation in the empty right gutter beside the 1200px
+ * main column. Fixed, centred in the gutter and in the window, and scaled down
+ * (not below 70%) when the jars do not fit. Only rendered at 1440px and up (the
+ * CSS hides it below as well). Only the jar buttons take the pointer. Motion
+ * uses only transform, opacity and filter, and is off under reduced motion and
+ * Calm Frank.
+ */
+.lab-shelf {
+  position: fixed;
+  /* The middle of the right gutter: (50vw + 600px) to 100vw. */
+  left: calc(75vw + 300px);
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--shelf-scale, 1));
+  transform-origin: center;
+  width: min(104px, calc(50vw - 600px - 16px));
+  z-index: 20;
+  pointer-events: none;
+}
+@media (max-width: 1439px) {
+  .lab-shelf {
+    display: none;
+  }
+}
+
+.lab-shelf * {
+  pointer-events: none;
+}
+.lab-shelf button.shelf-jar,
+.lab-shelf button.shelf-jar * {
+  pointer-events: auto;
+}
+
+.lab-shelf__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Room above the coil for its static arcs. */
+  padding-top: 28px;
+}
+.lab-shelf__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── The coil ─────────────────────────────────────────────────────────────── */
+.shelf-coil {
+  width: 84px;
+  height: 112px;
+  overflow: visible;
+}
+.shelf-coil__glow {
+  opacity: 0;
+  transition: opacity 900ms ease-out;
+}
+.shelf-coil--powered .shelf-coil__glow {
+  opacity: 0.7;
+}
+.shelf-coil__base {
+  fill: var(--surface-raised);
+  stroke: var(--border);
+  stroke-width: 1.2;
+}
+.shelf-coil__column {
+  fill: #2c3a33;
+  stroke: var(--lab-green-deep);
+  stroke-width: 1;
+}
+.shelf-coil__wind {
+  stroke: #c98a4b;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.shelf-coil__toroid {
+  fill: #7c8a85;
+  stroke: #46524d;
+  stroke-width: 1;
+}
+.shelf-coil__terminal {
+  fill: #9aa9a3;
+  stroke: #46524d;
+  stroke-width: 1;
+  transition: fill 900ms ease-out;
+}
+.shelf-coil--powered .shelf-coil__terminal {
+  fill: #d9fbff;
+}
+
+/* ── Arcs ─────────────────────────────────────────────────────────────────── */
+.shelf-arc path,
+.shelf-arc polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: miter;
+}
+.shelf-arc--crackle {
+  stroke: #bff8ff;
+  stroke-width: 1;
+  opacity: 0;
+  animation: shelf-crackle 350ms linear both;
+}
+.shelf-arc--spark polyline {
+  stroke: #ffffff;
+  stroke-width: 1.4;
+}
+.shelf-arc--spark circle {
+  fill: #ffffff;
+}
+.shelf-arc--spark {
+  filter: drop-shadow(0 0 3px rgba(80, 255, 214, 0.95));
+  animation: shelf-spark 400ms ease-out both;
+}
+/* The big arc flickers on/off/on/off/on and fades, like the wake strike. */
+.shelf-arc--big {
+  animation: shelf-arc-flicker 600ms linear both;
+}
+.shelf-arc__glow path {
+  stroke: rgba(80, 255, 214, 0.95);
+}
+.shelf-arc__core path {
+  stroke: #ffffff;
+}
+/* The static dancing on the ball: tiny, jagged and faint. */
+.shelf-static polyline {
+  stroke: #d9fbff;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: miter;
+  opacity: 0.4;
+}
+
+/* ── Jars ─────────────────────────────────────────────────────────────────── */
+.shelf-item {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.shelf-jar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 100%;
+  padding: 2px 0 3px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  animation: shelf-pop 300ms ease-out both;
+}
+button.shelf-jar {
+  cursor: pointer;
+}
+button.shelf-jar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.shelf-jar__art {
+  display: block;
+  width: 56px;
+  height: 54px;
+  overflow: visible;
+}
+/* The section's name, under the jar: real text, never truncated. */
+.shelf-jar__text {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.shelf-jar__glass {
+  fill: rgba(190, 240, 220, 0.07);
+  stroke: #7fa595;
+  stroke-width: 1.4;
+}
+.shelf-jar__lid {
+  fill: #5c564a;
+  stroke: #2d2a22;
+  stroke-width: 0.9;
+}
+.shelf-jar__shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+/* The liquid is a full-height rectangle scaled to the step's progress, so it rises smoothly. */
+.shelf-jar__liquid {
+  fill: rgba(57, 255, 20, 0.6);
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transform: scaleY(var(--fill, 0));
+  transition: transform 700ms ease-out;
+  animation: shelf-rise 700ms ease-out;
+}
+.shelf-jar__bubble {
+  fill: rgba(220, 255, 220, 0.9);
+  opacity: 0;
+  animation: shelf-bubble 2400ms ease-in infinite;
+}
+
+/* The section in view: a brighter glow and the label in the accent color. */
+.shelf-jar--active {
+  filter: drop-shadow(0 0 7px rgba(57, 255, 20, 0.85));
+}
+.shelf-jar--active .shelf-jar__glass {
+  stroke: var(--lab-green);
+}
+.shelf-jar--active .shelf-jar__text {
+  color: var(--accent);
+}
+button.shelf-jar:hover .shelf-jar__glass {
+  stroke: var(--lab-green);
+}
+
+/* The tooltip, to the left of the jar: the section and a one-line status. */
+.shelf-tip {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 5px 9px;
+  border: 1px solid var(--lab-green);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease-out;
+}
+button.shelf-jar:hover + .shelf-tip,
+button.shelf-jar:focus-visible + .shelf-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Its section went away (Reset lab, undo, closed): the liquid falls, then the jar fades. */
+.shelf-item--leaving .shelf-jar {
+  animation: shelf-fade-out 350ms ease-out 600ms both;
+}
+.shelf-item--leaving .shelf-jar__liquid {
+  animation: shelf-drain 600ms ease-in both;
+}
+
+@keyframes shelf-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes shelf-rise {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(var(--fill, 0)); }
+}
+@keyframes shelf-drain {
+  from { transform: scaleY(var(--fill, 0)); }
+  to { transform: scaleY(0); }
+}
+@keyframes shelf-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes shelf-bubble {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translateY(calc(var(--rise) * -1)); opacity: 0; }
+}
+@keyframes shelf-crackle {
+  0% { opacity: 0; }
+  20% { opacity: 0.55; }
+  40% { opacity: 0.1; }
+  60% { opacity: 0.45; }
+  100% { opacity: 0; }
+}
+@keyframes shelf-spark {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* On, off, on, off, on (70ms each = 350ms), then a 250ms fade: hard stops. */
+@keyframes shelf-arc-flicker {
+  0%, 11.6% { opacity: 1; }
+  11.7%, 23.2% { opacity: 0; }
+  23.3%, 34.9% { opacity: 1; }
+  35%, 46.5% { opacity: 0; }
+  46.6%, 58.3% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Calm Frank and reduced motion: static jars. No bubbles, arcs, pops, rises or fades. */
+.lab-shelf--still,
+.lab-shelf--still * {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-shelf,
+  .lab-shelf * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
