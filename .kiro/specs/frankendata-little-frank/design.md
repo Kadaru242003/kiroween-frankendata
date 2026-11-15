@@ -136,3 +136,38 @@ Other tests: `reactions.test.ts` (each event to the right Reaction, the wake/cat
 ## Implementation notes and deviations
 
 Recorded in `NOTES.md` next to this file.
+
+## Revision 2 design
+
+### Bolt generator (`src/core/frank/lightning.ts`, pure)
+
+`generateBolt({ seed, targetX, targetY, width })` returns `{ main, branches, sparks }`. A mulberry32 PRNG seeded from `seed` draws everything, so the same input gives the same bolt.
+
+- Main path: `n = 6 + floor(rand * 5)` segments, so 7 to 11 points. The first point is `(startX, 0)` with `startX` near the target and inside the viewport. The last point is exactly `(targetX, targetY)`. Interior points step down by `targetY / n` with a vertical jitter of at most a quarter step (so y never decreases) and a sideways zigzag that alternates sign, clamped to `[0, width]`.
+- Branches: 2 or 3, each on a distinct interior vertex of the main path, 2 to 4 short segments heading down and sideways, never below the target.
+- Sparks: 8 to 12 `{ angle, distance }` pairs for the impact burst.
+- `pointsToPath(points)` turns points into an SVG path string (one decimal).
+
+The strike is rendered by `FrankViewportFx` (`FrankFx.tsx`). It measures Frank's head once, when the strike mounts, builds the bolt from a seed taken from the clock and the reaction sequence number, and draws a full-viewport, `pointer-events: none` SVG: a glow stroke (blur filter, green and cyan), a 2px white core, the ring and the sparks. The flash is a separate fixed div. The keyframes use hard stops (no per-keyframe timing function) to flicker on, off, on, off, on over 350ms and fade over 250ms.
+
+The page shake adds a class to `#lab` for 150ms. The CSS selects `#lab.frank-shaking > :not(.specimen-layer)`, because a transform on an ancestor of a fixed element would re-anchor it.
+
+Under reduced motion or Calm Frank the strike is not rendered at all (no element, no class). The static wake pose is a soft glow on Frank.
+
+### Interaction
+
+`Specimen` renders two sibling buttons inside `.specimen-layer`: the creature (`aria-label="Poke Little Frank"`, calls `onPoke`) and the "?" (`aria-label="Ask Little Frank"`, calls `onToggleGuide`). Buttons cannot nest, so the "?" is positioned over his head with CSS. `FrankGuide` ignores pointer presses that land on either button, so poking with the guide open does not close it.
+
+Guide layout, top to bottom: tip, answer, form, chips, footer (Calm toggle). The answer is a `role="status"` region holding the full text in a visually hidden element and the typed text in an `aria-hidden` element, so assistive tech reads it once. The typewriter reveals a fixed number of characters per tick so any answer finishes within about 1.2 seconds, and is skipped (full text at once) under reduced motion or Calm Frank.
+
+### Personality
+
+Answers and bubbles live in `guide.ts` and `reactions.ts`. `GuideIntent.answer(now)` takes a `Date` so the November line is testable. `quips.ts` holds the pure scheduler (`quipDue`, `pickQuip`); `useFrankController` runs a coarse interval, asks the scheduler, and emits a `quip` event. New events: `autopsy-open` (bubble "Let me examine the patient.") and `quip`.
+
+### Look
+
+The body keeps its coordinates and class hooks (head group, arms, legs, stitches, neck bolts, electrode) so all poses and effects still line up. Patches use four local custom properties on `.specimen` (`--patch-1` to `--patch-4`) plus a seam color. The right sleeve is a coat-colored group longer than the arm, with the hand peeking out. A satchel with a book hangs at the left hip on a strap. `stitched` draws a new seam (a path with `pathLength=1` drawn in over 700ms, held after).
+
+### Correctness properties added
+
+6. Bolt structure (`lightning.property.test.ts`). 7. Quip scheduler gap (`quips.property.test.ts`). 8. Voice has no dashes (`voice.property.test.ts`).

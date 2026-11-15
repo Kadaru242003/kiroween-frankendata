@@ -42,3 +42,21 @@ Pure core first (constants, reactions and queue, poke, guide, calm), then the ev
   - Full `npm test`, `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e`
   - `NOTES.md`, commit
   - _Requirements: all_
+
+## Revision 2 tasks
+
+- [ ] 12. Spec: requirements 14 to 17, design Revision 2, these tasks
+- [ ] 13. Bolt generator (pure) with unit and property tests
+  - `lightning.ts`, `lightning.test.ts`, `lightning.property.test.ts`
+  - _Requirements: 14.1; Property 6_
+- [ ] 14. Voice: intents, reaction bubbles, quips (pure)
+  - Rewrite answers and bubbles; add Who, Eat, Read, Frankenstein, Born intents; `quips.ts`; `autopsy-open` and `quip` events; tests and properties 7 and 8
+  - _Requirements: 16; Property 3, 7, 8_
+- [ ] 15. Look: patchwork SVG, new seam, satchel, sleeve
+  - _Requirements: 17_
+- [ ] 16. Lightning rendering, flash, impact, shake, reduced motion
+  - _Requirements: 14.2 to 14.8_
+- [ ] 17. Interaction: poke on tap, "?" button, comic bubble guide, typewriter answer above the chips
+  - _Requirements: 15_
+- [ ] 18. Tests and gate: update unit and smoke tests, add e2e (tap pokes, "?" opens, acorns answer, answer above chips, reduced motion no bolt), full gate, NOTES.md
+  - _Requirements: all_

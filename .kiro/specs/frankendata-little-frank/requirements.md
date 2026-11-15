@@ -19,7 +19,9 @@ Out of scope: any change to what data leaves the browser, any new dependency or 
 - **ReactionQueue**: The pure state `{ current, pending }` that plays one Reaction at a time, keeping only the newest waiting one.
 - **Effect**: Any extra element Frank draws for a Reaction (lightning, flash, sparks, thread, smoke, file, cable).
 - **Calm Frank**: The preference that switches Reaction animations off while keeping Pose changes and bubble text.
-- **Guide**: The "Ask Little Frank" panel opened by clicking Frank.
+- **Guide**: The "Ask Little Frank" speech bubble opened by the "?" button next to Frank's head.
+- **Bolt**: The generated lightning strike: a main path plus branches, built from a seed.
+- **Quip**: A rare idle remark with a small drawing (a tiny book, an acorn, a look at his stitches).
 - **Intent**: One entry of the local intent table: an id, keywords, example questions and an answer.
 - **ContextTip**: The one-line hint at the top of the Guide chosen from the app state.
 - **EgressText**: The text of the "What leaves the browser?" disclosure, built by `describeEgress()`.
@@ -36,6 +38,12 @@ These SHALL be named values in `src/core/frank/constants.ts` so tests and the UI
 - **FRANK_POKE_RESET_MS = 6000** - Pause between pokes after which the poke count starts again.
 - **FRANK_CALM_STORAGE_KEY = "frankendata.calmFrank"** - The localStorage key of the Calm Frank preference.
 - **GUIDE_MIN_INTENTS = 15** - The fewest Intents the table holds.
+- **FRANK_BOLT_FLICKER_MS = 350** - How long the bolt flickers (on, off, on, off, on).
+- **FRANK_BOLT_FADE_MS = 250** - How long the bolt fades after the flicker.
+- **FRANK_FLASH_MS = 80** - How long the white screen flash lasts.
+- **FRANK_SHAKE_MS = 150** - How long the page shakes on impact.
+- **FRANK_QUIP_GAP_MS = 120000** - The least time between two idle quips.
+- **FRANK_QUIP_QUIET_MS = 15000** - How long the user must have been still before a quip may play.
 
 ## Requirements
 
@@ -58,7 +66,7 @@ These SHALL be named values in `src/core/frank/constants.ts` so tests and the UI
 
 #### Acceptance Criteria
 
-1. WHEN the first data is loaded (table count goes from 0 to 1 or more), THE Reaction `wake` SHALL play: a lightning bolt drawn as an SVG path from the top of the viewport down onto Frank (a stroke-dash draw of about 400ms), a brief and subtle screen flash, sparks at his neck bolts, he jolts upright, and a speech bubble says "IT'S ALIVE!".
+1. WHEN the first data is loaded (table count goes from 0 to 1 or more), THE Reaction `wake` SHALL play: a forked lightning strike, a brief screen flash, sparks, a ring and a page shake at Frank (all specified in Requirement 14, which supersedes the earlier "stroke-dash draw" wording), then he jolts upright and a speech bubble says "It's alive!".
 2. The lightning element and the flash SHALL ignore the pointer and SHALL NOT cover or intercept any control.
 3. A table count that rises while `wake` is playing or waiting SHALL NOT replace it (the files that arrive with it are part of the same load).
 4. WHEN a demo replaces the loaded tables (the quiet replace), THE next load SHALL play `catch` (files loaded) and not `wake`, because Frank did not die.
@@ -108,7 +116,7 @@ These SHALL be named values in `src/core/frank/constants.ts` so tests and the UI
 
 #### Acceptance Criteria
 
-1. Poking SHALL move into the Guide as a "Poke Frank" button; clicking Frank himself opens the Guide.
+1. Tapping or clicking Frank himself SHALL poke him (Requirement 15 supersedes the earlier "Poke Frank" button in the Guide, which is removed). The Guide opens from a separate "?" button.
 2. Pokes SHALL escalate by count: friendly at first, then annoyed, then "Stop poking me!", then fed up. The count SHALL start again after `FRANK_POKE_RESET_MS` without a poke.
 3. At `FRANK_POKE_EGG_COUNT` pokes in a row a harmless easter egg SHALL play (a pumpkin pops onto his head with the bubble "Happy Halloween!"), and the count SHALL start again.
 4. The poke Reaction for a given count SHALL be a pure function, unit tested.
@@ -133,10 +141,10 @@ These SHALL be named values in `src/core/frank/constants.ts` so tests and the UI
 
 #### Acceptance Criteria
 
-1. Clicking Frank (or pressing Enter or Space on him) SHALL open a small speech-bubble panel anchored to him with an accessible name ("Ask Little Frank"). Clicking him again SHALL close it.
+1. Clicking the "?" button next to his head (Requirement 15) SHALL open a comic speech bubble anchored to him with an accessible name ("Ask Little Frank"). Clicking the "?" again SHALL close it.
 2. The panel SHALL close on Esc and on a click outside it, and focus SHALL return to Frank.
 3. WHILE open, keyboard focus SHALL be trapped inside the panel (Tab and Shift+Tab cycle), and focus SHALL start on the question input.
-4. The panel SHALL hold: the ContextTip, a text input with an Ask button, the suggested-question chips ("How do I start?", "What does stitching do?", "Is my data safe?", "What is an Autopsy?", "How do recipes work?", "What can I ask the Lab?", "What does AI do here?", "How was this built?"), the answer area (a polite live region), a "Poke Frank" button, and the "Calm Frank" toggle.
+4. The panel SHALL hold, from top to bottom: the ContextTip, Frank's latest answer (a polite live region), a text input with an Ask button, the suggested-question chips ("How do I start?", "What does stitching do?", "Is my data safe?", "What is an Autopsy?", "How do recipes work?", "What can I ask the Lab?", "What does AI do here?", "How was this built?"), and the "Calm Frank" toggle. The answer SHALL always appear above the chips (Requirement 15).
 5. Opening the panel SHALL NOT scroll the page, and the panel SHALL NOT cover Frank.
 6. All answer text SHALL be rendered as plain text.
 
@@ -194,4 +202,63 @@ These SHALL be named values in `src/core/frank/constants.ts` so tests and the UI
 3. **Property 3 (guide matching)**: FOR EVERY Intent and EVERY one of its example questions (in any letter case and with extra punctuation), THE matcher SHALL return that Intent. FOR ANY text that contains no keyword, THE matcher SHALL return the fallback.
 4. **Property 4 (poke escalation)**: FOR ANY poke count, THE poke Reaction SHALL be defined; the escalation SHALL never go back to a friendlier level while the count rises without a pause; the egg SHALL play exactly at `FRANK_POKE_EGG_COUNT`.
 5. **Property 5 (no network)**: THE Guide module SHALL not call `fetch` while answering any question.
-6. EACH property test SHALL reference its design property by tag in its header comment (**Feature: frankendata-little-frank, Property {n}: {title}**).
+6. **Property 6 (bolt)**: FOR ANY seed and target, THE generated bolt SHALL be deterministic for that seed, have 6 to 10 main segments and 2 to 3 branches, start at y = 0 and end at the target, never go upward, and every branch SHALL start on a vertex of the main path (Requirement 14).
+7. **Property 7 (quips)**: FOR ANY sequence of times, THE quip scheduler SHALL never allow two quips less than `FRANK_QUIP_GAP_MS` apart and never while a Reaction plays or he sleeps (Requirement 16).
+8. **Property 8 (voice)**: FOR EVERY Reaction bubble and every guide answer, THE text SHALL contain no em dash or en dash (Requirement 16).
+9. EACH property test SHALL reference its design property by tag in its header comment (**Feature: frankendata-little-frank, Property {n}: {title}**).
+
+## Revision 2: lightning, interaction, personality and look
+
+### Requirement 14: A lightning strike that reads as lightning
+
+**User Story:** As a user, I want the wake-up to look like a real lightning strike, so that the first load is a moment.
+
+#### Acceptance Criteria
+
+1. THE bolt SHALL be generated procedurally from a seed by a pure function (`src/core/frank/lightning.ts`): a main path of 6 to 10 sharp zigzag segments from the top edge of the viewport (y = 0) down to Frank's head, plus 2 to 3 short branches that split off vertices of the main path. The same seed and target SHALL give the same bolt; a new seed per strike SHALL make each strike differ slightly.
+2. THE bolt SHALL be drawn as a bright white core stroke (2px) inside a wider glowing stroke in the lab green and cyan, with the glow made by an SVG blur filter.
+3. THE bolt SHALL appear instantly (no slow draw), flicker three times over `FRANK_BOLT_FLICKER_MS` (on, off, on, off, on), then fade over `FRANK_BOLT_FADE_MS`.
+4. A full-screen white flash of about 25% opacity SHALL last `FRANK_FLASH_MS` and start with the first flicker.
+5. ON impact there SHALL be a burst of 8 to 12 spark particles at Frank, a brief glow ring, and a shake of 2 to 3px lasting `FRANK_SHAKE_MS` on the page content. The shake SHALL NOT transform any ancestor of Frank (a transformed ancestor would break his fixed position), so it applies to the siblings of his layer only.
+6. AFTER the strike he SHALL jolt upright, his eyes SHALL open, and the bubble SHALL say "It's alive!".
+7. Under reduced motion or Calm Frank there SHALL be no bolt, shake or flash: only a soft static glow and the bubble.
+8. Every part of it SHALL have `pointer-events: none`, SHALL fit inside `FRANK_REACTION_MAX_MS`, and SHALL use only transform, opacity and filter.
+
+### Requirement 15: Interaction
+
+**User Story:** As a user, I want to poke Frank by tapping him and open the guide from a clear "?".
+
+#### Acceptance Criteria
+
+1. Tapping or clicking Frank SHALL poke him, with the escalating annoyance and the easter egg at `FRANK_POKE_EGG_COUNT` (Requirement 6). Frank SHALL be a real button named "Poke Little Frank", so Enter and Space poke him from the keyboard.
+2. THE Guide SHALL have no Poke button.
+3. A small round "?" speech-bubble button attached near his head, with the accessible name "Ask Little Frank", SHALL open and close the Guide. It SHALL be reachable by keyboard and show a visible focus ring.
+4. THE Guide SHALL look like a comic speech bubble coming from Frank, with a tail pointing at his head, not a form panel.
+5. Top to bottom, it SHALL show: the ContextTip, Frank's latest answer (large, in his voice, revealed with a short typewriter effect, instantly under reduced motion or Calm Frank), the input, then the suggestion chips. The answer SHALL appear above the chips, never below. Before the first question the answer area SHALL show a greeting.
+6. THE answer SHALL be exposed to screen readers as one complete text in a polite live region (the typewriter reveal SHALL NOT make it announce letter by letter).
+7. THE bubble SHALL be at most 360px wide, SHALL scroll inside itself when the space is tight, SHALL NOT cover Frank, and SHALL close on Esc and on an outside click. A click on Frank or on the "?" SHALL NOT count as an outside click. "Calm Frank" SHALL remain as a small toggle at the bottom.
+
+### Requirement 16: Personality, drawn from the 1818 novel
+
+**User Story:** As a user, I want Frank to be the gentle, eloquent creature of Mary Shelley's novel, not the film monster.
+
+#### Acceptance Criteria
+
+1. Frank SHALL be gentle, eloquent, curious, a little dramatic and well read. His lore (all from the 1818 novel): he learned to read by quietly watching a family through a chink in a cottage wall; he read Paradise Lost, Plutarch's Lives and The Sorrows of Young Werther; he eats only acorns and berries; he was stitched from mismatched parts and longs for a companion; his maker is Victor Frankenstein; he first lived on "a dreary night of November".
+2. EVERY guide answer and Reaction bubble SHALL be in that voice: short (1 to 3 sentences, except the privacy answer, which must carry the exact EgressText), warm, lightly spooky, never mean. No text SHALL contain an em dash or en dash.
+3. THE lore SHALL be tied to features: privacy opens with "I learned everything by watching quietly through a crack in the wall. I watch your data the same way. I never carry it off."; stitching says "I was stitched from mismatched parts too. Let's make your tables whole."; a successful stitch bubble is "Now neither of them is alone."; opening an Autopsy bubble is "Let me examine the patient."; saving a recipe bubble is "Even I keep notes in a journal.".
+4. THE Intent table SHALL gain: "Who are you?"; "What do you eat?" (acorns and berries, no meat); "What do you read?" (the three books); "Are you Frankenstein?" (gently correct the mix-up: Frankenstein was his maker, Victor; he is the creature, and in the lab people call him Little Frank); "When were you made?" (the novel says "a dreary night of November"; WHEN the current month is November, he adds "That's this month!"). The current date SHALL be an input to the answer function so it is testable.
+5. Idle quips SHALL be rare: a pure scheduler SHALL allow a quip only when no Reaction is playing, he is awake with tables loaded, the user has been still for `FRANK_QUIP_QUIET_MS`, and at least `FRANK_QUIP_GAP_MS` have passed since the last quip. The three quips are reading a tiny book, nibbling an acorn and looking at his own stitches. Under Calm Frank or reduced motion the bubble text still shows and no motion runs.
+6. All facts SHALL match the novel. Quotes from the novel SHALL be short phrases (under 15 words). The only film line SHALL be "It's alive!".
+
+### Requirement 17: A more detailed, original look
+
+**User Story:** As a user, I want Frank to look like a patchwork creature stitched from mismatched data columns.
+
+#### Acceptance Criteria
+
+1. THE torso and limbs SHALL be made of slightly mismatched patches in 3 to 4 greens and grays, with visible stitched seams in a lighter color.
+2. ONE eye SHALL be slightly bigger than the other. He SHALL have small electrode nubs (not a flat-top head or the film's makeup), a tiny satchel with a book peeking out, and a slightly too-long coat sleeve.
+3. HIS silhouette SHALL stay readable at the current size (94 by 140px), and every existing Pose and accessory (bandage, stethoscope, scroll, chart sign, magnifier, surgeon mask, flask, clipboard, pumpkin) SHALL keep working in the same positions.
+4. WHEN a stitch is applied, a new seam SHALL visibly appear across his torso (drawn in, then held).
+5. THE art SHALL be inline SVG and CSS only, aria-hidden, with no new dependency.
