@@ -52,6 +52,8 @@ These SHALL be named values in `src/core/chat/thread.ts` so that tests and the U
 7. WHEN AI is not available (the flag is off, or the proxy returns 429 or 503), a free-form question SHALL give the existing "AI is unavailable" outcome and no thread is sent. The existing messages SHALL explain it.
 8. A visible "New topic" button SHALL clear the Turns (and therefore the Thread). IT SHALL be shown only while at least one Turn exists, and SHALL announce "Started a new topic" in a polite live region. Clearing SHALL NOT remove the answer currently on screen.
 9. THE Thread and the Turns SHALL be cleared by "Reset lab" and whenever the queryable tables change (the same moments the outcome is cleared today). Nothing SHALL be persisted.
+10. WHEN "New topic" is clicked, THE Ask input text SHALL be cleared and keyboard focus SHALL move to the Ask input (without scrolling). The starter-question list SHALL return to its collapsed state. The "Started a new topic" note SHALL be replaced when the next Turn is added, so it can be announced again.
+11. WHEN "Reset lab" runs, THE Ask input text, the starter-question expansion, and the "New topic" note SHALL be cleared along with the Turns, even when the store was already empty. The store SHALL expose a counter that changes on every reset (`epoch`) so the panel can clear its own local state without a remount.
 
 ### Requirement 2: Thread view
 
@@ -70,13 +72,13 @@ These SHALL be named values in `src/core/chat/thread.ts` so that tests and the U
 
 #### Acceptance Criteria
 
-1. THE chart choice SHALL be a pure, deterministic function of the result columns, the result rows, and the set of TemporalColumns: the same inputs always give the same ChartChoice.
+1. THE chart choice function SHALL be a pure, deterministic function of the result columns, the result rows, and the set of TemporalColumns: the same inputs always give the same ChartChoice.
 2. WHEN the result has exactly two columns, one a TemporalColumn and one numeric, and at least `ASK_LINE_CHART_MIN_POINTS` rows, THE choice SHALL be a line chart with the temporal column on x and the numeric column on y.
-3. WHEN the result has exactly two columns, one non-temporal text column and one numeric column, THE choice SHALL be a bar chart (as today). In every other case THE choice SHALL be no chart.
+3. WHEN the result has exactly two columns, one non-temporal text column and one numeric column, THE choice function SHALL return a bar choice, but THE controller SHALL draw a bar chart ONLY when a chart spec supplied by the model or a starter chip passes the existing chart-spec validation, exactly as today. A text plus numeric result with no valid bar spec SHALL have no chart. In every other case THE choice SHALL be no chart.
 4. A column is numeric when its first non-empty converted value is a finite number. An all-empty or empty result has no chart.
 5. THE line chart SHALL be a hand-built SVG in the existing chart style (`chart.css`, same caption, axes, tick, and title conventions as the bar chart), SHALL sort points by x ascending, SHALL plot at most `ASK_LINE_CHART_MAX_POINTS` points (evenly sampled in order, always keeping the first and last point), and SHALL render all labels as plain text.
 6. THE line chart SHALL be accessible: the figure has an accessible name, the SVG is `role="img"` with a description, and a visually hidden data table lists every plotted point for screen readers.
-7. WHERE a model or starter chip supplies a chart spec, THE existing validation SHALL still apply to bar specs. A temporal plus numeric result SHALL use the line choice regardless of a supplied bar spec. A model supplied `line` spec that does not match the rule SHALL be dropped.
+7. WHERE a model or starter chip supplies a chart spec, THE existing validation SHALL still apply to bar specs, so a bar needs a valid spec (see 3). A temporal plus numeric result SHALL use the automatic line choice regardless of a supplied bar spec. A model supplied `line` spec that does not match the rule SHALL be dropped (the existing chart-spec validation already treats a supplied `line` as not renderable, so this needs no extra code).
 8. THE controller SHALL carry the names of the TemporalColumns in the ok outcome (an additive optional field) so the choice can be made without re-querying.
 
 ### Requirement 4: Ask about this table
@@ -89,6 +91,7 @@ These SHALL be named values in `src/core/chat/thread.ts` so that tests and the U
 2. Clicking it SHALL prefill the Ask input with `In <tableName>: `, move keyboard focus to the Ask input, and bring the Ask panel into view (instant under `prefers-reduced-motion`). This is an explicit navigation button, so scrolling is allowed.
 3. Prefilling SHALL replace any text in the input, SHALL NOT submit the question, and SHALL keep working for repeated clicks on different tables.
 4. WHEN there is no Ask panel (no queryable table), THE button SHALL NOT be shown.
+5. THE prefill request SHALL be applied exactly once. After it is applied, THE owner SHALL drop the request (`onPrefillHandled`), "Reset lab" SHALL clear any pending request, and a remount of the Ask panel SHALL NOT apply an old request again. A new click SHALL always apply, even for the same table.
 
 ### Requirement 5: Reset lab race
 
@@ -112,22 +115,11 @@ These SHALL be named values in `src/core/chat/thread.ts` so that tests and the U
 1. THE `playwright.config.ts` SHALL read the `E2E_SLOWMO` environment variable (milliseconds). WHEN it is a positive integer, THE browser launch SHALL use it as `slowMo`. OTHERWISE the default SHALL stay fast (no slow motion).
 2. `E2E_SLOWMO=600 npm run test:e2e -- --headed` SHALL run the same spec at that speed.
 3. THE e2e spec SHALL include one follow-up question after the starter chip. IF the AI proxy is not available in the test environment (the panel shows that AI is off), THE step SHALL be skipped without failing.
+   - **Coverage:** the skip branch is exercised by `e2e/demo.spec.ts` on every run (the Vite dev server serves no `/api/sql`, so the panel always shows that AI is off).
+   - **Waived:** the AI-on branch (typing the follow-up and expecting a result or an error alert). Reason: it needs a live `/api/sql` proxy with a real LLM key, Upstash and spend, which the automated run deliberately does not have, and a test must never call a real provider. It is covered by manual test step 3 in `NOTES.md` and by the unit tests of the thread request (`ask-controller.thread.test.ts`, `sql-proxy.thread.test.ts`).
 4. THE e2e spec SHALL keep passing with the reset race fixed (it no longer needs to wait for the previews to disappear, but MAY still do so).
 
-### Requirement 7: Correctness properties for property-based tests
-
-**User Story:** As a developer, I want the safety properties checked by property-based tests.
-
-#### Acceptance Criteria
-
-1. **Property 1 (thread bounds and privacy)**: FOR ANY sequence of turns, THE derived Thread SHALL contain at most `ASK_THREAD_MAX_TURNS` turns, SHALL keep the most recent ones, and SHALL NOT contain any result row or cell value.
-2. **Property 2 (payload cap)**: FOR ANY question, schema within its own cap, and Thread, THE request after budgeting SHALL serialize to at most the PayloadCap, and SHALL keep the newest ThreadTurns that fit.
-3. **Property 3 (chart determinism)**: FOR ANY result shape, THE chart choice SHALL be identical across repeated calls and independent of column set iteration order, and SHALL be a line only for temporal plus numeric and a bar only for text plus numeric.
-4. **Property 4 (reset lock)**: FOR ANY interleaving of lock reads while a reset is running, THE LoadControls enabled state SHALL be false while the lock is busy, and true after it releases, including after a failure.
-5. **Property 5 (proxy thread validation)**: FOR ANY malformed thread (unknown keys, too many turns, overlong or non-string fields), THE SqlProxy SHALL return `400 bad_request` and SHALL NOT call the LLM or touch the counters.
-6. EACH property test SHALL reference its design property by tag in its header comment (**Feature: frankendata-smarter-ask, Property {n}: {title}**).
-
-### Requirement 8: Privacy, limits, and non-interference
+### Requirement 7: Privacy, limits, and non-interference
 
 **User Story:** As a user, I want the same privacy and limits as before.
 
@@ -136,5 +128,21 @@ These SHALL be named values in `src/core/chat/thread.ts` so that tests and the U
 1. THE only data leaving the browser SHALL be what Feature 3 sends (column names, types, and a few short samples) plus the Thread (question text, SQL text, column names, row counts). No result row or value SHALL ever be sent.
 2. THE SQL validator, the fetch cap, the proxy limits, the shared `cap:<day>` key, and the fail-closed behavior SHALL be unchanged. Changes to `api/` SHALL be limited to what this feature needs. `npm run check:api` SHALL pass.
 3. THE feature SHALL add no runtime dependency.
-4. WITH `VITE_AI_ENABLED` off, the app SHALL make no network attempt for Ask and SHALL keep working with starter chips.
+4. WITH `VITE_AI_ENABLED` off, or the AI switch Off, the app SHALL make no network attempt for Ask (with or without a Thread) and SHALL keep working with starter chips.
+   - **Coverage:** `src/core/chat/ask-controller.thread.test.ts` ("returns ai-unavailable with AI off and sends nothing": the build flag off, a Thread passed, no provider call) and `src/core/ai-off.duckdb.test.ts` ("free-form Ask shows the unavailable outcome and never calls fetch": the switch Off, with and without a Thread, a spied `fetch` never called, and called again once the switch is On as the positive control).
 5. THE existing stitching, cleaning, recipe, Autopsy, and MCP behavior SHALL be unchanged.
+6. THE "What leaves the browser?" disclosure SHALL list the follow-up Thread as its own line, built from `ASK_THREAD_MAX_TURNS` so the text cannot drift from the code: "Follow-up questions: your previous questions (at most 3 turns), the SQL that answered them, and the result column names and row counts." It SHALL keep stating that rows and result values are never sent.
+   - **Coverage:** `src/core/ai-off.duckdb.test.ts` ("the disclosure states the real limits" checks the turn limit and the never-sent sentence) and `src/components/AiToggle.smoke.test.tsx` (every line of `describeEgress()` is rendered).
+
+### Requirement 8: Correctness properties for property-based tests
+
+**User Story:** As a developer, I want the safety properties checked by property-based tests.
+
+#### Acceptance Criteria
+
+1. **Property 1 (thread bounds and privacy)**: FOR ANY sequence of turns, THE derived Thread SHALL contain at most `ASK_THREAD_MAX_TURNS` turns, SHALL keep the most recent ones, and SHALL NOT contain any result row or cell value.
+2. **Property 2 (payload cap)**: FOR ANY question, schema within its own cap, and Thread, THE request after budgeting SHALL serialize to at most the PayloadCap, and SHALL keep the newest ThreadTurns that fit.
+3. **Property 3 (chart determinism)**: FOR ANY result shape, THE chart choice function SHALL give an identical result across repeated calls and independent of column set iteration order, and SHALL return a line only for temporal plus numeric and a bar only for text plus numeric.
+4. **Property 4 (reset lock)**: FOR ANY interleaving of lock reads while a reset is running, THE LoadControls enabled state SHALL be false while the lock is busy, and true after it releases, including after a failure.
+5. **Property 5 (proxy thread validation)**: FOR ANY malformed thread (unknown keys, too many turns, overlong or non-string fields), THE SqlProxy SHALL return `400 bad_request` and SHALL NOT call the LLM or touch the counters.
+6. EACH property test SHALL reference its design property by tag in its header comment (**Feature: frankendata-smarter-ask, Property {n}: {title}**).

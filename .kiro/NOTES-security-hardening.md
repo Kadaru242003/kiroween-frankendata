@@ -146,3 +146,44 @@ Not changed on purpose: status codes, error codes, `rl:`/`rlsql:` prefixes, the 
 The two real exposures the audit found are unchanged by this and need your decision: there is no authentication (so anyone can spend the shared daily cap of 500), and the client IP is read from `x-forwarded-for`, which is only trustworthy behind Vercel.
 
 Gate after commit C: `npm test` (176 files, 1142 tests), `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e` (5 passed).
+
+## Commit D: smarter-ask spec review fixes (docs only)
+
+Files: `.kiro/specs/frankendata-smarter-ask/requirements.md`, `design.md`, `tasks.md`. No code changed.
+
+| # | Review finding | Done |
+| --- | --- | --- |
+| D1 | Requirement 3.1/3.3 contradicted the real behavior: the spec said a text plus numeric result "SHALL be a bar chart", but the controller draws a bar only when a supplied spec passes `validateChartSpec`; only the line is automatic. | 3.1 now says "chart choice function". 3.3 says the function returns a bar choice and the controller draws it only with a valid spec; no valid spec means no chart. 3.7 states that a bar needs a valid spec. Property 3 (now 8.3) is worded for the choice function. |
+| D2 | New topic and Reset clearing behavior had no requirement. | New 1.10 (New topic clears the input, moves focus to it, collapses the starters, and its note is replaced by the next turn) and 1.11 (Reset lab clears the input, the starter expansion and the note, through a store `epoch` that changes on every reset). |
+| D3 | The one-shot prefill had no requirement. | New 4.5 (applied once, `onPrefillHandled`, cleared by Reset lab, a remount never re-applies, a new click always applies). |
+| D4 | The "Follow-up questions" egress line had no requirement or test reference. | New 7.6, with its coverage: `ai-off.duckdb.test.ts` and `AiToggle.smoke.test.tsx`. Task 11 now lists it. |
+| D5 | The properties requirement was not last. | Swapped: Privacy, limits and non-interference is now Requirement 7 and Correctness properties is Requirement 8. `tasks.md` references were renumbered (`7.x` properties became `8.x`; old `8.2` became `7.2`). Property test header tags use "Property n" and did not change. |
+| D6 | `design.md` had no requirement numbers. | Every section has a `_Requirements ..._` line, and the property table has the `8.n` of each property. |
+| D7 | 6.3 and 8.4 had no stated coverage. | 6.3: skip branch **covered** by `e2e/demo.spec.ts`; AI-on branch **waived** with a reason (needs a live proxy, real LLM key, Upstash and spend, and a test must never call a real provider), pointing to manual step 3 in the spec `NOTES.md` and the thread request unit tests. 7.4 (was 8.4): **covered** by `ask-controller.thread.test.ts` (build flag off, a Thread passed, no provider call) and `ai-off.duckdb.test.ts` (switch Off, spied `fetch` never called, positive control when On). |
+
+Left as is on purpose (not in the request): the Named Constants section still says every constant lives in `thread.ts`, but `ASK_LINE_CHART_MIN_POINTS` and `ASK_LINE_CHART_MAX_POINTS` live in `chart-choice.ts`, and the criteria for 1.7 ("no thread is sent" when AI is unavailable) and 3.5 (sampling details for nulls and duplicate x values) remain loosely worded. The spec `NOTES.md` still says the Ask about this button uses a React context while `design.md` says `renderActions`; I did not read `App.tsx` to settle which is current.
+
+Gate after commit D: see the end of this file.
+
+## Index: audit finding to where it is handled
+
+| Audit finding | Severity | Status |
+| --- | --- | --- |
+| 1 FROM-list stops after subquery or alias | High | Fixed, A1 to A3, A12 |
+| 2 Comment split and quoted function names | High | Fixed, A4, A5 |
+| 3 Parenthesized table positions | Medium | Fixed, A6, A16 |
+| 4 Blocklist not exhaustive | Medium | Fixed, A7 |
+| 5 Repair error sends cell values | Medium | Fixed, B1 |
+| 6 No authentication, Origin is a courtesy, IP header trust, shared cap | Medium | Not changed. Needs your decision. See the `ALLOWED_ORIGINS` answer in commit C. |
+| 7 LIMIT counted from any `LIMIT` token | Low | Not changed. The fetch-cap wrapper still bounds rows at 5000. |
+| 8 NUL byte | Low | Fixed, A8 |
+| 9 Non-numeric counter fails open | Low | Fixed, C1 |
+| 10 No upstream timeouts | Low | Fixed, C2 |
+| 11 Unfiltered model fields and uncapped schema strings | Low | Fixed, C3 and B2 |
+| 12 `FROM` in EXTRACT and friends | Low | Fixed, A9 |
+| 13 Body read before method and env checks, no handler logging, non-atomic INCR then EXPIRE | Low / info | Not changed. |
+| Secrets scan, tracked `.env` check | n/a | Not done. The scan command was blocked in the first audit and not retried. |
+
+## Gate after commit D
+
+`npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e` (5 passed) all passed. `npm test` failed once on the first run of this gate: `stitch-applier.undo.property.test.ts` ("Property 6: Undo restores pre-apply state") reported a failure after 930 seconds. Commit D changes no code, and the same test passed in the three earlier full runs on this branch. Run alone it passed in 41 seconds, and a full rerun passed (176 files, 1142 tests, 240 seconds). The cause of the one slow run is not known; a machine pause or load is the likely reason, but I did not prove it. If it shows up again, look at that test first.
