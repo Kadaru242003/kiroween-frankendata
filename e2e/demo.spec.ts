@@ -35,7 +35,7 @@ test('month one, recipe, month two', async ({ page }) => {
 
   // One follow-up question. It needs the AI proxy, which the dev server does
   // not provide, so skip this step gracefully when AI is off.
-  const aiOff = await page.getByText('AI is off, starter questions still work.').isVisible()
+  const aiOff = await page.getByText('AI is off here. Starter questions still work without it.').isVisible()
   if (aiOff) {
     test.info().annotations.push({
       type: 'skipped-step',
@@ -96,3 +96,55 @@ test('business demo: stitch on the email key, revenue by region, Autopsy', async
   await page.getByRole('button', { name: 'Autopsy of crm_customers' }).click()
   await expect(page.getByLabel('Health score 79 out of 100')).toBeVisible()
 })
+
+test('Autopsy opens and scrolls into view after stitching and asking, on every table', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+  await stitchEverything(page)
+  await expect(
+    page.getByRole('region', { name: 'Stitched result preview' }).getByText('48 rows', { exact: true }),
+  ).toBeVisible()
+  await page
+    .getByRole('button', { name: 'What is the monthly revenue by region in crm_customers?' })
+    .click()
+  await expect(page.getByLabel('Latest answer')).toBeVisible()
+
+  for (const table of ['crm_customers', 'billing_invoices', 'stitch_1_result']) {
+    await page.getByRole('button', { name: `Autopsy of ${table}` }).click()
+    const panel = page.getByRole('region', { name: 'Autopsy case file' })
+    await expect(panel.getByRole('heading', { name: table })).toBeVisible()
+    await expect(panel).toBeInViewport()
+    await panel.getByRole('button', { name: 'Close' }).click()
+  }
+  // A second click on the same card, after scrolling away, brings it back.
+  await page.getByRole('button', { name: 'Autopsy of crm_customers' }).click()
+  await expect(page.getByRole('region', { name: 'Autopsy case file' })).toBeInViewport()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.getByRole('button', { name: 'Autopsy of crm_customers' }).click()
+  await expect(page.getByRole('region', { name: 'Autopsy case file' })).toBeInViewport()
+})
+
+for (const [label, width] of [['100% zoom', 1280], ['67% zoom', 1910]] as const) {
+  test(`landing: START HERE sits above the button and the demo buttons share a baseline (${label})`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    const business = page.getByRole('button', { name: 'Load business demo' })
+    await expect(business).toBeVisible()
+    const tag = page.getByText('Start here', { exact: true })
+    const tagBox = (await tag.boundingBox())!
+    const btnBox = (await business.boundingBox())!
+    // Fully above the button's top edge (1px for the touching border).
+    expect(tagBox.y + tagBox.height).toBeLessThanOrEqual(btnBox.y + 1.5)
+    // Centered over the button.
+    expect(Math.abs(tagBox.x + tagBox.width / 2 - (btnBox.x + btnBox.width / 2))).toBeLessThan(2)
+    // All four demo buttons share one top edge when they fit on one row.
+    const tops: number[] = []
+    for (const name of ['Load business demo', 'Load demo data', 'Load mismatched demo', "Load next month's files"]) {
+      tops.push((await page.getByRole('button', { name }).boundingBox())!.y)
+    }
+    if (width >= 1280) {
+      for (const t of tops) expect(Math.abs(t - tops[0])).toBeLessThan(1)
+    }
+  })
+}

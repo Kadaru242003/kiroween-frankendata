@@ -20,6 +20,7 @@ import {
   type DisplayValue,
 } from "../../core/chat/types";
 import { toCsv } from "../../core/chat/csv-export";
+import { formatCell, humanize, isNumericColumnAt } from "../../core/chat/format";
 import "./ResultTableView.css";
 
 export interface ResultTableViewProps {
@@ -33,14 +34,12 @@ export interface ResultTableViewProps {
 export const DOWNLOAD_CSV_LABEL = "Download CSV";
 
 /** Render a display value as text (DisplayValue is always string|number|boolean). */
-function cellText(value: DisplayValue): string {
-  return typeof value === "string" ? value : String(value);
-}
 
 export function ResultTableView({ columns, rows, capped }: ResultTableViewProps) {
   const total = rows.length;
   const shown = Math.min(total, ASK_RESULT_DISPLAY_CAP);
   const displayRows = rows.slice(0, ASK_RESULT_DISPLAY_CAP);
+  const numeric = columns.map((_c, i) => isNumericColumnAt(rows, i));
 
   const handleDownload = useCallback(() => {
     try {
@@ -82,8 +81,13 @@ export function ResultTableView({ columns, rows, capped }: ResultTableViewProps)
           <thead className="ask-result__thead">
             <tr>
               {columns.map((c) => (
-                <th key={c} scope="col" className="ask-result__th">
-                  {c}
+                <th
+                  key={c}
+                  scope="col"
+                  className={`ask-result__th${numeric[columns.indexOf(c)] ? " ask-result__num" : ""}`}
+                  title={c}
+                >
+                  {humanize(c)}
                 </th>
               ))}
             </tr>
@@ -99,8 +103,8 @@ export function ResultTableView({ columns, rows, capped }: ResultTableViewProps)
               displayRows.map((row, ri) => (
                 <tr key={ri}>
                   {columns.map((_c, ci) => (
-                    <td key={ci} className="ask-result__td">
-                      {cellText(row[ci])}
+                    <td key={ci} className={`ask-result__td${numeric[ci] ? " ask-result__num" : ""}`}>
+                      {formatCell(row[ci])}
                     </td>
                   ))}
                 </tr>

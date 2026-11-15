@@ -82,3 +82,9 @@
   color: var(--text-secondary);
   text-align: center;
 }
+
+/* Numeric columns are right-aligned with tabular figures. */
+.ask-result__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

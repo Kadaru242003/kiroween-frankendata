@@ -13,16 +13,16 @@ function findColumn(table: QueryableTable, name: string): string | undefined {
 
 export function generateBusinessChips(tables: readonly QueryableTable[]): StarterChip[] {
   const chips: StarterChip[] = [];
-  // After stitching: invoiced revenue by the CLEANED CRM region (Region_1 in
-  // the stitched result). Listed first; the raw-table chip below stays.
+  // After stitching: invoiced revenue by the merged, cleaned `region` column
+  // (the billing and CRM regions are one column in the stitched result). Listed first; the raw-table chip below stays.
   const stitched = tables.find(
     (t) =>
       /^stitch_\d+_result$/.test(t.tableName) &&
-      findColumn(t, "Region_1") !== undefined &&
+      findColumn(t, "Region") !== undefined &&
       findColumn(t, "amount") !== undefined
   );
   if (stitched) {
-    const region = findColumn(stitched, "Region_1")!;
+    const region = findColumn(stitched, "Region")!;
     const amount = findColumn(stitched, "amount")!;
     chips.push({
       tableName: stitched.tableName,
@@ -60,7 +60,7 @@ export function generateBusinessChips(tables: readonly QueryableTable[]): Starte
     if (date && amount) {
       chips.push({
         tableName: billing.tableName,
-        question: "What is the invoiced amount by month (from invoice_date)?",
+        question: "What is the invoiced amount by month?",
         sql:
           `SELECT CAST(date_trunc('month', ${quoteIdent(date)}) AS DATE) AS month, ` +
           `SUM(${quoteIdent(amount)}) AS total_amount ` +

@@ -20,6 +20,7 @@ import {
   type DisplayValue,
 } from "../../../core/chat/types";
 import { shapeCategories, type CategoryDatum } from "../../../core/chat/chart-spec";
+import { formatNumber, humanize, wrapLabel } from "../../../core/chat/format";
 import "./chart.css";
 
 export interface BarChartProps {
@@ -29,18 +30,13 @@ export interface BarChartProps {
 }
 
 /** Max characters of an x label shown before truncating (full text in title). */
-const MAX_LABEL_CHARS = 10;
-
-const WIDTH = 480;
-const HEIGHT = 240;
-const PAD_LEFT = 44;
-const PAD_RIGHT = 12;
-const PAD_TOP = 12;
-const PAD_BOTTOM = 48;
-
-function truncateLabel(label: string): string {
-  return label.length > MAX_LABEL_CHARS ? `${label.slice(0, MAX_LABEL_CHARS - 1)}…` : label;
-}
+const WIDTH = 720;
+const HEIGHT = 280;
+const PAD_RIGHT = 16;
+const PAD_TOP = 18;
+const PAD_BOTTOM = 56;
+/** Approximate glyph width (px, at the 11px tick font) used to reserve y-axis room. */
+const TICK_CHAR_WIDTH = 6.5;
 
 export function BarChart({ spec, columns, rows }: BarChartProps) {
   const data: CategoryDatum[] = shapeCategories(
@@ -51,21 +47,22 @@ export function BarChart({ spec, columns, rows }: BarChartProps) {
     spec.y,
     ASK_CHART_MAX_CATEGORIES
   );
-
   if (data.length === 0) return null;
-
-  const plotWidth = WIDTH - PAD_LEFT - PAD_RIGHT;
-  const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
   const maxValue = Math.max(0, ...data.map((d) => d.value));
+  const maxTick = formatNumber(maxValue);
+  // Reserve enough left padding for the widest tick label so it never clips.
+  const padLeft = Math.max(44, Math.ceil(maxTick.length * TICK_CHAR_WIDTH) + 16);
+  const plotWidth = WIDTH - padLeft - PAD_RIGHT;
+  const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
   const scale = maxValue > 0 ? plotHeight / maxValue : 0;
   const slot = plotWidth / data.length;
   const barWidth = Math.max(1, slot * 0.7);
-
+  // Labels wrap to two lines before truncating; the full text is in a tooltip.
+  const charsPerLine = Math.max(5, Math.floor(slot / 6.5));
+  const title = `${humanize(spec.y)} by ${humanize(spec.x).toLowerCase()}`;
   return (
     <figure className="ask-chart" aria-label={`Bar chart of ${spec.y} by ${spec.x}`}>
-      <figcaption className="ask-chart__caption">
-        {spec.y} by {spec.x}
-      </figcaption>
+      <figcaption className="ask-chart__caption">{title}</figcaption>
       <svg
         className="ask-chart__svg"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -73,66 +70,42 @@ export function BarChart({ spec, columns, rows }: BarChartProps) {
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Axes */}
-        <line
-          className="ask-chart__axis"
-          x1={PAD_LEFT}
-          y1={PAD_TOP}
-          x2={PAD_LEFT}
-          y2={PAD_TOP + plotHeight}
-        />
-        <line
-          className="ask-chart__axis"
-          x1={PAD_LEFT}
-          y1={PAD_TOP + plotHeight}
-          x2={PAD_LEFT + plotWidth}
-          y2={PAD_TOP + plotHeight}
-        />
+        <line className="ask-chart__axis" x1={padLeft} y1={PAD_TOP} x2={padLeft} y2={PAD_TOP + plotHeight} />
+        <line className="ask-chart__axis" x1={padLeft} y1={PAD_TOP + plotHeight} x2={padLeft + plotWidth} y2={PAD_TOP + plotHeight} />
         {/* Max-value tick label (plain text). */}
-        <text className="ask-chart__tick" x={PAD_LEFT - 6} y={PAD_TOP + 4} textAnchor="end">
-          {formatNumber(maxValue)}
+        <text className="ask-chart__tick" x={padLeft - 6} y={PAD_TOP + 4} textAnchor="end">
+          {maxTick}
         </text>
-        <text
-          className="ask-chart__tick"
-          x={PAD_LEFT - 6}
-          y={PAD_TOP + plotHeight}
-          textAnchor="end"
-        >
+        <text className="ask-chart__tick" x={padLeft - 6} y={PAD_TOP + plotHeight} textAnchor="end">
           0
         </text>
-
         {data.map((d, i) => {
           const barHeight = d.value > 0 ? d.value * scale : 0;
-          const x = PAD_LEFT + i * slot + (slot - barWidth) / 2;
+          const x = padLeft + i * slot + (slot - barWidth) / 2;
           const y = PAD_TOP + plotHeight - barHeight;
           const full = `${d.label}: ${formatNumber(d.value)}`;
+          const lines = wrapLabel(d.label, charsPerLine);
           return (
             <g key={`${d.label}-${i}`}>
-              <rect
-                className="ask-chart__bar"
-                x={x}
-                y={y}
-                width={barWidth}
-                height={barHeight}
-              >
+              <rect className="ask-chart__bar" x={x} y={y} width={barWidth} height={barHeight}>
                 <title>{full}</title>
               </rect>
               {/* Value label above the bar (plain text). */}
-              <text
-                className="ask-chart__value"
-                x={x + barWidth / 2}
-                y={y - 3}
-                textAnchor="middle"
-              >
+              <text className="ask-chart__value" x={x + barWidth / 2} y={y - 4} textAnchor="middle">
                 {formatNumber(d.value)}
               </text>
-              {/* X label under the bar, truncated with a full-text tooltip. */}
+              {/* X label under the bar: up to two lines, full text in the tooltip. */}
               <text
                 className="ask-chart__xlabel"
                 x={x + barWidth / 2}
                 y={PAD_TOP + plotHeight + 14}
                 textAnchor="middle"
               >
-                {truncateLabel(d.label)}
+                {lines.map((line, li) => (
+                  <tspan key={li} x={x + barWidth / 2} dy={li === 0 ? 0 : 13}>
+                    {line}
+                  </tspan>
+                ))}
                 <title>{d.label}</title>
               </text>
             </g>
@@ -141,12 +114,6 @@ export function BarChart({ spec, columns, rows }: BarChartProps) {
       </svg>
     </figure>
   );
-}
-
-/** Compact numeric label (integers as-is; otherwise up to 2 decimals). */
-function formatNumber(n: number): string {
-  if (!Number.isFinite(n)) return "";
-  return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }
 
 export default BarChart;

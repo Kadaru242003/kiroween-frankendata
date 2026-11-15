@@ -8,7 +8,7 @@ describe("AiToggle", () => {
     render(<AiToggle buildEnabled={false} on onChange={() => {}} />);
     expect(screen.getByText("Fully local")).toBeInTheDocument();
     expect(screen.queryByRole("switch")).toBeNull();
-    expect(screen.queryByText("What leaves the browser?")).toBeNull();
+    expect(screen.queryByRole("button", { name: "What leaves the browser?" })).toBeNull();
   });
   it("switches between AI: On and AI: Off (fully local)", () => {
     const onChange = vi.fn();
@@ -24,8 +24,21 @@ describe("AiToggle", () => {
   });
   it("lists exactly what is sent, and that rows are never sent", () => {
     render(<AiToggle buildEnabled on onChange={() => {}} />);
-    expect(screen.getByText("What leaves the browser?")).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: "What leaves the browser?" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
     for (const line of describeEgress().sent) expect(screen.getByText(line)).toBeInTheDocument();
     expect(screen.getByText(describeEgress().neverSent)).toBeInTheDocument();
+  });
+  it("closes on Esc and on an outside click", () => {
+    render(<AiToggle buildEnabled on onChange={() => {}} />);
+    const trigger = screen.getByRole("button", { name: "What leaves the browser?" });
+    fireEvent.click(trigger);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(trigger);
+    fireEvent.mouseDown(document.body);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });

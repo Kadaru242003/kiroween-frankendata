@@ -68,7 +68,7 @@ describe("business demo", () => {
     const snap = await resultSnapshot(lab.db, stitched.tableName);
     expect(snap.columns).toEqual([
       "client_name", "email", "invoice_date", "amount", "status", "region",
-      "Customer_Name", "Region_1", "Plan", "Customer_Since", "Monthly_Revenue",
+      "Customer_Name", "Plan", "Customer_Since", "Monthly_Revenue",
     ]);
     // Billing emails that differ in casing still join after the case cleanup.
     expect(snap.rows.filter((r) => JSON.parse(r)[6] === null)).toHaveLength(0);
@@ -98,7 +98,7 @@ describe("business demo", () => {
       expect(v.ok).toBe(true);
       return v.ok ? lab.db.query<Record<string, unknown>>(v.sql) : [];
     };
-    const cleaned = (await run(0)).map((r) => [r.Region_1, Math.round(num(r.invoiced_revenue) * 100) / 100]);
+    const cleaned = (await run(0)).map((r) => [r.region, Math.round(num(r.invoiced_revenue) * 100) / 100]);
     expect(cleaned).toEqual(CLEANED_REGION_ANSWER);
     const region = (await run(1)).map((r) => [r.Region, num(r.monthly_revenue)]);
     expect(region).toEqual([["North America", 34220], ["EMEA", 17850], ["APAC", 9430], ["emea", 1750]]);

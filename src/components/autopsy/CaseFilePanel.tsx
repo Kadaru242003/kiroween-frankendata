@@ -34,7 +34,7 @@ export interface CaseFilePanelProps {
   fixable: boolean;
   onClose: () => void;
   /** Hand a Fix it intent to the existing approval flow. */
-  onFixIt: (tableName: string, proposalId: string) => void;
+  onFixIt: (tableName: string, proposalId: string) => void | Promise<void>;
   /** Review the added fixes in the stitching table (latest proposal id). */
   onReview?: (proposalId: string) => void;
   /** Injection points for tests. */
@@ -197,6 +197,20 @@ export function CaseFilePanel({
     [onFixIt, target.tableName, added]
   );
 
+  // "Fix all (N)": add every Fix it proposal not yet added, one after another
+  // (sequential, because each hand-off may recompute proposals), reusing the
+  // same in-place review bar as a single Fix it.
+  const pendingFixes = fixable && report ? report.fixes.filter((f) => !added.has(f.proposalId)) : [];
+  const handleFixAll = useCallback(async () => {
+    const todo = pendingFixes;
+    if (todo.length === 0) return;
+    setAdded((prev) => new Set([...prev, ...todo.map((f) => f.proposalId)]));
+    setAddedOrder((prev) => [...prev, ...todo.map((f) => f.proposalId)]);
+    setAnnouncement(`Added ${todo.length} ${todo.length === 1 ? "fix" : "fixes"} to the stitching table`);
+    for (const f of todo) {
+      await onFixIt(target.tableName, f.proposalId);
+    }
+  }, [pendingFixes, onFixIt, target.tableName]);
   const complete = report?.complete === true && report.status === "ok";
   const stem = fileStem(target.tableName);
   const dupFix = report?.fixes.find((f) => f.kind === "duplicate-rows");
@@ -205,7 +219,7 @@ export function CaseFilePanel({
   if (report?.status === "error" || report?.status === "too-large") {
     status = report.message ?? "The autopsy could not be completed.";
   } else if (complete) {
-    status = "Autopsy complete";
+    status = "";
   } else if (report) {
     status = "Analyzing columns...";
   }
@@ -223,6 +237,15 @@ export function CaseFilePanel({
             <span className="case-stamp__max">/ 100</span>
             <span className="case-stamp__verdict">{verdictFor(report.health.score)}</span>
           </div>
+        ) : null}
+        {report?.status === "ok" && pendingFixes.length > 0 ? (
+          <button
+            type="button"
+            className="case-file__fix-all"
+            onClick={() => void handleFixAll()}
+          >
+            Fix all ({pendingFixes.length})
+          </button>
         ) : null}
         <button type="button" className="case-file__close" onClick={onClose}>
           Close

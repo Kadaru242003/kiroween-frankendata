@@ -91,7 +91,7 @@ describe("CaseFilePanel", () => {
     expect(screen.getByRole("button", { name: "Download Markdown" })).toBeDisabled();
 
     await act(async () => d.resolve(report(true)));
-    expect(screen.getByText("Autopsy complete")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Health score/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download Markdown" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Download JSON" })).toBeEnabled();
   });
@@ -131,7 +131,7 @@ describe("CaseFilePanel", () => {
     );
     await waitFor(() => expect(screen.getByText(/could not read/)).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    await waitFor(() => expect(screen.getByText("Autopsy complete")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(/Health score/)).toBeInTheDocument());
     expect(runner).toHaveBeenCalledTimes(2);
   });
 
@@ -198,7 +198,7 @@ describe("CaseFilePanel", () => {
     const { container } = render(
       <CaseFilePanel db={db} target={{ ...target, tableName: hostile }} fixable onClose={onClose} onFixIt={() => {}} runner={runner} />
     );
-    await waitFor(() => expect(screen.getByText("Autopsy complete")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(/Health score/)).toBeInTheDocument());
     expect(container.querySelector("img")).toBeNull();
     expect(within(container).getByRole("heading", { level: 2 }).textContent).toBe(hostile);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
@@ -258,3 +258,35 @@ describe("Fix it feedback", () => {
     expect(onReview).toHaveBeenCalledWith("clean:whitespace:monsters.Species");
   });
 });
+
+describe("Fix all", () => {
+  it("adds every pending fix one after another and shows the same review bar", async () => {
+    const order: string[] = [];
+    const onFixIt = vi.fn(async (_t: string, id: string) => {
+      order.push(`start ${id}`);
+      await Promise.resolve();
+      order.push(`end ${id}`);
+    });
+    const runner = vi.fn(async () => report(true));
+    render(
+      <CaseFilePanel db={db} target={target} fixable onClose={() => {}} onFixIt={onFixIt} runner={runner} />
+    );
+    const fixAll = await screen.findByRole("button", { name: /^Fix all \(\d+\)$/ });
+    const n = Number(/\((\d+)\)/.exec(fixAll.textContent ?? "")![1]);
+    expect(n).toBeGreaterThan(1);
+    // One single Fix it first: Fix all then skips it.
+    fireEvent.click(screen.getByRole("button", { name: "Fix it: Remove duplicate rows" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: `Fix all (${n - 1})` })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: `Fix all (${n - 1})` }));
+    await waitFor(() => expect(onFixIt).toHaveBeenCalledTimes(n));
+    expect(new Set(onFixIt.mock.calls.map((c) => c[1])).size).toBe(n);
+    // Sequential: each call ends before the next one starts.
+    for (let i = 0; i < order.length; i += 2) {
+      expect(order[i].startsWith("start")).toBe(true);
+      expect(order[i + 1].startsWith("end")).toBe(true);
+    }
+    expect(screen.getByText(`${n} fixes added`)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Fix all/ })).toBeNull();
+  });
+});
+

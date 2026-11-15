@@ -37,14 +37,14 @@ Lumen Software Inc,gavin.hale@lumensoft.example,2026-01-09,1995.00,Paid,North Am
 Redwood Capital LLC,Beth.Rowan@Redwoodcap.Example,2026-01-09,8455.00,paid,North America
 Quantum Freight Systems,mike.davies@quantumfreight.example,2026-01-12,1520.00,Overdue,APAC
 Pinecrest Cloud Inc,ruth.hendry@pinecrest.example,2026-01-15,1805.00,Paid,North America
-Summit Dynamics Inc,walter.bell@summitdyn.example,2026-01-15,6840.00,paid,Emea
+Summit Dynamics Inc,walter.bell@summitdyn.example,2026-01-15,6840.00,paid,EMEA
 Bluepeak Logistics Inc,harper.simmons@bluepeak.example,2026-02-08,5488.00,Overdue,North America
 Northwind Analytics Ltd,omar.khan@northwind-analytics.example,2026-02-08,1176.00,Paid,North America
-Harborline Foods Limited,alan.weston@harborline.example,2026-02-11,7644.00,Paid,Emea
+Harborline Foods Limited,alan.weston@harborline.example,2026-02-11,7644.00,Paid,EMEA
 Ironbridge Manufacturing Co,tom.ainsley@ironbridge.example,2026-02-14,9310.00,Paid,North America
-Sweetwater Foods Ltd,will.baker@sweetwater.example,2026-02-14,1715.00,Overdue,Emea
+Sweetwater Foods Ltd,will.baker@sweetwater.example,2026-02-14,1715.00,Overdue,EMEA
 Silverline Biotech Corporation,eva.turner@silverline.example,2026-02-17,6174.00,Paid,APAC
-Granite Bank plc,Bill.Grant@Granitebank.Example,2026-02-20,2352.00,Overdue,Emea
+Granite Bank plc,Bill.Grant@Granitebank.Example,2026-02-20,2352.00,Overdue,EMEA
 Millbrook Paper Co,mark.stone@millbrook.example,2026-02-20,509.60,Paid,North America
 Northwind Analytics Ltd,jane.doe@northwind-analytics.example,2026-03-10,4242.00,Paid,North America
 Cedar and Pine Health LLC,paul.green@cedarpine.example,2026-03-13,303.00,Paid,North America
@@ -53,29 +53,29 @@ Lumen Software Inc,gavin.hale@lumensoft.example,2026-03-16,2121.00,Paid,North Am
 Quantum Freight Systems,mike.davies@quantumfreight.example,2026-03-19,1616.00,Paid,APAC
 Redwood Capital LLC,beth.rowan@redwoodcap.example,2026-03-19,8989.00,Paid,North America
 Pinecrest Cloud Inc,ruth.hendry@pinecrest.example,2026-03-22,1919.00,Paid,North America
-Summit Dynamics Inc,walter.bell@summitdyn.example,2026-03-25,7272.00,Paid,Emea
+Summit Dynamics Inc,walter.bell@summitdyn.example,2026-03-25,7272.00,Paid,EMEA
 Millbrook Paper Co,mark.stone@millbrook.example,2026-04-03,540.80,Paid,North America
-Granite Bank plc,bill.grant@granitebank.example,2026-04-06,2496.00,Pending,Emea
+Granite Bank plc,bill.grant@granitebank.example,2026-04-06,2496.00,Pending,EMEA
 Northwind Analytics Ltd,omar.khan@northwind-analytics.example,2026-04-15,1248.00,Paid,North America
 Bluepeak Logistics Inc,Harper.Simmons@Bluepeak.Example,2026-04-18,5824.00,Pending,North America
-Harborline Foods Limited,alan.weston@harborline.example,2026-04-18,8112.00,Paid,Emea
+Harborline Foods Limited,alan.weston@harborline.example,2026-04-18,8112.00,Paid,EMEA
 Ironbridge Manufacturing Co,tom.ainsley@ironbridge.example,2026-04-21,9880.00,Paid,North America
 Silverline Biotech Corporation,eva.turner@silverline.example,2026-04-24,6552.00,Paid,APAC
-Sweetwater Foods Ltd,will.baker@sweetwater.example,2026-04-24,1820.00,Pending,Emea
+Sweetwater Foods Ltd,will.baker@sweetwater.example,2026-04-24,1820.00,Pending,EMEA
 Pinecrest Cloud Inc,ruth.hendry@pinecrest.example,2026-05-05,2033.00,Paid,North America
 Quantum Freight Systems,Mike.Davies@Quantumfreight.Example,2026-05-05,1712.00,paid,APAC
-Summit Dynamics Inc,walter.bell@summitdyn.example,2026-05-08,7704.00,Pending,Emea
+Summit Dynamics Inc,walter.bell@summitdyn.example,2026-05-08,7704.00,Pending,EMEA
 Northwind Analytics Ltd,jane.doe@northwind-analytics.example,2026-05-17,4494.00,Paid,North America
 Northwind Analytics Ltd,LI.WEI@NORTHWIND-ANALYTICS.EXAMPLE,2026-05-20,1230.50,Pending,APAC
 Cedar and Pine Health LLC,paul.green@cedarpine.example,2026-05-23,321.00,paid,North America
 Lumen Software Inc,gavin.hale@lumensoft.example,2026-05-23,2247.00,Paid,North America
 Redwood Capital LLC,beth.rowan@redwoodcap.example,2026-05-26,9523.00,Pending,North America
-Harborline Foods Limited,alan.weston@harborline.example,2026-06-04,8580.00,Overdue,Emea
+Harborline Foods Limited,alan.weston@harborline.example,2026-06-04,8580.00,Overdue,EMEA
 Ironbridge Manufacturing Co,tom.ainsley@ironbridge.example,2026-06-04,10450.00,Pending,North America
-Sweetwater Foods Ltd,WILL.BAKER@SWEETWATER.EXAMPLE,2026-06-07,1925.00,paid,Emea
+Sweetwater Foods Ltd,WILL.BAKER@SWEETWATER.EXAMPLE,2026-06-07,1925.00,paid,EMEA
 Millbrook Paper Co,mark.stone@millbrook.example,2026-06-10,572.00,Pending,North America
 Silverline Biotech Corporation,eva.turner@silverline.example,2026-06-10,6930.00,Overdue,APAC
-Granite Bank plc,bill.grant@granitebank.example,2026-06-13,2640.00,paid,Emea
+Granite Bank plc,bill.grant@granitebank.example,2026-06-13,2640.00,paid,EMEA
 Northwind Analytics Ltd,Omar.Khan@Northwind-Analytics.Example,2026-06-22,1320.00,Pending,North America
 Bluepeak Logistics Inc,harper.simmons@bluepeak.example,2026-06-25,6160.00,paid,North America
 `;

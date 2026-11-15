@@ -279,3 +279,10 @@
     animation: none;
   }
 }
+
+/* No single word wraps alone in the heading (balance, with a max-width fallback). */
+.frankendata-dropzone__headline {
+  max-width: 28ch;
+  margin-inline: auto;
+  text-wrap: balance;
+}

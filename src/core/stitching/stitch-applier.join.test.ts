@@ -216,7 +216,7 @@ describe("buildJoinChainSql — generated DDL", () => {
         '"monsters"."name" = "experiments"."name"'
     );
     // Key column emitted once under the anchor name; collision-free others.
-    expect(createSql).toContain('"monsters"."name" AS "name"');
+    expect(createSql).toContain('COALESCE("monsters"."name", "experiments"."name") AS "name"');
     expect(createSql).toContain('"monsters"."weight" AS "weight"');
     expect(createSql).toContain('"experiments"."status" AS "status"');
     // Right-side key column NOT projected.
@@ -255,5 +255,49 @@ describe("escaping invariant (Property 13): adversarial names", () => {
     // every double-quote in the SQL is part of a balanced pair.
     const quotes = (createSql.match(/"/g) ?? []).length;
     expect(quotes % 2).toBe(0);
+  });
+});
+
+describe("merged matched columns (no duplicates, no _1 suffix)", () => {
+  const monsters = table("monsters", ["name", "region", "note"], 20);
+  const experiments = table("experiments", ["name", "region", "note"], 10);
+  const key = match(ref("monsters", "name"), ref("experiments", "name"), 0.9);
+  const regionMatch = match(ref("monsters", "region"), ref("experiments", "region"), 0.8);
+
+  it("merges every approved matched pair into one COALESCE column named after the anchor side", () => {
+    const { columns, createSql } = buildJoinChainSql(0, [monsters, experiments], [key, regionMatch]);
+    const names = columns.map((c) => c.name);
+    expect(names).toEqual(["name", "region", "note", "experiments_note"]);
+    expect(createSql).toContain('COALESCE("monsters"."region", "experiments"."region") AS "region"');
+    expect(createSql).not.toContain('"region_1"');
+    expect(createSql).not.toContain('AS "experiments_region"');
+  });
+
+  it("an UNMATCHED same-name column still gets the collision prefix", () => {
+    const { columns } = buildJoinChainSql(0, [monsters, experiments], [key]);
+    expect(columns.map((c) => c.name)).toEqual(["name", "region", "note", "experiments_region", "experiments_note"]);
+  });
+
+  it("does not merge a pair whose column types differ", () => {
+    const typed = table("experiments", ["name", "region"], 10);
+    typed.schema = [
+      { name: "name", type: "string" },
+      { name: "region", type: "number" },
+    ];
+    const { columns } = buildJoinChainSql(0, [table("monsters", ["name", "region"], 20), typed], [key, regionMatch]);
+    expect(columns.map((c) => c.name)).toEqual(["name", "region", "experiments_region"]);
+  });
+
+  it("merges a pair between two non-anchor tables into the member nearer the anchor", () => {
+    const a = table("a", ["id", "x"], 30);
+    const b = table("b", ["id", "y"], 20);
+    const c = table("c", ["id", "z"], 10);
+    const ab = match(ref("a", "id"), ref("b", "id"), 0.9);
+    const bc = match(ref("b", "id"), ref("c", "id"), 0.85);
+    const yz = match(ref("b", "y"), ref("c", "z"), 0.7);
+    const { columns, createSql } = buildJoinChainSql(0, [a, b, c], [ab, bc, yz]);
+    expect(columns.map((x) => x.name)).toEqual(["id", "x", "y"]);
+    expect(createSql).toContain('COALESCE("a"."id", "b"."id", "c"."id") AS "id"');
+    expect(createSql).toContain('COALESCE("b"."y", "c"."z") AS "y"');
   });
 });

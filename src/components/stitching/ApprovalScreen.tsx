@@ -302,6 +302,15 @@ export function ApprovalScreen({
       ? "Approve a match or cleanup first"
       : "";
   const canStitch = stitchDisabledReason === "";
+  // Done state: after a successful apply the bar says so and hides "Confirm &
+  // stitch". It returns to normal after Undo stitch or any approval change
+  // (the decisions object is replaced on every change).
+  const { stitchedTable } = state;
+  const [appliedDecisions, setAppliedDecisions] = useState<typeof decisions | null>(null);
+  useEffect(() => {
+    setAppliedDecisions(stitchedTable !== null ? store.getState().decisions : null);
+  }, [stitchedTable, store]);
+  const stitchDone = stitchedTable !== null && appliedDecisions === decisions;
 
   return (
     <section className="approval-screen" aria-label="Stitching table">
@@ -337,9 +346,16 @@ export function ApprovalScreen({
             Approve all suggestions
           </button>
         </div>
-        <p className="approval-screen__progress" aria-label="Approval progress">
-          {approvedCount} of {totalProposals} approved
-        </p>
+        {stitchDone ? (
+          <p className="approval-screen__done" role="status">
+            Stitched. {approvedCount} of {totalProposals} applied
+          </p>
+        ) : (
+          <p className="approval-screen__progress" aria-label="Approval progress">
+            {approvedCount} of {totalProposals} approved
+          </p>
+        )}
+        {stitchDone ? null : (
         <button
           type="button"
           className="approval-screen__confirm"
@@ -352,7 +368,8 @@ export function ApprovalScreen({
         >
           Confirm &amp; stitch
         </button>
-        {!canStitch ? (
+        )}
+        {!canStitch && !stitchDone ? (
           <span
             id="approval-screen-stitch-reason"
             className="approval-screen__reason"

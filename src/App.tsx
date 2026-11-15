@@ -112,6 +112,7 @@ import { ResetLock, useResetLock } from './state/reset-lock'
 import { AiSwitch, useAiSwitch } from './state/ai-switch'
 import { gateAiProvider, gateSqlProvider } from './core/ai-gate'
 import { AiToggle } from './components/AiToggle'
+import { DemoMenu } from './components/DemoMenu'
 import './App.css'
 
 /**
@@ -297,6 +298,9 @@ function App() {
   const [stitchOpen, setStitchOpen] = useState(false)
   // The table whose Autopsy case file is open, or null (Autopsy Req 1).
   const [autopsyTable, setAutopsyTable] = useState<LoadedTable | null>(null)
+  // Bumped on every Autopsy click so the panel scrolls into view even when the
+  // same table is clicked again (or the panel sits above the clicked card).
+  const [autopsyNonce, setAutopsyNonce] = useState(0)
   // True when the approval screen was opened by an Autopsy "Fix it" so it can
   // show with a single table (Autopsy Req 5.6). Does not affect stitching.
   const [cleanupOnly, setCleanupOnly] = useState(false)
@@ -405,6 +409,29 @@ function App() {
     [stack, resetLock],
   )
 
+  // Drag and drop works anywhere on the page, not only on the drop zone. The
+  // drop zone stops propagation for its own events, so nothing loads twice.
+  useEffect(() => {
+    const onOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault()
+      }
+    }
+    const onDrop = (e: DragEvent) => {
+      const files = e.dataTransfer?.files
+      if (files && files.length > 0) {
+        e.preventDefault()
+        handleFiles(Array.from(files))
+      }
+    }
+    window.addEventListener('dragover', onOver)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragover', onOver)
+      window.removeEventListener('drop', onDrop)
+    }
+  }, [handleFiles])
+  const addFilesInputRef = useRef<HTMLInputElement>(null)
   // Load a demo ONCE by id (idempotent). A repeated click is a no-op; the
   // button reflects "Already loaded" via `loadedDemos`. Loading the other demo
   // is always allowed. Reset re-enables both (see handleResetLab).
@@ -533,6 +560,7 @@ function App() {
   // one panel is open at a time; opening another replaces it (Autopsy Req 1.4).
   const handleAutopsy = useCallback((table: LoadedTable) => {
     setAutopsyTable(table)
+    setAutopsyNonce((n) => n + 1)
   }, [])
 
   // Autopsy "Fix it": hand the existing cleaning proposal to the existing
@@ -812,6 +840,7 @@ function App() {
 
       {status.phase === 'ready' ? (
         <>
+          {tables.length === 0 ? (
           <section className="lab-intake" aria-label="File intake">
             <DropZone onFiles={handleFiles} disabled={resetting} />
             <div className="lab-intake__demos">
@@ -826,6 +855,7 @@ function App() {
                 alreadyLoaded={loadedDemos.has('business')}
                 disabled={resetting}
                 tag="Start here"
+                primary
               />
               <DemoDataControl
                 onLoadDemo={handleLoadDemo}
@@ -857,38 +887,72 @@ function App() {
                 disabled={resetting}
               />
             </div>
-            {/*
-              Reset lab: shown only when at least one table is loaded. Drops all
-              DuckDB tables, clears every store + undo + the ask panel, and
-              re-enables the demo buttons. No confirm dialog; never throws.
-            */}
-            {tables.length > 0 ? (
-              <button
-                type="button"
-                className="lab-reset__button"
-                disabled={resetting}
-                onClick={() => void handleResetLab()}
-              >
-                Reset lab
-              </button>
-            ) : null}
             <p className="lab-reset__status" role="status" aria-live="polite">
               {resetting ? 'Resetting the lab...' : ''}
             </p>
-            {/* Apply recipe: visible whenever a table is loaded, even before a stitch. */}
-            {tables.length > 0 ? (
-              <ApplyRecipe
-                disabled={resetting}
-                onApplyRecipe={handleApplyRecipe}
-                onReview={handleReviewRecipe}
-                outcome={
-                  recipeErrors !== null
-                    ? { ok: false, errors: recipeErrors }
-                    : recipeSuccess
-                }
-              />
-            ) : null}
           </section>
+          ) : (
+          <section className="lab-toolbar" aria-label="Lab toolbar">
+            <button
+              type="button"
+              className="lab-toolbar__button"
+              disabled={resetting}
+              onClick={() => addFilesInputRef.current?.click()}
+            >
+              Add files
+            </button>
+            <input
+              ref={addFilesInputRef}
+              type="file"
+              multiple
+              accept=".csv,.xlsx"
+              className="lab-toolbar__file"
+              aria-label="Add files"
+              tabIndex={-1}
+              onChange={(e) => {
+                handleFiles(Array.from(e.target.files ?? []))
+                e.target.value = ''
+              }}
+            />
+            <DemoMenu
+              disabled={resetting}
+              items={[
+                { id: 'business', label: 'Business', loaded: loadedDemos.has('business') },
+                { id: 'default', label: 'Lab', loaded: loadedDemos.has('default') },
+                { id: 'mismatched', label: 'Mismatched', loaded: loadedDemos.has('mismatched') },
+                { id: 'nextMonth', label: "Next month's files", loaded: loadedDemos.has('nextMonth') },
+              ]}
+              onSelect={(id) => void loadDemo(id as DemoId)}
+            />
+            <ApplyRecipe
+              compact
+              disabled={resetting}
+              onApplyRecipe={handleApplyRecipe}
+              onReview={handleReviewRecipe}
+              outcome={
+                recipeErrors !== null
+                  ? { ok: false, errors: recipeErrors }
+                  : recipeSuccess
+              }
+            />
+            {/*
+              Reset lab: drops all DuckDB tables, clears every store + undo +
+              the ask panel, and re-enables the demo buttons. No confirm
+              dialog; never throws.
+            */}
+            <button
+              type="button"
+              className="lab-reset__button"
+              disabled={resetting}
+              onClick={() => void handleResetLab()}
+            >
+              Reset lab
+            </button>
+            <p className="lab-reset__status" role="status" aria-live="polite">
+              {resetting ? 'Resetting the lab...' : ''}
+            </p>
+          </section>
+          )}
 
           <ErrorDisplay errors={[...errors]} />
 
@@ -981,6 +1045,7 @@ function App() {
           */}
           <AutopsyRegion
             target={autopsyTable}
+            openNonce={autopsyNonce}
             loadedTables={tables}
             duckDBService={status.stack.duckDBService}
             stitchStore={status.stack.stitchStore}
@@ -1018,6 +1083,8 @@ function App() {
 /** Props for {@link AutopsyRegion}. */
 interface AutopsyRegionProps {
   target: LoadedTable | null
+  /** Changes on every Autopsy click; drives the scroll into view. */
+  openNonce: number
   loadedTables: readonly LoadedTable[]
   duckDBService: DuckDBService
   stitchStore: StitchStore
@@ -1035,6 +1102,7 @@ interface AutopsyRegionProps {
  */
 function AutopsyRegion({
   target,
+  openNonce,
   loadedTables,
   duckDBService,
   stitchStore,
@@ -1055,11 +1123,26 @@ function AutopsyRegion({
     }
   }, [target, exists, onClose])
 
+  const sectionRef = useRef<HTMLElement>(null)
+  const visible = target !== null && exists
+  // Clicking Autopsy on any card opens that table's panel and brings it into
+  // view: the panel sits above the table cards, so without this it can open
+  // off-screen. Smooth, instant under prefers-reduced-motion.
+  useEffect(() => {
+    if (!visible) return
+    const reduce =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    sectionRef.current?.scrollIntoView?.({
+      behavior: reduce ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }, [openNonce, visible])
   if (target === null || !exists) {
     return null
   }
   return (
-    <section className="lab-autopsy" aria-label="Autopsy">
+    <section className="lab-autopsy" aria-label="Autopsy" ref={sectionRef}>
       <CaseFilePanel
         db={duckDBService}
         target={{
@@ -1227,7 +1310,7 @@ function AskPanelRegion({
         store={askStore}
         chips={chips}
         aiAvailable={ASK_AI_AVAILABLE && aiOn}
-        aiUserOff={ASK_AI_AVAILABLE && !aiOn}
+        knownTables={queryable.map((t) => t.tableName)}
         prefill={prefill}
         onPrefillHandled={onPrefillHandled}
       />

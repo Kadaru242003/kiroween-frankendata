@@ -390,29 +390,22 @@ describe("Golden example — apply all approved proposals (Design: Apply; Req 4.
     expect(fannedOut).toBe(false);
   });
 
-  it("has consistent Species/species_1 on every row, and Threat_Level agrees with danger_level (item 3 + rename)", () => {
-    // Both files standardize each category to the SAME Title-Case canonical,
-    // so after approving every cleanup the same-meaning columns in the joined
-    // result agree exactly, row by row. `species` collides case-insensitively
-    // with `Species` so DuckDB suffixes it `species_1`; `danger_level` has no
-    // such collision, so it keeps its name — but its standardized values still
-    // match monsters\u2019 Threat_Level canonicals on the monster_name join.
-    // (Rules-only this column is unmatched; the row-alignment here comes from
-    // the monster_name join, not from danger_level being a join key.)
+  it("merges the matched Species pair into one column; unmatched danger_level stays (item 3 + merge)", () => {
+    // Species and species are an approved same-meaning match, so they merge into
+    // ONE `Species` column (COALESCE of the anchor side and the other side) and
+    // no `species_1` copy exists. Rules-only, danger_level is unmatched, so it
+    // keeps its own column next to Threat_Level.
     expect(resultColumns).toContain("Species");
-    expect(resultColumns).toContain("species_1");
+    expect(resultColumns).not.toContain("species_1");
     expect(resultColumns).toContain("Threat_Level");
     expect(resultColumns).toContain("danger_level");
     expect(resultRows).toHaveLength(12);
     for (const row of resultRows) {
-      expect(String(row["Species"])).toBe(String(row["species_1"]));
-      expect(String(row["Threat_Level"])).toBe(
-        String(row["danger_level"]),
-      );
+      expect(row["Species"]).not.toBeNull();
+      expect(String(row["Threat_Level"])).toBe(String(row["danger_level"]));
     }
   });
 });
-
 describe("Golden example — AI DISCOVERS danger_level ↔ Threat_Level (FakeAiProvider, enhancement)", () => {
   // danger_level shares exactly one token (`level`) with monsters' Threat_Level,
   // so the rules score lands at ~0.48 (nameSim ~0.38, over the 0.2 gate, under
@@ -532,14 +525,15 @@ describe("Golden example — AI DISCOVERS danger_level ↔ Threat_Level (FakeAiP
     expect(highIds.includes(discovered!.id)).toBe(false);
   });
 
-  it("after approving all + applying: 12 rows, no fan-out, danger_level agrees with Threat_Level per row", () => {
+  it("after approving all + applying: 12 rows, no fan-out, danger_level merged into Threat_Level", () => {
     expect(stitchedRowCount).toBe(12);
     expect(fannedOut).toBe(false);
     expect(resultColumns).toContain("Threat_Level");
-    expect(resultColumns).toContain("danger_level");
+    // The AI-discovered pair is an approved match, so it merges into one column.
+    expect(resultColumns).not.toContain("danger_level");
     expect(resultRows).toHaveLength(12);
     for (const row of resultRows) {
-      expect(String(row["Threat_Level"])).toBe(String(row["danger_level"]));
+      expect(row["Threat_Level"]).not.toBeNull();
     }
   });
 });

@@ -74,6 +74,8 @@ export interface DemoDataControlProps {
   tag?: string;
   /** When true (for example while Reset lab runs) the button is disabled. */
   disabled?: boolean;
+  /** Filled primary style for the recommended demo. */
+  primary?: boolean;
 }
 
 /**
@@ -88,6 +90,7 @@ export function DemoDataControl({
   alreadyLoaded = false,
   tag,
   disabled = false,
+  primary = false,
 }: DemoDataControlProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   // A ref mirror of the loading flag so rapid clicks are rejected synchronously,
@@ -118,7 +121,7 @@ export function DemoDataControl({
       : label;
 
   return (
-    <div className="frankendata-demo-control">
+    <div className={`frankendata-demo-control${primary ? " frankendata-demo-control--primary" : ""}`}>
       {tag ? (
         <span className="frankendata-demo-control__tag">{tag}</span>
       ) : null}

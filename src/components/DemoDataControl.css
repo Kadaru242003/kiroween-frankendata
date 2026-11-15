@@ -56,3 +56,33 @@
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
+
+/* Landing layout: the tag is positioned on the button's top edge so it never pushes the button down. */
+.frankendata-demo-control {
+  position: relative;
+}
+.frankendata-demo-control__tag {
+  /* Fully above the button's top edge, centered, touching the border. */
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, calc(-100% + 1px));
+  margin: 0;
+  white-space: nowrap;
+  z-index: 1;
+}
+/* Recommended demo: filled primary button. */
+.frankendata-demo-control--primary .frankendata-demo-control__button {
+  background: var(--lab-green);
+  border-color: var(--lab-green);
+  color: #07130a;
+  font-weight: 600;
+}
+.frankendata-demo-control--primary .frankendata-demo-control__button:hover:not(:disabled) {
+  box-shadow: 0 0 14px rgba(57, 255, 20, 0.5);
+}
+.frankendata-demo-control--primary .frankendata-demo-control__button:disabled {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}

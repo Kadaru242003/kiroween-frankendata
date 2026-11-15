@@ -115,25 +115,52 @@ function nonNullSamples(samples: SampleValue[]): NonNullSample[] {
 }
 
 /**
- * Pick the most frequent surface form from a list of (value, count) entries,
- * breaking ties by the lexicographically smallest value (the global tie-break).
- * Assumes a non-empty list.
+ * Case-shape rank used only to break frequency ties: 0 = Title Case (every word
+ * is an uppercase letter followed by lowercase letters, like "Northwind
+ * Analytics"), 1 = other mixed case (like "NORTHWIND Analytics"), 2 = ALL CAPS,
+ * all lowercase, or no letters. Lower is preferred.
  */
-function mostFrequentSurfaceForm(
+export function caseShapeRank(value: string): 0 | 1 | 2 {
+  const words = value.split(/[^\p{L}]+/u).filter((w) => w.length > 0);
+  if (words.length === 0) {
+    return 2;
+  }
+  if (words.every((w) => /^\p{Lu}\p{Ll}*$/u.test(w))) {
+    // A single all-caps letter run such as "A" still reads as Title Case, but a
+    // value that is entirely upper case with 2+ letters per word is not.
+    const allCaps = value === value.toUpperCase() && words.some((w) => w.length > 1);
+    return allCaps ? 2 : 0;
+  }
+  const hasUpper = value !== value.toLowerCase();
+  const hasLower = value !== value.toUpperCase();
+  return hasUpper && hasLower ? 1 : 2;
+}
+
+/**
+ * Pick the most frequent surface form from a list of (value, count) entries.
+ * Ties on frequency prefer a Title Case or otherwise mixed-case variant over
+ * ALL CAPS or all lowercase (see {@link caseShapeRank}), then break by the
+ * lexicographically smallest value (the global tie-break). The result is always
+ * one of the observed values. Assumes a non-empty list.
+ */
+export function mostFrequentSurfaceForm(
   entries: NonNullSample[]
 ): string {
   let best = entries[0];
+  let bestRank = caseShapeRank(best.value);
   for (const entry of entries) {
+    const rank = caseShapeRank(entry.value);
     if (
       entry.count > best.count ||
-      (entry.count === best.count && entry.value < best.value)
+      (entry.count === best.count &&
+        (rank < bestRank || (rank === bestRank && entry.value < best.value)))
     ) {
       best = entry;
+      bestRank = rank;
     }
   }
   return best.value;
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // whitespace + case (Req 2.1, 2.8)
 // ─────────────────────────────────────────────────────────────────────────────
