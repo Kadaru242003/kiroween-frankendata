@@ -104,7 +104,7 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
       calm={frank.calm}
       reducedMotion={reduced}
       guideOpen={guideOpen}
-      onPoke={frank.poke}
+      onPoke={() => frank.poke(tableCount > 0)}
       onToggleGuide={toggleGuide}
       buttonRef={buttonRef}
     >

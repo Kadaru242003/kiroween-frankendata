@@ -12,6 +12,7 @@
 import {
   FRANK_POKE_EGG_COUNT,
   FRANK_POKE_RESET_MS,
+  FRANK_SLEEPY_REPEAT_MS,
 } from "./constants.js";
 import type { QuipKind } from "./quips.js";
 
@@ -69,7 +70,8 @@ export type ReactionId =
   | "poke-3"
   | "poke-4"
   | "poke-5"
-  | "poke-egg";
+  | "poke-egg"
+  | "sleepy";
 
 /** One transient reaction: what to draw, what to say, how long it runs. */
 export interface Reaction {
@@ -236,26 +238,40 @@ export function pokeReaction(count: number): Reaction {
 export interface PokeState {
   count: number;
   lastAt: number | null;
+  /** When the last sleepy poke happened (he was not alive), if any. */
+  sleepyAt?: number | null;
 }
 
 export const NO_POKES: PokeState = Object.freeze({ count: 0, lastAt: null });
 
+/** The reaction to a poke while he is not alive yet (before data, or after Reset lab). */
+export const SLEEPY_REACTION: Reaction = Object.freeze(r("sleepy", "5 more minutes...", 1200));
+
 /**
- * Register a poke at `now`. The count starts again after FRANK_POKE_RESET_MS
- * without a poke, and after the easter egg. Returns the new state and the
- * Reaction to play.
+ * Register a poke at `now`. While he is not alive (`alive` false) the poke is
+ * sleepy: the escalation counter is untouched, nothing wakes him, and a sleepy
+ * poke within FRANK_SLEEPY_REPEAT_MS of the last one is flagged `repeat` so the
+ * caller keeps the same bubble instead of stacking a new reaction.
+ *
+ * Alive: the count starts again after FRANK_POKE_RESET_MS without a poke, and
+ * after the easter egg. Returns the new state and the Reaction to play.
  */
 export function pokeStep(
   state: PokeState,
-  now: number
-): { state: PokeState; reaction: Reaction } {
+  now: number,
+  alive = true
+): { state: PokeState; reaction: Reaction; repeat: boolean } {
+  if (!alive) {
+    const repeat = state.sleepyAt != null && now - state.sleepyAt <= FRANK_SLEEPY_REPEAT_MS;
+    return { state: { ...state, sleepyAt: now }, reaction: SLEEPY_REACTION, repeat };
+  }
   const fresh =
     state.lastAt === null || now - state.lastAt > FRANK_POKE_RESET_MS;
   const count = (fresh ? 0 : state.count) + 1;
   const reaction = pokeReaction(count);
   const next: PokeState =
     count >= FRANK_POKE_EGG_COUNT
-      ? { count: 0, lastAt: now }
-      : { count, lastAt: now };
-  return { state: next, reaction };
+      ? { count: 0, lastAt: now, sleepyAt: state.sleepyAt }
+      : { count, lastAt: now, sleepyAt: state.sleepyAt };
+  return { state: next, reaction, repeat: false };
 }

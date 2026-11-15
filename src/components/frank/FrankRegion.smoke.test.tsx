@@ -74,6 +74,32 @@ describe("FrankRegion", () => {
     expect(view.container.querySelector(".specimen--react-poke-2")).not.toBeNull();
   });
 
+  it("a poke before any data is sleepy: a bubble and Zzz, no wake, no lightning, one bubble for quick repeats", () => {
+    const { view } = setup({ tableCount: 0 });
+    const poke = screen.getByRole("button", { name: "Poke Little Frank" });
+    fireEvent.click(poke);
+    expect(bubble(view.container)).toBe("5 more minutes...");
+    expect(view.container.querySelector(".specimen--asleep")).not.toBeNull();
+    expect(view.container.querySelector(".specimen__zzz")).not.toBeNull();
+    expect(view.container.querySelector('[data-testid="frank-lightning"]')).toBeNull();
+    expect(view.container.querySelector(".specimen--react-sleepy")).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    fireEvent.click(poke);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    // The repeat kept the same bubble on screen (4s after the first poke).
+    expect(bubble(view.container)).toBe("5 more minutes...");
+    expect(view.container.querySelector(".specimen--react-poke-1, .specimen--react-poke-2")).toBeNull();
+    // Alive again: pokes work as before, starting from the first level.
+    view.unmount();
+    const alive = setup({ tableCount: 2 });
+    fireEvent.click(screen.getByRole("button", { name: "Poke Little Frank" }));
+    expect(bubble(alive.view.container)).toBe("Oh! Good day to you.");
+  });
+
   it("opens the guide from the '?' button, and a poke with it open does not close it", () => {
     setup({ tableCount: 2 });
     fireEvent.click(screen.getByRole("button", { name: "Ask Little Frank" }));

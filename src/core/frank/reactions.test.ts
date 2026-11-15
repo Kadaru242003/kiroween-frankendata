@@ -147,3 +147,38 @@ describe("poking", () => {
     expect(pokeLevel(0)).toBe(1);
   });
 });
+
+describe("poking while he is not alive (sleepy poke)", () => {
+  it("gives the sleepy reaction and leaves the counter alone", () => {
+    const first = pokeStep(NO_POKES, 1000, false);
+    expect(first.reaction).toMatchObject({ id: "sleepy", bubble: "5 more minutes..." });
+    expect(first.reaction.durationMs).toBeLessThanOrEqual(FRANK_REACTION_MAX_MS);
+    expect(first.state.count).toBe(0);
+    expect(first.state.lastAt).toBeNull();
+    expect(first.repeat).toBe(false);
+    // Many sleepy pokes never escalate.
+    let state = first.state;
+    for (let i = 1; i <= 15; i += 1) {
+      const step = pokeStep(state, 1000 + i * 4000, false);
+      expect(step.reaction.id).toBe("sleepy");
+      expect(step.state.count).toBe(0);
+      state = step.state;
+    }
+  });
+
+  it("flags a second sleepy poke within 3 seconds as a repeat (same bubble), and not after", () => {
+    const a = pokeStep(NO_POKES, 0, false);
+    expect(pokeStep(a.state, 2900, false).repeat).toBe(true);
+    expect(pokeStep(a.state, 3001, false).repeat).toBe(false);
+  });
+
+  it("does not disturb a live count, and live pokes work as before once he is alive", () => {
+    let state = pokeStep(NO_POKES, 0).state;
+    state = pokeStep(state, 100).state;
+    expect(state.count).toBe(2);
+    const sleepy = pokeStep(state, 200, false);
+    expect(sleepy.state.count).toBe(2);
+    expect(pokeStep(sleepy.state, 300).reaction.id).toBe("poke-3");
+    expect(pokeStep(NO_POKES, 0, true).reaction.id).toBe("poke-1");
+  });
+});

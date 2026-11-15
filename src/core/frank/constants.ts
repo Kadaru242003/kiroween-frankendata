@@ -15,6 +15,8 @@ export const FRANK_EYE_RANGE_PX = 280;
 export const FRANK_POKE_EGG_COUNT = 10;
 /** Pause between pokes after which the poke count starts again. */
 export const FRANK_POKE_RESET_MS = 6000;
+/** A sleepy poke within this long of the last one keeps the same bubble. */
+export const FRANK_SLEEPY_REPEAT_MS = 3000;
 /** The localStorage key of the Calm Frank preference. */
 export const FRANK_CALM_STORAGE_KEY = "frankendata.calmFrank";
 /** The fewest Intents the guide table holds. */

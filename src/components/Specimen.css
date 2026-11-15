@@ -489,6 +489,12 @@
 .specimen__flask-bubble--2 { animation-delay: 400ms; }
 .specimen__flask-bubble--3 { animation-delay: 800ms; }
 
+/* A sleepy poke: the Zzz shows clearly and he stays asleep. */
+.specimen--react-sleepy .specimen__zzz {
+  opacity: 1;
+  font-size: 14px;
+}
+
 /* Sleeping and thinking poses. */
 .specimen__zzz {
   position: absolute;

@@ -267,8 +267,28 @@ test('Little Frank wakes with lightning and "IT\'S ALIVE!" when the business dem
   await expect(page.locator('.specimen__bubble')).toHaveText("It's alive!")
 })
 
-test('tapping Frank pokes him (and Enter pokes from the keyboard); the guide stays closed', async ({ page }) => {
+test('on the landing page a poke is sleepy: "5 more minutes...", no lightning, still asleep', async ({ page }) => {
   await page.goto('/')
+  const frank = page.getByRole('button', { name: 'Poke Little Frank' })
+  await frank.click()
+  await expect(page.locator('.specimen__bubble')).toHaveText('5 more minutes...')
+  await expect(page.getByTestId('frank-lightning')).toHaveCount(0)
+  await expect(page.locator('.specimen--asleep')).toHaveCount(1)
+  await expect(page.locator('.specimen__zzz')).toBeVisible()
+  // Enter on him is the same, and a quick repeat keeps the one bubble.
+  await frank.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.specimen__bubble')).toHaveCount(1)
+  await expect(page.locator('.specimen__bubble')).toHaveText('5 more minutes...')
+  await expect(page.getByTestId('frank-lightning')).toHaveCount(0)
+})
+
+test('once he is alive, tapping Frank pokes him (and Enter pokes from the keyboard); the guide stays closed', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.locator('.specimen--awake')).toHaveCount(1)
+  // Let the wake and its bubble finish.
+  await page.waitForTimeout(3000)
   const frank = page.getByRole('button', { name: 'Poke Little Frank' })
   await frank.click()
   await expect(page.locator('.specimen__bubble')).toHaveText('Oh! Good day to you.')

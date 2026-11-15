@@ -31,8 +31,8 @@ export interface FrankView {
 export interface FrankController extends FrankView {
   /** Tell Frank something happened. */
   emit: (event: FrankEvent) => void;
-  /** Poke him (from the guide). */
-  poke: () => void;
+  /** Poke him. While he is not alive (`alive` false) the poke is sleepy. */
+  poke: (alive?: boolean) => void;
   /** No activity for FRANK_IDLE_MS: he sleeps until the next activity. */
   idle: boolean;
   calm: boolean;
@@ -74,6 +74,13 @@ export function useFrankController(options: FrankControllerOptions = {}): FrankC
 
   // Show the queue's current reaction and time its end. The queue is a pure
   // value; the timers are the only clock.
+  const armBubbleTimer = useCallback(() => {
+    if (bubbleTimer.current !== null) clearTimeout(bubbleTimer.current);
+    bubbleTimer.current = setTimeout(() => {
+      setView((v) => ({ ...v, bubble: null }));
+    }, FRANK_BUBBLE_MS);
+  }, []);
+
   const run = useCallback(() => {
     const q = queueRef.current;
     if (reactionTimer.current !== null) clearTimeout(reactionTimer.current);
@@ -88,17 +95,12 @@ export function useFrankController(options: FrankControllerOptions = {}): FrankC
       reactionSeq: q.seq,
       bubble: current.bubble ?? v.bubble,
     }));
-    if (current.bubble !== null) {
-      if (bubbleTimer.current !== null) clearTimeout(bubbleTimer.current);
-      bubbleTimer.current = setTimeout(() => {
-        setView((v) => ({ ...v, bubble: null }));
-      }, FRANK_BUBBLE_MS);
-    }
+    if (current.bubble !== null) armBubbleTimer();
     reactionTimer.current = setTimeout(() => {
       queueRef.current = finish(queueRef.current);
       run();
     }, current.durationMs);
-  }, []);
+  }, [armBubbleTimer]);
 
   const play = useCallback(
     (reaction: Reaction) => {
@@ -122,11 +124,20 @@ export function useFrankController(options: FrankControllerOptions = {}): FrankC
     [play]
   );
 
-  const poke = useCallback(() => {
-    const step = pokeStep(pokeRef.current, Date.now());
-    pokeRef.current = step.state;
-    play(step.reaction);
-  }, [play]);
+  const poke = useCallback(
+    (alive = true) => {
+      const step = pokeStep(pokeRef.current, Date.now(), alive);
+      pokeRef.current = step.state;
+      if (step.repeat) {
+        // A second sleepy poke close to the first: the same bubble stays, a bit longer.
+        setView((v) => ({ ...v, bubble: step.reaction.bubble }));
+        armBubbleTimer();
+        return;
+      }
+      play(step.reaction);
+    },
+    [play, armBubbleTimer]
+  );
 
   const setCalm = useCallback((on: boolean) => {
     setCalmState(on);
