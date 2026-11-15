@@ -49,3 +49,29 @@
   fill: var(--text-primary);
   font-size: 11px;
 }
+
+/* Line chart (Smarter Ask). Same conventions as the bar chart. */
+.ask-chart__line {
+  fill: none;
+  stroke: var(--lab-green);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.ask-chart__point {
+  fill: var(--lab-green);
+}
+.ask-chart__point:hover {
+  fill: var(--lab-green-deep);
+}
+.ask-chart__sr-table {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

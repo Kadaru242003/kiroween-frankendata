@@ -20,7 +20,7 @@
  * table exists (Req 1.1).
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ASK_MAX_QUESTION_CHARS,
   ASK_VISIBLE_CHIPS_LIMIT,
@@ -32,6 +32,9 @@ import { SqlBlock } from "./SqlBlock";
 import { ResultTableView } from "./ResultTableView";
 import { StarterChips } from "./StarterChips";
 import { BarChart } from "./charts/BarChart";
+import { LineChart } from "./charts/LineChart";
+import { ThreadCards } from "./ThreadCards";
+import { toThread } from "../../core/chat/thread";
 import "./AskTheLabPanel.css";
 
 export interface AskTheLabPanelProps {
@@ -47,6 +50,11 @@ export interface AskTheLabPanelProps {
    * questions resolve to the "AI unavailable" message with no network call.
    */
   aiAvailable: boolean;
+  /**
+   * "Ask about this" request from a table card: when `nonce` changes the input
+   * is prefilled with `text`, brought into view, and focused.
+   */
+  prefill?: { text: string; nonce: number } | null;
 }
 
 export const ASK_SUBMIT_LABEL = "Ask";
@@ -61,9 +69,41 @@ export function AskTheLabPanel({
   store,
   chips,
   aiAvailable,
+  prefill = null,
 }: AskTheLabPanelProps) {
-  const { history, outcome, loading } = useAskStore(store);
+  const { history, outcome, loading, turns } = useAskStore(store);
   const [question, setQuestion] = useState("");
+  const [topicNote, setTopicNote] = useState("");
+  const panelRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const outcomeRef = useRef<HTMLDivElement>(null);
+  // Set only by the Ask form, so the newest answer takes focus only when the
+  // user submitted the question (never for chips or history buttons).
+  const focusNextOutcome = useRef(false);
+
+  useEffect(() => {
+    if (!loading && outcome && focusNextOutcome.current) {
+      focusNextOutcome.current = false;
+      outcomeRef.current?.focus({ preventScroll: true });
+    }
+  }, [loading, outcome]);
+
+  // A fresh turn replaces the "new topic" note so it can be announced again.
+  useEffect(() => {
+    if (turns.length > 0) setTopicNote("");
+  }, [turns.length]);
+
+  const prefillNonce = prefill?.nonce;
+  useEffect(() => {
+    if (prefill === null || prefillNonce === undefined) return;
+    setQuestion(prefill.text);
+    const reduce =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    panelRef.current?.scrollIntoView?.({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    inputRef.current?.focus({ preventScroll: true });
+    // Only a new request (nonce) should prefill.
+  }, [prefillNonce]); // eslint-disable-line react-hooks/exhaustive-deps
   // Starter-chip overflow: show at most ASK_VISIBLE_CHIPS_LIMIT until expanded.
   const [chipsExpanded, setChipsExpanded] = useState(false);
   const hasOverflowChips = chips.length > ASK_VISIBLE_CHIPS_LIMIT;
@@ -76,10 +116,15 @@ export function AskTheLabPanel({
     async (text: string) => {
       const trimmed = text.trim();
       if (trimmed.length === 0 || loading) return;
+      const thread = toThread(store.getState().turns);
       store.pushQuestion(trimmed);
       store.setLoading(true);
-      const result = await controller.ask(trimmed);
+      const result =
+        thread.length > 0
+          ? await controller.ask(trimmed, thread)
+          : await controller.ask(trimmed);
       store.setOutcome(result);
+      if (result.kind === "ok") store.pushTurn(trimmed, result);
     },
     [controller, store, loading]
   );
@@ -91,6 +136,7 @@ export function AskTheLabPanel({
       store.setLoading(true);
       const result = await controller.runSql(chip.sql, chip.question, chip.chart);
       store.setOutcome(result);
+      if (result.kind === "ok") store.pushTurn(chip.question, result);
     },
     [controller, store, loading]
   );
@@ -98,13 +144,14 @@ export function AskTheLabPanel({
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
+      focusNextOutcome.current = true;
       void runFreeForm(question);
     },
     [runFreeForm, question]
   );
 
   return (
-    <section className="ask-panel" aria-label="Ask the Lab">
+    <section className="ask-panel" aria-label="Ask the Lab" ref={panelRef}>
       <header className="ask-panel__header">
         <h2 className="ask-panel__title">Ask the Lab</h2>
         <p className="ask-panel__subtitle">
@@ -117,6 +164,7 @@ export function AskTheLabPanel({
       <form className="ask-panel__form" onSubmit={handleSubmit}>
         <input
           className="ask-panel__input"
+          ref={inputRef}
           type="text"
           value={question}
           maxLength={ASK_MAX_QUESTION_CHARS}
@@ -132,8 +180,23 @@ export function AskTheLabPanel({
         >
           {loading ? "Thinking…" : ASK_SUBMIT_LABEL}
         </button>
+        {turns.length > 0 ? (
+          <button
+            type="button"
+            className="ask-panel__new-topic"
+            onClick={() => {
+              store.clearThread();
+              setTopicNote("Started a new topic");
+            }}
+          >
+            New topic
+          </button>
+        ) : null}
       </form>
 
+      <p className="ask-panel__sr" role="status" aria-live="polite">
+        {topicNote}
+      </p>
       {history.length > 0 ? (
         <div className="ask-panel__history" aria-label="Recent questions">
           <p className="ask-panel__history-label">Recent:</p>
@@ -198,8 +261,9 @@ export function AskTheLabPanel({
         </div>
       ) : null}
 
+      <ThreadCards turns={turns.filter((t) => t.outcome !== outcome)} />
       {!loading && outcome ? (
-        <div className="ask-panel__outcome">
+        <div className="ask-panel__outcome" ref={outcomeRef} tabIndex={-1} aria-label="Latest answer">
           {outcome.kind === "ok" ? (
             <>
               <SqlBlock sql={outcome.sql} explanation={outcome.explanation} />
@@ -210,6 +274,13 @@ export function AskTheLabPanel({
               />
               {outcome.chart && outcome.chart.type === "bar" ? (
                 <BarChart
+                  spec={outcome.chart}
+                  columns={outcome.columns}
+                  rows={outcome.rows}
+                />
+              ) : null}
+              {outcome.chart && outcome.chart.type === "line" ? (
+                <LineChart
                   spec={outcome.chart}
                   columns={outcome.columns}
                   rows={outcome.rows}

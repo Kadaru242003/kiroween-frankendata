@@ -239,3 +239,48 @@
   .table-preview-card__tbody tr:nth-child(14) .table-preview-card__td { animation-delay: 390ms; }
   .table-preview-card__tbody tr:nth-child(15) .table-preview-card__td { animation-delay: 420ms; }
 }
+
+/* "Ask about this" (Smarter Ask): small secondary button in the card header. */
+.table-preview-card__ask {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.table-preview-card__ask:focus-visible {
+  outline: 2px solid var(--lab-green);
+  outline-offset: 2px;
+}
+
+/* "Ask about this" (Smarter Ask): small secondary button in the card header. */
+.table-preview-card__ask {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.table-preview-card__ask:focus-visible {
+  outline: 2px solid var(--lab-green);
+  outline-offset: 2px;
+}
+
+/* "Ask about this" (Smarter Ask): small secondary button in the card header. */
+.table-preview-card__ask {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.table-preview-card__ask:focus-visible {
+  outline: 2px solid var(--lab-green);
+  outline-offset: 2px;
+}

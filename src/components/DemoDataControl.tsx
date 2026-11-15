@@ -72,6 +72,8 @@ export interface DemoDataControlProps {
    * label itself is unchanged.
    */
   tag?: string;
+  /** When true (for example while Reset lab runs) the button is disabled. */
+  disabled?: boolean;
 }
 
 /**
@@ -85,6 +87,7 @@ export function DemoDataControl({
   caption,
   alreadyLoaded = false,
   tag,
+  disabled = false,
 }: DemoDataControlProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   // A ref mirror of the loading flag so rapid clicks are rejected synchronously,
@@ -92,7 +95,7 @@ export function DemoDataControl({
   const loadingRef = useRef(false);
 
   const handleClick = useCallback(() => {
-    if (loadingRef.current || alreadyLoaded) {
+    if (loadingRef.current || alreadyLoaded || disabled) {
       return;
     }
     loadingRef.current = true;
@@ -106,7 +109,7 @@ export function DemoDataControl({
         loadingRef.current = false;
         setIsLoading(false);
       });
-  }, [onLoadDemo, alreadyLoaded]);
+  }, [onLoadDemo, alreadyLoaded, disabled]);
 
   const buttonLabel = alreadyLoaded
     ? DEMO_ALREADY_LOADED_LABEL
@@ -123,7 +126,7 @@ export function DemoDataControl({
         type="button"
         className="frankendata-demo-control__button"
         onClick={handleClick}
-        disabled={isLoading || alreadyLoaded}
+        disabled={isLoading || alreadyLoaded || disabled}
         aria-busy={isLoading}
       >
         {buttonLabel}

@@ -468,3 +468,27 @@ body::before {
     animation: none !important;
   }
 }
+
+/* Reset lab status text (Smarter Ask). */
+.lab-reset__status {
+  margin: 4px 0;
+  min-height: 1.2em;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Reset lab status text (Smarter Ask). */
+.lab-reset__status {
+  margin: 4px 0;
+  min-height: 1.2em;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Reset lab status text (Smarter Ask). */
+.lab-reset__status {
+  margin: 4px 0;
+  min-height: 1.2em;
+  color: var(--text-secondary);
+  font-size: 13px;
+}

@@ -16,6 +16,7 @@
 
 import { useSyncExternalStore } from "react";
 import { ASK_HISTORY_SIZE, type AskOutcome } from "../core/chat/types";
+import { ASK_THREAD_MAX_TURNS, type AskTurn } from "../core/chat/thread";
 
 /** Immutable snapshot of the ask store handed to subscribers. */
 export interface AskState {
@@ -25,6 +26,12 @@ export interface AskState {
   readonly outcome: AskOutcome | null;
   /** True while a question is being answered (drives the loading state). */
   readonly loading: boolean;
+  /**
+   * The most recent successful turns (at most ASK_THREAD_MAX_TURNS, oldest
+   * first), kept in memory only. They feed the thread cards and, reduced to
+   * names and counts, the follow-up thread.
+   */
+  readonly turns: readonly AskTurn[];
 }
 
 type Listener = () => void;
@@ -33,6 +40,7 @@ const EMPTY_STATE: AskState = Object.freeze({
   history: Object.freeze([]) as readonly string[],
   outcome: null,
   loading: false,
+  turns: Object.freeze([]) as readonly AskTurn[],
 });
 
 /** A session-only, in-memory observable store for the Ask the Lab panel. */
@@ -80,10 +88,40 @@ export class AskStore {
     this.emit();
   }
 
-  /** Clear the current outcome (e.g. when the queryable tables change). */
+  /** Record a successful turn (newest last), keeping at most the last 3. */
+  pushTurn(question: string, outcome: Extract<AskOutcome, { kind: "ok" }>): void {
+    const next = [...this.state.turns, { question, outcome }].slice(
+      -ASK_THREAD_MAX_TURNS
+    );
+    this.state = Object.freeze({ ...this.state, turns: Object.freeze(next) });
+    this.emit();
+  }
+
+  /** "New topic": forget the turns (the answer on screen stays). */
+  clearThread(): void {
+    if (this.state.turns.length === 0) return;
+    this.state = Object.freeze({
+      ...this.state,
+      turns: Object.freeze([]) as readonly AskTurn[],
+    });
+    this.emit();
+  }
+
+  /** Clear the current outcome and the turns (e.g. when the tables change). */
   clearOutcome(): void {
-    if (this.state.outcome === null && !this.state.loading) return;
-    this.state = Object.freeze({ ...this.state, outcome: null, loading: false });
+    if (
+      this.state.outcome === null &&
+      !this.state.loading &&
+      this.state.turns.length === 0
+    ) {
+      return;
+    }
+    this.state = Object.freeze({
+      ...this.state,
+      outcome: null,
+      loading: false,
+      turns: Object.freeze([]) as readonly AskTurn[],
+    });
     this.emit();
   }
 

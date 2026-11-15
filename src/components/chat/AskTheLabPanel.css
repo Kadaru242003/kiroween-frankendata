@@ -228,3 +228,62 @@
     opacity: 0;
   }
 }
+
+/* Smarter Ask: thread cards, New topic, and the focus target. */
+.ask-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+.ask-thread__card {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.ask-thread__question {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.ask-thread__meta {
+  margin: 2px 0 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.ask-thread__sql summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.ask-thread__sql pre {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.ask-panel__new-topic {
+  margin-left: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+}
+.ask-panel__new-topic:focus-visible,
+.ask-panel__outcome:focus-visible {
+  outline: 2px solid var(--lab-green);
+  outline-offset: 2px;
+}
+.ask-panel__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

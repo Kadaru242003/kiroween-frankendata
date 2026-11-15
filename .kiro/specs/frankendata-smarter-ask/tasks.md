@@ -25,19 +25,19 @@ Core first (thread, chart choice, reset lock, proxy and controller changes), the
   - Create `src/state/reset-lock.ts`; unit tests and Property 4
   - _Design: Reset lock; Requirements 5, 7.4_
 - [x] 5. Checkpoint: `npm run build`, `npm run check:api`, the touched tests; commit
-- [ ] 6. Store, line chart, thread cards
+- [x] 6. Store, line chart, thread cards
   - Extend `AskStore` (`turns`, `pushTurn`, `clearThread`); create `LineChart.tsx` and `ThreadCards.tsx` with CSS
   - Store tests, LineChart smoke test
   - _Design: Store and UI; Requirements 1.8, 1.9, 2, 3.5, 3.6_
-- [ ] 7. Panel, New topic, focus, Ask about this
+- [x] 7. Panel, New topic, focus, Ask about this
   - Update `AskTheLabPanel` (thread, New topic, focus, line chart, prefill); wire `App.tsx` (`askPrefill`, button through `renderActions`)
   - Smoke tests for thread cards, New topic, focus, line chart, prefill
   - _Design: Store and UI; Requirements 1, 2, 4_
-- [ ] 8. Reset lock wiring
+- [x] 8. Reset lock wiring
   - `disabled` props on `DropZone`, `DemoDataControl`, `ApplyRecipe`; App uses the lock and the "Resetting the lab..." status
   - Smoke tests for the disabled props and the status
   - _Design: Reset lock; Requirements 5_
-- [ ] 9. Checkpoint: `npm run build`, `npm run check:api`, `npm run mcp:build`, touched tests; commit
+- [x] 9. Checkpoint: `npm run build`, `npm run check:api`, `npm run mcp:build`, touched tests; commit
 - [ ] 10. Playwright slow mode and follow-up step
   - `E2E_SLOWMO` in `playwright.config.ts`; follow-up step with graceful skip
   - _Design: Playwright slow mode; Requirements 6_

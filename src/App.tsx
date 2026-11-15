@@ -25,7 +25,7 @@
 
 import { loadNextMonthFiles } from './core/recipes/next-month-demo'
 import { revealProposalCard } from './components/autopsy/reveal-proposal'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createDuckDBService } from './db/duckdb-service'
 import { createIntakeController } from './core/intake-controller'
 import { demoDataLoader } from './core/demo-data-loader'
@@ -106,6 +106,7 @@ import {
   type RecipeApplyOutcome,
 } from './components/recipes/RecipePanel'
 import { scrollToStitchScreen } from './components/recipes/review'
+import { ResetLock, useResetLock } from './state/reset-lock'
 import './App.css'
 
 /**
@@ -322,6 +323,21 @@ function App() {
   const [recipeBase, setRecipeBase] = useState<{
     stitched: StitchedTable | null
   } | null>(null)
+  // Reset lock (Smarter Ask): while Reset lab runs, every load control is
+  // disabled and the load handlers ignore requests.
+  const [resetLock] = useState(() => new ResetLock())
+  const { busy: resetting } = useResetLock(resetLock)
+  // "Ask about this" request from a table card: text prefilled in the Ask input.
+  const [askPrefill, setAskPrefill] = useState<{
+    text: string
+    nonce: number
+  } | null>(null)
+  const handleAskAbout = useCallback((tableName: string) => {
+    setAskPrefill((prev) => ({
+      text: `In ${tableName}: `,
+      nonce: (prev?.nonce ?? 0) + 1,
+    }))
+  }, [])
   // Initialize DuckDB + controller once on mount. The module-level singleton
   // promise makes this safe under StrictMode's double-invoke.
   useEffect(() => {
@@ -369,12 +385,12 @@ function App() {
 
   const handleFiles = useCallback(
     (files: File[]) => {
-      if (stack === null || files.length === 0) {
+      if (stack === null || files.length === 0 || resetLock.isBusy()) {
         return
       }
       void stack.controller.intake(files)
     },
-    [stack],
+    [stack, resetLock],
   )
 
   // Load a demo ONCE by id (idempotent). A repeated click is a no-op; the
@@ -382,7 +398,7 @@ function App() {
   // is always allowed. Reset re-enables both (see handleResetLab).
   const loadDemo = useCallback(
     async (id: DemoId) => {
-      if (stack === null) {
+      if (stack === null || resetLock.isBusy()) {
         return
       }
       const didLoad = await stack.demoLoader.load(id)
@@ -394,7 +410,7 @@ function App() {
         })
       }
     },
-    [stack],
+    [stack, resetLock],
   )
 
   const handleLoadDemo = useCallback(() => loadDemo('default'), [loadDemo])
@@ -417,6 +433,7 @@ function App() {
     if (stack === null) {
       return
     }
+    await resetLock.run(async () => {
     // Best-effort undo of any applied stitch (drops its created tables), then a
     // belt-and-braces drop of every remaining base table.
     try {
@@ -446,7 +463,8 @@ function App() {
     setRecipeBase(null)
     queryableTableNamesHolder = []
     queryableSchemaSourceHolder = []
-  }, [stack])
+    })
+  }, [stack, resetLock])
 
   const canStitch = shouldShowStitchEntry(tables.length)
   // The subset of loaded tables CHECKED for stitching: loaded minus the
@@ -581,7 +599,7 @@ function App() {
   // scrolls, or applies anything (Recipes Req 4.7, 4.9, 8.2).
   const handleApplyRecipe = useCallback(
     async (text: string): Promise<RecipeApplyOutcome> => {
-      if (stack === null) {
+      if (stack === null || resetLock.isBusy()) {
         const errors = [{ path: '$', message: 'The lab is not ready yet.' }]
         setRecipeErrors(errors)
         return { ok: false, errors }
@@ -621,7 +639,7 @@ function App() {
       setWorkingPlan(null)
       return outcome
     },
-    [stack, tables, uncheckedTableNames],
+    [stack, tables, uncheckedTableNames, resetLock],
   )
 
   // The explicit "Review in stitching table" button: open the approval screen
@@ -737,6 +755,7 @@ function App() {
   }, [canStitch, stitchOpen, cleanupOnly, tables.length])
 
   return (
+    <AskAboutContext.Provider value={handleAskAbout}>
     <main id="lab">
       <header className="lab-header">
         <LabIntro />
@@ -771,12 +790,13 @@ function App() {
       {status.phase === 'ready' ? (
         <>
           <section className="lab-intake" aria-label="File intake">
-            <DropZone onFiles={handleFiles} />
+            <DropZone onFiles={handleFiles} disabled={resetting} />
             <div className="lab-intake__demos">
               <DemoDataControl
                 onLoadDemo={handleLoadDemo}
                 caption="Three messy lab files, typed automatically"
                 alreadyLoaded={loadedDemos.has('default')}
+                disabled={resetting}
               />
               {/*
                 Second demo action: the mismatched stitching dataset (Req 8.4).
@@ -788,6 +808,7 @@ function App() {
                 label={LOAD_MISMATCHED_DEMO_LABEL}
                 caption="Two files with different headers, ready to stitch"
                 alreadyLoaded={loadedDemos.has('mismatched')}
+                disabled={resetting}
                 tag="Start here"
               />
               {/*
@@ -799,6 +820,7 @@ function App() {
                 label={LOAD_NEXT_MONTH_DEMO_LABEL}
                 caption="Same messy patterns, new rows: try applying a recipe"
                 alreadyLoaded={loadedDemos.has('nextMonth')}
+                disabled={resetting}
               />
             </div>
             {/*
@@ -810,14 +832,19 @@ function App() {
               <button
                 type="button"
                 className="lab-reset__button"
+                disabled={resetting}
                 onClick={() => void handleResetLab()}
               >
                 Reset lab
               </button>
             ) : null}
+            <p className="lab-reset__status" role="status" aria-live="polite">
+              {resetting ? 'Resetting the lab...' : ''}
+            </p>
             {/* Apply recipe: visible whenever a table is loaded, even before a stitch. */}
             {tables.length > 0 ? (
               <ApplyRecipe
+                disabled={resetting}
                 onApplyRecipe={handleApplyRecipe}
                 onReview={handleReviewRecipe}
                 outcome={
@@ -908,6 +935,7 @@ function App() {
             askController={status.stack.askController}
             askStore={status.stack.askStore}
             stitchStore={status.stack.stitchStore}
+            prefill={askPrefill}
           />
 
           {/*
@@ -947,6 +975,7 @@ function App() {
         </>
       ) : null}
     </main>
+    </AskAboutContext.Provider>
   )
 }
 
@@ -1074,6 +1103,7 @@ interface AskPanelRegionProps {
   askController: AskController
   askStore: AskStore
   stitchStore: StitchStore
+  prefill: { text: string; nonce: number } | null
 }
 
 /**
@@ -1091,6 +1121,7 @@ function AskPanelRegion({
   askController,
   askStore,
   stitchStore,
+  prefill,
 }: AskPanelRegionProps) {
   const [queryable, setQueryable] = useState<QueryableTable[]>([])
   const [chips, setChips] = useState<StarterChip[]>([])
@@ -1156,10 +1187,14 @@ function AskPanelRegion({
         store={askStore}
         chips={chips}
         aiAvailable={ASK_AI_AVAILABLE}
+        prefill={prefill}
       />
     </section>
   )
 }
+
+/** Lets any table card ask "about this table" without threading props. */
+const AskAboutContext = createContext<((tableName: string) => void) | null>(null)
 
 /** Props for {@link TablePreviewRegion}. */
 interface TablePreviewRegionProps {
@@ -1183,6 +1218,7 @@ function TablePreviewRegion({
   duckDBService,
   onAutopsy,
 }: TablePreviewRegionProps) {
+  const askAbout = useContext(AskAboutContext)
   const [previews, setPreviews] = useState<TablePreviewData[]>([])
   // Track the latest effect run so a stale fetch (from a superseded table list)
   // cannot overwrite fresher preview data.
@@ -1226,7 +1262,19 @@ function TablePreviewRegion({
       tables={previews}
       onAutopsy={onAutopsy}
       renderActions={(table) => (
-        <ExportButtons db={duckDBService} table={table} />
+        <>
+          {askAbout ? (
+            <button
+              type="button"
+              className="table-preview-card__ask"
+              aria-label={`Ask about ${table.tableName}`}
+              onClick={() => askAbout(table.tableName)}
+            >
+              Ask about this
+            </button>
+          ) : null}
+          <ExportButtons db={duckDBService} table={table} />
+        </>
       )}
     />
   )

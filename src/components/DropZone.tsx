@@ -73,6 +73,8 @@ export interface DropZoneProps {
    * (Req 1.2). The App wires this to `IntakeController.intake`.
    */
   onFiles: (files: File[]) => void;
+  /** When true (for example while Reset lab runs) nothing can be dropped or browsed. */
+  disabled?: boolean;
 }
 
 /**
@@ -80,7 +82,7 @@ export interface DropZoneProps {
  * browsed files via {@link DropZoneProps.onFiles} and renders the file-count
  * guidance message, nothing more.
  */
-export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
+export function DropZone({ onFiles, disabled = false }: DropZoneProps): JSX.Element {
   const [isDragging, setIsDragging] = useState(false);
   // The count from the most recent drop/selection, used only to decide whether
   // to render the guidance message. `null` means nothing has been provided yet.
@@ -90,12 +92,13 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
   /** Forward a file list to the consumer and record its count for guidance. */
   const forwardFiles = useCallback(
     (fileList: FileList | null): void => {
+      if (disabled) return;
       const files = fileList ? Array.from(fileList) : [];
       setLastDropCount(files.length);
       // Accept every file regardless of count (Req 1.2).
       onFiles(files);
     },
-    [onFiles]
+    [onFiles, disabled]
   );
 
   const handleDragEnter = useCallback((event: DragEvent<HTMLDivElement>) => {
@@ -128,8 +131,9 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
   );
 
   const openFilePicker = useCallback(() => {
+    if (disabled) return;
     fileInputRef.current?.click();
-  }, []);
+  }, [disabled]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -162,6 +166,7 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
       <div
         className={className}
         role="button"
+        aria-disabled={disabled || undefined}
         tabIndex={0}
         aria-label="File intake port. Drag and drop CSV or XLSX files here, or activate to browse."
         data-dragging={isDragging}
@@ -202,6 +207,7 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
         <button
           type="button"
           className="frankendata-dropzone__browse"
+          disabled={disabled}
           onClick={(event) => {
             // Avoid double-triggering via the wrapper's onClick.
             event.stopPropagation();

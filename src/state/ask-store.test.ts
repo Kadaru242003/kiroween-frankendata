@@ -55,3 +55,28 @@ describe("AskStore", () => {
     expect(store.getState().loading).toBe(false);
   });
 });
+
+import { AskStore as TurnStore } from "./ask-store";
+describe("AskStore turns (Smarter Ask)", () => {
+  const ok = (n: number) => ({
+    kind: "ok" as const, sql: `SELECT ${n}`, explanation: "e", columns: ["a"],
+    rows: [[n]], rowCount: 1, capped: false,
+  });
+  it("keeps at most 3 turns, newest last", () => {
+    const s = new TurnStore();
+    for (let i = 1; i <= 5; i++) s.pushTurn(`q${i}`, ok(i));
+    expect(s.getState().turns.map((t) => t.question)).toEqual(["q3", "q4", "q5"]);
+  });
+  it("clearThread, clearOutcome and reset empty the turns", () => {
+    const s = new TurnStore();
+    s.pushTurn("q", ok(1));
+    s.clearThread();
+    expect(s.getState().turns).toHaveLength(0);
+    s.pushTurn("q", ok(1));
+    s.clearOutcome();
+    expect(s.getState().turns).toHaveLength(0);
+    s.pushTurn("q", ok(1));
+    s.reset();
+    expect(s.getState().turns).toHaveLength(0);
+  });
+});

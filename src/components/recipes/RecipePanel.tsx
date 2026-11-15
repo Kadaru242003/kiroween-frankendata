@@ -36,6 +36,8 @@ export interface ApplyRecipeProps {
   onReview: () => void;
   /** The last apply outcome, owned by the App so the stitch section can show it. */
   outcome: RecipeApplyOutcome | null;
+  /** When true (for example while Reset lab runs) the control is disabled. */
+  disabled?: boolean;
 }
 
 /** "Apply recipe": a secondary button with a drop target, plus its feedback. */
@@ -43,6 +45,7 @@ export function ApplyRecipe({
   onApplyRecipe,
   onReview,
   outcome,
+  disabled = false,
 }: ApplyRecipeProps): JSX.Element {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,6 +54,7 @@ export function ApplyRecipe({
 
   const applyFile = useCallback(
     async (file: File) => {
+      if (disabled) return;
       setBusy(true);
       setMessage("");
       try {
@@ -73,7 +77,7 @@ export function ApplyRecipe({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [onApplyRecipe]
+    [onApplyRecipe, disabled]
   );
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -102,7 +106,7 @@ export function ApplyRecipe({
             accept=".json,application/json"
             className="recipe-panel__file"
             aria-label="Apply recipe (JSON file)"
-            disabled={busy}
+            disabled={busy || disabled}
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void applyFile(f);
