@@ -17,7 +17,8 @@ describe("Feature: frankendata-smarter-ask, Property 3: chart choice", () => {
         fc.array(fc.constantFrom("a", "b", "c", "d"), { minLength: 1, maxLength: 4 }),
         fc.array(fc.array(cell, { minLength: 4, maxLength: 4 }), { maxLength: 6 }),
         fc.array(fc.constantFrom("a", "b", "c", "d"), { maxLength: 4 }),
-        (columns, rows4, temporalList) => {
+        (columnsIn, rows4, temporalList) => {
+          const columns: string[] = columnsIn;
           const rows = rows4.map((r) => r.slice(0, columns.length));
           const t1 = new Set<string>(temporalList);
           const t2 = new Set<string>([...temporalList].reverse());
