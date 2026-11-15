@@ -1,5 +1,7 @@
 # FrankenData
 
+[![CI](https://github.com/Kadaru242003/kiroween-frankendata/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kadaru242003/kiroween-frankendata/actions/workflows/ci.yml)
+
 Stitch mismatched CSV and XLSX files into one living dataset, then ask it questions in plain English. Everything runs in your browser, with a small stitched-together creature, Little Frank, to keep you company.
 
 **Live demo:** https://kiroween-frankendata.vercel.app
@@ -216,6 +218,19 @@ The app is fully functional with no configuration: with AI off it runs the offli
 - `AI_PROVIDER`, `AI_MODEL`, the provider API key (`AI_API_KEY`, or the provider's own variable named in `.env.example`), optional `AI_BASE_URL`
 - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 - `IP_HASH_SALT`, optional `ALLOWED_ORIGINS`
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and on every pull request, in one job on `ubuntu-latest`. Node is pinned in `.nvmrc`, dependencies come from `npm ci` with the npm cache, and the gates run in this order as separate steps, so the first red step tells you which one broke:
+
+1. **Lint:** `npm run lint`
+2. **Unit tests:** `npm test`
+3. **Build:** `npm run build`
+4. **Serverless API graph:** `npm run check:api`
+5. **MCP server build:** `npm run mcp:build`
+6. **End-to-end tests:** `npx playwright install --with-deps chromium`, then `npm run test:e2e`
+
+The workflow needs no secrets and never sets `VITE_AI_ENABLED`, so AI is off and the app runs fully local in CI. If the end-to-end gate fails, the Playwright report and traces are uploaded as an artifact. An optional second workflow, `kiro-review.yml`, runs the Kiro CLI with the security-auditor instructions on a pull request's diff and writes the findings to the job summary. It is skipped, not failed, when the `KIRO_API_KEY` secret is not set. Details are in `.kiro/NOTES-ci.md`.
 
 ## Deployment
 
