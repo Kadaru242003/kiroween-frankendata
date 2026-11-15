@@ -71,6 +71,27 @@ describe("vendors + purchases: default key, anchor and result", () => {
     expect(fan).toEqual({ anchorRowCount: 5, resultRowCount: 5, fannedOut: false });
   }, 120000);
 
+  it("matches Eastgate Foods (INFO@eastgate.example) case-insensitively, with no NULL vendor columns", async () => {
+    const rows = await lab.db.query<Record<string, unknown>>(
+      `SELECT * FROM stitch_1_result`
+    );
+    expect(rows).toHaveLength(5);
+    const eastgate = rows.filter((r) => String(r.email).toLowerCase() === "info@eastgate.example");
+    expect(eastgate).toHaveLength(1);
+    expect(Number(eastgate[0].Annual_Spend)).toBe(5400);
+    // All five purchases match a vendor that has a spend and a status, so no
+    // cell of the result is NULL.
+    for (const r of rows) {
+      expect(Object.keys(r)).toEqual(expect.arrayContaining(["Annual_Spend", "Status"]));
+      for (const [col, value] of Object.entries(r)) {
+        expect(value, `${String(r.email)} ${col}`).not.toBeNull();
+        expect(value, `${String(r.email)} ${col}`).not.toBeUndefined();
+      }
+    }
+    // The anchor side keeps its display value (purchases wrote INFO@...).
+    expect(eastgate[0].email).toBe("INFO@eastgate.example");
+  });
+
   it("still honors a key the user picks in the dropdown (country fans out)", async () => {
     await lab.controller.undo();
     const { plan } = await lab.approveAllPlan();

@@ -65,7 +65,7 @@ test('month one, recipe, month two', async ({ page }) => {
   await page.getByRole('button', { name: 'Reset lab' }).click()
   // Reset is asynchronous: wait until every table is gone before loading again.
   await expect(page.getByRole('region', { name: /^Preview of/ })).toHaveCount(0)
-  await page.getByRole('button', { name: "Load next month's files" }).click()
+  await page.getByRole('button', { name: 'Lab: next month' }).click()
   await expect(page.getByRole('region', { name: 'Preview of monsters', exact: true })).toBeVisible()
   await page.getByLabel('Apply recipe (JSON file)').setInputFiles(recipePath)
   await expect(page.getByText(/proposals? pre-approved/).first()).toBeVisible()
@@ -116,7 +116,7 @@ test("business month two: the March recipe applies to next month's business file
   // April: reset, load next month's business files, apply the recipe.
   await page.getByRole('button', { name: 'Reset lab' }).click()
   await expect(page.getByRole('region', { name: /^Preview of/ })).toHaveCount(0)
-  await page.getByRole('button', { name: "Load next month's business files" }).click()
+  await page.getByRole('button', { name: 'Business: next month' }).click()
   await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
   await expect(
     page.getByRole('region', { name: 'Preview of billing_invoices_2026_04', exact: true }),
@@ -207,7 +207,7 @@ for (const [label, width] of [['100% zoom', 1280], ['67% zoom', 1910]] as const)
     expect(Math.abs(tagBox.x + tagBox.width / 2 - (btnBox.x + btnBox.width / 2))).toBeLessThan(2)
     // All five demo buttons share one top edge when they fit on one row.
     const tops: number[] = []
-    for (const name of ['Load business demo', 'Load demo data', 'Load mismatched demo', "Load next month's files", "Load next month's business files"]) {
+    for (const name of ['Load business demo', 'Business: next month', 'Load demo data', 'Load mismatched demo', 'Lab: next month']) {
       tops.push((await page.getByRole('button', { name }).boundingBox())!.y)
     }
     if (width >= 1280) {

@@ -34,7 +34,7 @@ Millbrook Paper,mark.stone@millbrook.example,North America,Starter,12/01/2025,$5
 Orchard Labs,nina.owens@orchardlabs.example,EMEA,Pro,2025-04-04,N/A
 Summit Dynamics,walter.bell@summitdyn.example,EMEA,Enterprise,2025-07-22,"$7,200.00"
 Granite Bank,bill.grant@granitebank.example,EMEA,Pro,"Aug 30, 2025","$2,400.00"
-Crestview Worldwide,ben.stephens@crestview.example,APAC,,2025-10-17,$380.00
+Crestview Worldwide,ben.stephens@crestview.example,APAC,Starter,2025-10-17,$380.00
 Tidewater Shipping,rosa.lindqvist@tidewater.example,emea,Starter,2026-03-12,$320.00
 Alder Pharmacy,kenji.mori@alderpharmacy.example,APAC,pro,"Mar 28, 2026","$2,750.00"
 Harborline Foods,alan.weston@harborline.example,EMEA,Enterprise,2025-05-19,"$7,800.00"

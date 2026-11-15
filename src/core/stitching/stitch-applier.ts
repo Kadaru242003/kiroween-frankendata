@@ -132,6 +132,14 @@ export function cleanedCopyTableName(n: number, sourceTableName: string): string
 }
 
 /**
+ * The normalized form of a text join key: whitespace collapsed, trimmed,
+ * lower-cased. Matches the normalization the value overlap and the key stats use.
+ */
+export function joinKeyExpr(ref: string): string {
+  return `lower(trim(regexp_replace(${ref}, '\\s+', ' ', 'g')))`;
+}
+
+/**
  * The SQL expression that trim+collapses whitespace for a text column, matching
  * {@link normalizeWhitespace} (`value.trim().replace(/\s+/gu, " ")`) and the
  * duplicate-key normalization in `cleaning-rules.ts`. Never changes case.
@@ -947,9 +955,21 @@ export function buildJoinChainSql(
   for (const step of steps) {
     // LEFT JOIN each table on its key, compared on the post-cleaning columns of
     // both sides (both are read from cleaned copies / originals, Req 7.8).
-    const onClause =
-      `${alias(step.leftTableName)}.${quoteIdent(step.leftColumnName)} = ` +
-      `${alias(step.table.tableName)}.${quoteIdent(step.rightColumnName)}`;
+    //
+    // Text keys compare normalized values on both sides (trim, collapse
+    // whitespace, lower-case), so "INFO@x.example" joins " info@x.example ".
+    // Output columns still show the original values. Only when BOTH key columns
+    // are text; any other key is compared as is.
+    const leftType = tables
+      .find((tb) => tb.tableName === step.leftTableName)
+      ?.schema.find((c) => c.name === step.leftColumnName)?.type;
+    const rightType = step.table.schema.find((c) => c.name === step.rightColumnName)?.type;
+    const leftRef = `${alias(step.leftTableName)}.${quoteIdent(step.leftColumnName)}`;
+    const rightRef = `${alias(step.table.tableName)}.${quoteIdent(step.rightColumnName)}`;
+    const textKey = leftType === "string" && rightType === "string";
+    const onClause = textKey
+      ? `${joinKeyExpr(leftRef)} = ${joinKeyExpr(rightRef)}`
+      : `${leftRef} = ${rightRef}`;
     fromClause +=
       ` LEFT JOIN ${quoteIdent(step.table.readTableName)} AS ${alias(step.table.tableName)}` +
       ` ON ${onClause}`;

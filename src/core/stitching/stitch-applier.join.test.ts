@@ -210,10 +210,12 @@ describe("buildJoinChainSql — generated DDL", () => {
     expect(createSql).toContain(
       'FROM "stitch_0_clean_monsters" AS "monsters"'
     );
-    // LEFT JOIN with the pair key on the post-cleaning columns.
+    // LEFT JOIN with the pair key on the post-cleaning columns. Both keys are
+    // text, so each side is compared normalized (trim, collapse, lower-case).
     expect(createSql).toContain(
       'LEFT JOIN "experiments" AS "experiments" ON ' +
-        '"monsters"."name" = "experiments"."name"'
+        "lower(trim(regexp_replace(\"monsters\".\"name\", '\\s+', ' ', 'g'))) = " +
+        "lower(trim(regexp_replace(\"experiments\".\"name\", '\\s+', ' ', 'g')))"
     );
     // Key column emitted once under the anchor name; collision-free others.
     expect(createSql).toContain('COALESCE("monsters"."name", "experiments"."name") AS "name"');

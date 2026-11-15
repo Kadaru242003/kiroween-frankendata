@@ -82,5 +82,23 @@ describe("business month two", () => {
       resultRowCount: 24,
       fannedOut: false,
     });
+
+    // Every invoice whose email exists in crm_customers (case-insensitively) has
+    // its CRM columns; report how many April rows are unmatched.
+    const crm = await lab.db.query<{ email: string }>(
+      `SELECT DISTINCT lower(trim("Email")) AS email FROM crm_customers`
+    );
+    const crmEmails = new Set(crm.map((r) => r.email));
+    const result = await lab.db.query<Record<string, unknown>>(
+      `SELECT email, "Plan", "Customer_Name" FROM ${stitched.tableName}`
+    );
+    expect(result).toHaveLength(24);
+    const inCrm = result.filter((r) => crmEmails.has(String(r.email).trim().toLowerCase()));
+    const unmatched = result.filter((r) => !crmEmails.has(String(r.email).trim().toLowerCase()));
+    expect(inCrm.filter((r) => r.Plan === null || r.Plan === undefined)).toEqual([]);
+    expect(inCrm.filter((r) => r.Customer_Name === null || r.Customer_Name === undefined)).toEqual([]);
+    // Every April invoice belongs to a CRM customer (the 2 new ones are in the CRM file).
+    expect(unmatched).toHaveLength(0);
+    expect(inCrm).toHaveLength(24);
   }, 120000);
 });

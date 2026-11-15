@@ -139,3 +139,60 @@ between the clear and the new tables.
 - The Join dropdown still lists matches by confidence; only the preselected key changed.
 - `columnStats` is a new optional field on `ProposalSet` (additive). The recipe mapper copies it.
 - No Vercel, API or proxy change.
+
+## Follow-up commit: case-insensitive text join keys, demo labels
+
+### 1. Text join keys compare normalized values
+
+The shared join builder (`buildJoinChainSql` in `stitch-applier.ts`) now compares a text key as
+`lower(trim(regexp_replace(col, '\s+', ' ', 'g')))` on both sides (`joinKeyExpr`). Only when
+BOTH key columns are text; a number, date or mixed-type key is compared as before. Output
+columns are untouched: the SELECT list is unchanged, so display values stay as written and the
+anchor side still wins in a merged column (`COALESCE(anchor, other)`; the fixture result keeps
+`INFO@eastgate.example` from purchases). One builder serves all four paths, so there was nothing
+to change per path: the browser stitch and recipe replay (both go through the applier), the
+Export SQL script (`sql-script.ts` calls `buildJoinChainSql`) and MCP (same controller).
+`stitch-applier.join.test.ts` pinned the old plain `ON` for a text key; it now pins the
+normalized form.
+
+Why this was needed: before, the join compared the cleaned copies' raw text. Cleanups only
+unify casing inside one table, so an email written `LI.WEI@...` in billing and `li.wei@...` in
+the CRM did not join unless billing happened to hold both spellings.
+
+### 2. Tests
+
+- **Fixtures** (`join-key.fixtures.duckdb.test.ts`): the result has 5 rows, no NULL in any
+  cell, Eastgate Foods (`INFO@eastgate.example`) has `Annual_Spend` 5400, and the email column
+  keeps the purchases spelling.
+- **April flow** (`business-recipe.duckdb.test.ts`: load business demo, stitch, save recipe, load
+  Business: next month, apply recipe, confirm and stitch): 24 rows, no fan-out; every invoice
+  whose email is in `crm_customers` (compared lower/trim) has a non-null `Plan` and
+  `Customer_Name`. **Unmatched April rows: 0 of 24.** Every April customer is in the April CRM
+  file, including the 2 new ones. With the old comparison the same flow left **5 of 24** rows
+  without CRM columns (measured by switching the new comparison off for one run). One data
+  change: Crestview Worldwide had a blank `Plan` in the April CRM file (copied from March), which
+  made a correct match look unmatched, so it is now `Starter`. The blank and `N/A` revenues stay
+  as the missing-value mess.
+- **March business unchanged** (`join-key.business.duckdb.test.ts`): 48 rows, same columns, and
+  the sha256 of the sorted result snapshot is identical to the one taken before this change
+  (`fc2211a5...ae47`). Every existing golden passes unchanged.
+- **Fan-out uses the same key** (`join-key.normalized.duckdb.test.ts`): left `Ab` joins right
+  `ab` and ` AB `, so 2 anchor rows give 3 result rows and `fannedOut` is true. With the old raw
+  comparison it was 2 rows and no warning. The fan-out count compares anchor rows with result
+  rows of the join that was built, so it follows the key with no separate code. The same file
+  checks the SQL for a text key, and a number key and a text-vs-number key staying plain.
+
+Cost to know: a join on an expression cannot use a plain hash on the stored column. DuckDB
+still hash-joins the computed keys, so it is fine at these sizes; it is only a difference for
+very large tables. The MVP-bundle crash note concerns `GROUP BY` on a `regexp_replace`; a join
+on one runs fine in the node bundle used by the tests and in the real browser (e2e).
+
+### 3. Landing demo buttons
+
+Order and labels: `Load business demo` (primary, START HERE), `Business: next month`,
+`Load demo data`, `Load mismatched demo`, `Lab: next month`. Captions: Business: next month =
+"April invoices: apply the March recipe"; Lab: next month = "New lab rows: apply a lab recipe".
+The two next-month buttons used to be "Load next month's business files" and "Load next month's
+files"; their landing labels changed, so the e2e tests were updated. The Load demo menu labels
+are unchanged. The landing baseline test lists the five in the new order and still passes: all
+five share one row at 1280px (spacing from the previous commit).

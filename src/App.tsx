@@ -134,9 +134,9 @@ const PREVIEW_ROW_LIMIT = 20
 const LOAD_BUSINESS_DEMO_LABEL = 'Load business demo'
 const LOAD_MISMATCHED_DEMO_LABEL = 'Load mismatched demo'
 /** Idle label for the third demo action: next month's files (Recipes demo). */
-const LOAD_NEXT_MONTH_DEMO_LABEL = "Load next month's files"
+const LOAD_NEXT_MONTH_DEMO_LABEL = 'Lab: next month'
 /** Idle label for the business month-two demo (Recipes on the business data). */
-const LOAD_BUSINESS_NEXT_MONTH_DEMO_LABEL = "Load next month's business files"
+const LOAD_BUSINESS_NEXT_MONTH_DEMO_LABEL = 'Business: next month'
 
 /**
  * The lab stack: the single DuckDB service plus the controller wired to it and
@@ -886,6 +886,17 @@ function App() {
                 tag="Start here"
                 primary
               />
+              {/*
+                Second demo action: next month's business files (Recipes on the
+                business data): the same CRM plus the April 2026 billing export.
+              */}
+              <DemoDataControl
+                onLoadDemo={handleLoadBusinessNextMonthDemo}
+                label={LOAD_BUSINESS_NEXT_MONTH_DEMO_LABEL}
+                caption="April invoices: apply the March recipe"
+                alreadyLoaded={loadedDemos.has('businessNextMonth')}
+                disabled={resetting}
+              />
               <DemoDataControl
                 onLoadDemo={handleLoadDemo}
                 caption="Three messy lab files, typed automatically"
@@ -911,19 +922,8 @@ function App() {
               <DemoDataControl
                 onLoadDemo={handleLoadNextMonthDemo}
                 label={LOAD_NEXT_MONTH_DEMO_LABEL}
-                caption="Same messy patterns, new rows: try applying a recipe"
+                caption="New lab rows: apply a lab recipe"
                 alreadyLoaded={loadedDemos.has('nextMonth')}
-                disabled={resetting}
-              />
-              {/*
-                Fourth demo action: next month's business files (Recipes on the
-                business data): the same CRM plus the April 2026 billing export.
-              */}
-              <DemoDataControl
-                onLoadDemo={handleLoadBusinessNextMonthDemo}
-                label={LOAD_BUSINESS_NEXT_MONTH_DEMO_LABEL}
-                caption="April invoices and two new customers: apply the March recipe"
-                alreadyLoaded={loadedDemos.has('businessNextMonth')}
                 disabled={resetting}
               />
             </div>
