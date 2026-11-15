@@ -29,6 +29,26 @@ test('month one, recipe, month two', async ({ page }) => {
   const ask = page.getByRole('region', { name: 'Ask the Lab' })
   await expect(ask.getByRole('row', { name: /Swamp Wraith\s+3/ })).toBeVisible()
 
+  // "Ask about this" prefills the Ask input for that table.
+  await page.getByRole('button', { name: 'Ask about monsters' }).click()
+  await expect(page.getByRole('textbox', { name: 'Question' })).toHaveValue('In monsters: ')
+
+  // One follow-up question. It needs the AI proxy, which the dev server does
+  // not provide, so skip this step gracefully when AI is off.
+  const aiOff = await page.getByText('AI is off, starter questions still work.').isVisible()
+  if (aiOff) {
+    test.info().annotations.push({
+      type: 'skipped-step',
+      description: 'Follow-up question skipped: the AI proxy is not available in this environment.',
+    })
+  } else {
+    await page.getByRole('textbox', { name: 'Question' }).fill('now only the Swamp Wraith ones')
+    await page.getByRole('button', { name: 'Ask', exact: true }).click()
+    await expect(
+      page.getByLabel('Latest answer').or(page.getByRole('alert')).or(page.getByRole('status').filter({ hasText: 'unavailable' })),
+    ).toBeVisible()
+  }
+
   // Autopsy on monsters.
   await page.getByRole('button', { name: 'Autopsy of monsters' }).click()
   await expect(page.getByLabel('Health score 81 out of 100')).toBeVisible()

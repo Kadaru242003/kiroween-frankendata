@@ -20,7 +20,7 @@ Built for the Kiroween 2026 hackathon, Frankenstein category: a mad-scientist la
 - **Typed intake:** CSV (PapaParse) and XLSX (SheetJS) are parsed and type-inferred through messy real-world values (currency, percents, mixed date formats, null tokens).
 - **Deterministic rules engine for stitching, with an optional AI enhancement:** each proposal carries an engine badge, and the AI can surface "AI found this" discoveries that the rules alone scored too low to show.
 - **Before and after approval screen:** review every match and cleanup as a diff, then approve, reject, or edit (re-pair a match to another column, or change a category's canonical value), with single-step undo. 
-- **Ask the Lab:** plain-English questions become DuckDB SQL, rendered as a table with an optional chart and a full CSV export.
+- **Ask the Lab:** plain-English questions become DuckDB SQL, rendered as a table with an optional bar or line chart and a full CSV export. Short follow-ups ("now only the High ones") use the last 3 turns as context, sending only question text, SQL, column names and row counts, never result values. "New topic" clears the thread, and "Ask about this" on a table card starts a question about that table.
 - **Starter questions that work with AI off:** deterministic example questions per table run with no LLM call at all.
 - **Little Frank:** a mascot stitched together from spreadsheet cells who reacts to every step: asleep until you load data, alive after a lightning strike, goggles while you review, bandages when you stitch, a chart when you get an answer. Click him to poke him.
 
@@ -126,7 +126,7 @@ The same engine that runs in the browser is also available to AI agents through 
 
 ### End-to-end browser test
 
-`npm run test:e2e` runs one Playwright spec (`e2e/demo.spec.ts`) in a real browser against the Vite dev server. It is not part of `npm test`. First run `npx playwright install chromium`. The spec loads the mismatched demo, stitches with all suggestions (12 rows), checks the species chip (Swamp Wraith 3), opens the Autopsy on monsters (81), saves a recipe, resets, loads next month's files, applies the recipe and expects 12 rows.
+`npm run test:e2e` (add `E2E_SLOWMO=600` and `-- --headed` to watch it) runs one Playwright spec (`e2e/demo.spec.ts`) in a real browser against the Vite dev server. It is not part of `npm test`. First run `npx playwright install chromium`. The spec loads the mismatched demo, stitches with all suggestions (12 rows), checks the species chip (Swamp Wraith 3), opens the Autopsy on monsters (81), saves a recipe, resets, loads next month's files, applies the recipe and expects 12 rows.
 
 For agent-driven browser checks, the Playwright MCP server is registered in `.kiro/settings/mcp.json` but disabled by default. Enable it in the MCP Server view in Kiro, start `npm run dev`, then ask Kiro to open the app and click through the demo.
 

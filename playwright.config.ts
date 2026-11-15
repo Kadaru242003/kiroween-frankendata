@@ -5,6 +5,11 @@ import { defineConfig, devices } from '@playwright/test'
 // `npm run test:e2e` after `npx playwright install chromium`.
 const PORT = 5199
 
+// E2E_SLOWMO=600 npm run test:e2e -- --headed runs at a watchable speed.
+// Unset or not a positive integer: no slow motion (the default stays fast).
+const parsedSlowMo = Number.parseInt(process.env.E2E_SLOWMO ?? '', 10)
+const slowMo = Number.isFinite(parsedSlowMo) && parsedSlowMo > 0 ? parsedSlowMo : 0
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 120_000,
@@ -16,7 +21,12 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], launchOptions: { slowMo } },
+    },
+  ],
   webServer: {
     command: `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}`,

@@ -38,10 +38,10 @@ Core first (thread, chart choice, reset lock, proxy and controller changes), the
   - Smoke tests for the disabled props and the status
   - _Design: Reset lock; Requirements 5_
 - [x] 9. Checkpoint: `npm run build`, `npm run check:api`, `npm run mcp:build`, touched tests; commit
-- [ ] 10. Playwright slow mode and follow-up step
+- [x] 10. Playwright slow mode and follow-up step
   - `E2E_SLOWMO` in `playwright.config.ts`; follow-up step with graceful skip
   - _Design: Playwright slow mode; Requirements 6_
-- [ ] 11. Final checks and notes
+- [x] 11. Final checks and notes
   - Full `npm test`, `npm run build`, `npm run lint`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e`
   - README features, `NOTES.md`, commit
   - _Requirements: all_
