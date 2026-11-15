@@ -163,3 +163,24 @@
   outline: 1px dashed #39ff14;
   outline-offset: 4px;
 }
+
+/* Compact (toolbar) Apply recipe: the section dissolves into the toolbar row. */
+.apply-recipe--compact {
+  display: contents;
+}
+.apply-recipe--compact .apply-recipe__drop {
+  display: inline-flex;
+}
+.apply-recipe--compact .recipe-panel__button {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  box-sizing: border-box;
+}
+.apply-recipe--compact .recipe-panel__message,
+.apply-recipe--compact .recipe-panel__errors,
+.apply-recipe--compact .recipe-panel__result {
+  flex: 1 0 100%;
+  order: 5;
+}

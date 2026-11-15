@@ -60,7 +60,7 @@ export function generateBusinessChips(tables: readonly QueryableTable[]): Starte
     if (date && amount) {
       chips.push({
         tableName: billing.tableName,
-        question: "What is the invoiced amount by month (from invoice_date)?",
+        question: "What is the invoiced amount by month?",
         sql:
           `SELECT CAST(date_trunc('month', ${quoteIdent(date)}) AS DATE) AS month, ` +
           `SUM(${quoteIdent(amount)}) AS total_amount ` +

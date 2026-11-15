@@ -450,3 +450,10 @@
     animation: none;
   }
 }
+
+/* Done state of the sticky action bar after a successful stitch. */
+.approval-screen__done {
+  margin: 0;
+  color: var(--lab-green);
+  font-weight: 600;
+}

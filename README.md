@@ -11,7 +11,7 @@ Built for the Kiroween 2026 hackathon, Frankenstein category: a mad-scientist la
 1. Click **Reset lab** (if any tables are already loaded) to start clean.
 2. Click **Load business demo**: a CRM export (`crm_customers`, 22 rows) and a billing export (`billing_invoices`, 48 rows) that never agree. They have duplicate customers, casing and whitespace variants, mixed date formats, currency strings and nulls.
 3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch**, then **Apply & stitch**. The tables are joined on the email key (billing emails that differ in casing are cleaned first), giving 48 rows.
-4. In **Ask the Lab**, click the starter question "What is the monthly revenue by region in crm_customers?" for a bar chart, or "What is the invoiced amount by month (from invoice_date)?" for a line chart. Starter questions run with no AI at all.
+4. In **Ask the Lab**, click the starter question "What is the monthly revenue by region in crm_customers?" for a bar chart, or "What is the invoiced amount by month?" for a line chart. Starter questions run with no AI at all.
 5. Click **Autopsy** on the `crm_customers` card to see its health score (79), the breakdown, and the per-column findings.
 
 With AI on, the stitching screen can also surface "AI found this" for `client_name` and `Customer_Name`, a pair the rules scored too low (0.38) to show.

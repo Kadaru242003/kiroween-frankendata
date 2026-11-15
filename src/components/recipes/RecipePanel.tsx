@@ -38,6 +38,8 @@ export interface ApplyRecipeProps {
   outcome: RecipeApplyOutcome | null;
   /** When true (for example while Reset lab runs) the control is disabled. */
   disabled?: boolean;
+  /** Toolbar style: the button joins a row and the feedback spans below it. */
+  compact?: boolean;
 }
 
 /** "Apply recipe": a secondary button with a drop target, plus its feedback. */
@@ -46,6 +48,7 @@ export function ApplyRecipe({
   onReview,
   outcome,
   disabled = false,
+  compact = false,
 }: ApplyRecipeProps): JSX.Element {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,7 +91,7 @@ export function ApplyRecipe({
   };
 
   return (
-    <section className="apply-recipe" aria-label="Apply recipe">
+    <section className={`apply-recipe${compact ? " apply-recipe--compact" : ""}`} aria-label="Apply recipe">
       <div
         className={`apply-recipe__drop${dragging ? " apply-recipe__drop--active" : ""}`}
         onDragOver={(e) => {
@@ -98,7 +101,10 @@ export function ApplyRecipe({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <label className="recipe-panel__button recipe-panel__button--secondary">
+        <label
+          className="recipe-panel__button recipe-panel__button--secondary"
+          title="Reuse a saved stitch on new files"
+        >
           <span>{busy ? "Reading recipe..." : "Apply recipe"}</span>
           <input
             ref={inputRef}
@@ -113,7 +119,9 @@ export function ApplyRecipe({
             }}
           />
         </label>
-        <span className="recipe-panel__hint">Reuse a saved stitch on new files</span>
+        {compact ? null : (
+          <span className="recipe-panel__hint">Reuse a saved stitch on new files</span>
+        )}
       </div>
       <p className="recipe-panel__message" role="status" aria-live="polite">
         {message}

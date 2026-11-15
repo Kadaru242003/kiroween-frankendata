@@ -51,6 +51,7 @@
 .lab-subtitle {
   margin: 16px auto 0;
   max-width: 48ch;
+  text-wrap: balance;
   color: var(--text-secondary);
 }
 
@@ -168,13 +169,14 @@
   max-width: 420px;
 }
 
-/* The two demo buttons sit side by side beneath the drop zone, centered. */
+/* The four demo buttons sit on one baseline beneath the drop zone, centered. */
 .lab-intake__demos {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: 20px;
+  gap: 28px 20px;
+  padding-top: 12px;
 }
 
 .lab-intake .frankendata-demo-control {
@@ -491,4 +493,29 @@ body::before {
   min-height: 1.2em;
   color: var(--text-secondary);
   font-size: 13px;
+}
+
+/* Compact toolbar shown once tables are loaded (replaces the hero). */
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.lab-toolbar__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.lab-toolbar .lab-reset__button {
+  height: 36px;
+}
+.lab-toolbar .lab-reset__button {
+  margin-top: 0;
+  padding: 0 14px;
+  box-sizing: border-box;
 }

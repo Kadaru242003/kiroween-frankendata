@@ -86,11 +86,26 @@ export function AskTheLabPanel({
   // Set only by the Ask form, so the newest answer takes focus only when the
   // user submitted the question (never for chips or history buttons).
   const focusNextOutcome = useRef(false);
+  // Any question the user asks scrolls its new answer into view (smoothly,
+  // instantly under prefers-reduced-motion).
+  const scrollNextOutcome = useRef(false);
+  // After the first question in a topic the starters collapse into a toggle.
+  const [startersExpanded, setStartersExpanded] = useState(false);
 
   useEffect(() => {
     if (!loading && outcome && focusNextOutcome.current) {
       focusNextOutcome.current = false;
       outcomeRef.current?.focus({ preventScroll: true });
+    }
+    if (!loading && outcome && scrollNextOutcome.current) {
+      scrollNextOutcome.current = false;
+      const reduce =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      outcomeRef.current?.scrollIntoView?.({
+        behavior: reduce ? "auto" : "smooth",
+        block: "nearest",
+      });
     }
   }, [loading, outcome]);
 
@@ -103,6 +118,7 @@ export function AskTheLabPanel({
   useEffect(() => {
     setQuestion("");
     setTopicNote("");
+    setStartersExpanded(false);
   }, [epoch]);
 
   const prefillNonce = prefill?.nonce;
@@ -130,6 +146,7 @@ export function AskTheLabPanel({
     async (text: string) => {
       const trimmed = text.trim();
       if (trimmed.length === 0 || loading) return;
+      scrollNextOutcome.current = true;
       const thread = toThread(store.getState().turns);
       store.pushQuestion(trimmed);
       store.setLoading(true);
@@ -146,6 +163,7 @@ export function AskTheLabPanel({
   const runChip = useCallback(
     async (chip: StarterChip) => {
       if (loading) return;
+      scrollNextOutcome.current = true;
       store.pushQuestion(chip.question);
       store.setLoading(true);
       const result = await controller.runSql(chip.sql, chip.question, chip.chart);
@@ -200,6 +218,7 @@ export function AskTheLabPanel({
             className="ask-panel__new-topic"
             onClick={() => {
               store.clearThread();
+              setStartersExpanded(false);
               setQuestion("");
               setTopicNote("Started a new topic");
               inputRef.current?.focus({ preventScroll: true });
@@ -233,8 +252,20 @@ export function AskTheLabPanel({
         </div>
       ) : null}
 
-      <StarterChips chips={visibleChips} onRun={(c) => void runChip(c)} disabled={loading} />
-      {hasOverflowChips ? (
+      {turns.length > 0 ? (
+        <button
+          type="button"
+          className="ask-panel__chips-toggle"
+          aria-expanded={startersExpanded}
+          onClick={() => setStartersExpanded((v) => !v)}
+        >
+          Starter questions
+        </button>
+      ) : null}
+      {turns.length === 0 || startersExpanded ? (
+        <StarterChips chips={visibleChips} onRun={(c) => void runChip(c)} disabled={loading} />
+      ) : null}
+      {hasOverflowChips && (turns.length === 0 || startersExpanded) ? (
         <button
           type="button"
           className="ask-panel__chips-toggle"
