@@ -60,6 +60,7 @@ import {
 import type { StitchStore } from "./stitch-store";
 import { budgetAiRequest, isAiEnabled } from "./ai-budget";
 import { validateAiResponse } from "./ai-validation";
+import { computeColumnKeyStats } from "./key-stats";
 import {
   MATCH_DISPLAY_THRESHOLD,
   type AiProvider,
@@ -354,7 +355,9 @@ export function createStitchController(
       samples
     );
 
-    const proposals: ProposalSet = { matches, cleanings, aiUsed };
+    // How key-like each column is: drives the default join key and anchor.
+    const columnStats = computeColumnKeyStats(samples, cleanings);
+    const proposals: ProposalSet = { matches, cleanings, aiUsed, columnStats };
     store.setProposals(proposals, datasetVersion, isRecompute);
     return proposals;
   }

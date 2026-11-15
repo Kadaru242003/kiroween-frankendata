@@ -123,13 +123,14 @@ describe("cleaning rules over a real DuckDB (full-column counts)", () => {
       { name: "name", type: "string" },
       { name: "kind", type: "string" },
     ];
-    // "Ghoul" / "ghoul " / " ghoul" differ only by case/whitespace on name,
-    // so with normalized grouping rows 1–3 collapse to one group (2 dups).
-    // Rows 4–5 are exact duplicates (1 dup). Row 6 is unique.
+    // "Ghoul" / "ghoul" / " Ghoul " differ only by case/whitespace on name,
+    // so with normalized grouping (trim, collapse whitespace, fold case) rows
+    // 1–3 collapse to one group (2 dups). Rows 4–5 are exact duplicates (1 dup).
+    // Row 6 is unique.
     const rows = [
       ["Ghoul", "undead"],
-      ["ghoul", "undead"], // case-only dup of row 1 after normalization? No:
-      [" Ghoul ", "undead"], // whitespace dup of row 1 after normalization.
+      ["ghoul", "undead"], // case-only dup of row 1.
+      [" Ghoul ", "undead"], // whitespace dup of row 1.
       ["Wraith", "spirit"],
       ["Wraith", "spirit"], // exact dup of row 4.
       ["Ogre", "giant"],
@@ -148,12 +149,11 @@ describe("cleaning rules over a real DuckDB (full-column counts)", () => {
     expect(dup).toBeDefined();
     expect(dup.target).toEqual({ tableName: "dups" });
 
-    // Normalized groups: {Ghoul,  Ghoul } (whitespace) → 1 removed;
-    // "ghoul" lowercases differently from "Ghoul" under the string key
-    // (trim/collapse only, not case), so it stays distinct. Wraith exact dup
-    // → 1 removed. Total removed = 2, so 6 → 4.
+    // Normalized groups: {Ghoul, ghoul,  Ghoul } → 2 removed (case is folded,
+    // because the case cleanups make such rows identical); Wraith exact dup
+    // → 1 removed. Total removed = 3, so 6 → 3.
     expect(dup.before).toEqual({ rowCount: 6 });
-    expect(dup.after).toEqual({ rowCount: 4 });
+    expect(dup.after).toEqual({ rowCount: 3 });
     expect(dup.reason).toMatch(/duplicate/i);
     expect(dup.reason).not.toContain("\n");
   });

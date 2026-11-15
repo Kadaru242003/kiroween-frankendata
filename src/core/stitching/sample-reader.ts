@@ -103,13 +103,40 @@ export function createSampleReader(db: DuckDBService): SampleReader {
     return samples;
   }
 
+  /**
+   * Exact non-null and distinct-raw totals for a column whose sample list was
+   * cut at the cap. Same grouped-by-raw-value shape as the sample query, so it
+   * is safe on the MVP bundle.
+   */
+  async function readColumnTotals(
+    tableName: string,
+    columnName: string
+  ): Promise<{ nonNull: number; rawDistinct: number } | null> {
+    const col = quoteIdent(columnName);
+    const table = quoteIdent(tableName);
+    const sql =
+      `SELECT COUNT(*) AS d, COALESCE(SUM(n), 0) AS nn FROM (` +
+      `SELECT COUNT(*) AS n FROM ${table} WHERE ${col} IS NOT NULL GROUP BY ${col})`;
+    try {
+      const rows = await db.query<{ d: number | bigint; nn: number | bigint }>(sql);
+      const row = rows[0];
+      if (!row) return null;
+      return { nonNull: Number(row.nn), rawDistinct: Number(row.d) };
+    } catch {
+      return null;
+    }
+  }
+
   async function readTable(table: SampleSourceTable): Promise<TableSample> {
     const samplesByColumn: Record<string, SampleValue[]> = {};
+    const columnTotals: Record<string, { nonNull: number; rawDistinct: number }> = {};
     for (const column of table.schema) {
-      samplesByColumn[column.name] = await readColumnSamples(
-        table.tableName,
-        column.name
-      );
+      const samples = await readColumnSamples(table.tableName, column.name);
+      samplesByColumn[column.name] = samples;
+      if (samples.length >= MAX_SAMPLE_VALUES_PER_COLUMN) {
+        const totals = await readColumnTotals(table.tableName, column.name);
+        if (totals) columnTotals[column.name] = totals;
+      }
     }
     return {
       tableName: table.tableName,
@@ -117,6 +144,7 @@ export function createSampleReader(db: DuckDBService): SampleReader {
       // Copy so a caller mutating its LoadedTable.schema can't alias ours.
       schema: table.schema.map((c) => ({ ...c })),
       samplesByColumn,
+      ...(Object.keys(columnTotals).length > 0 ? { columnTotals } : {}),
     };
   }
 

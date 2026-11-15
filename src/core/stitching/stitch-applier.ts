@@ -205,8 +205,8 @@ function columnSelectExpr(
 /**
  * The normalization expression used to PARTITION the keep-first dedupe, mirroring
  * the duplicate-key logic in `cleaning-rules.ts`: text columns are
- * trim+collapsed (so rows differing only by whitespace collapse into one
- * partition); non-text columns are cast to VARCHAR. NULLs are coalesced to a
+ * trim+collapsed and lower-cased (so rows differing only by whitespace or case
+ * collapse into one partition); non-text columns are cast to VARCHAR. NULLs are coalesced to a
  * printable sentinel so two NULLs partition together (a literal NUL byte crashes
  * the MVP bundle).
  */
@@ -214,7 +214,7 @@ function duplicatePartitionExpr(column: ColumnSchema): string {
   const ident = quoteIdent(column.name);
   const nullSentinel = quoteString("\u2400NULL\u2400");
   if (column.type === "string") {
-    return `coalesce(${whitespaceExpr(ident)}, ${nullSentinel})`;
+    return `coalesce(lower(${whitespaceExpr(ident)}), ${nullSentinel})`;
   }
   return `coalesce(CAST(${ident} AS VARCHAR), ${nullSentinel})`;
 }
@@ -677,12 +677,17 @@ function orientMatch(
  * @param tables       every participating table (anchor + candidates).
  * @param approvedMatches  the user-approved matches (any confidence).
  * @param anchorOverride   optional logical anchor table name (Req 7.2).
+ * @param chosenKeyIds     ids of the matches the plan chose as join keys
+ *                         (`StitchPlan.joinKeysByPair`). They are tried before
+ *                         any other match, so the key the user (or the default)
+ *                         picked is the one the join actually uses.
  */
 export function planJoinChain(
   n: number,
   tables: JoinTableInput[],
   approvedMatches: MatchProposal[],
-  anchorOverride?: string
+  anchorOverride?: string,
+  chosenKeyIds?: ReadonlySet<string>
 ): JoinChainPlan {
   const tableName = resultTableName(n);
   const anchor = selectAnchorTable(tables, anchorOverride);
@@ -690,8 +695,12 @@ export function planJoinChain(
 
   // Matches sorted by descending confidence, then stable id — the order Req 7.3
   // ("descending approved-match confidence") selects both the next table to
-  // join and its key.
+  // join and its key. Matches the plan chose as join keys come first.
+  const isChosenKey = (m: MatchProposal): number => (chosenKeyIds?.has(m.id) ? 0 : 1);
   const sortedMatches = [...approvedMatches].sort((a, b) => {
+    if (isChosenKey(a) !== isChosenKey(b)) {
+      return isChosenKey(a) - isChosenKey(b);
+    }
     if (b.confidence !== a.confidence) {
       return b.confidence - a.confidence;
     }
@@ -913,9 +922,10 @@ export function buildJoinChainSql(
   n: number,
   tables: JoinTableInput[],
   approvedMatches: MatchProposal[],
-  anchorOverride?: string
+  anchorOverride?: string,
+  keyMatchIds?: ReadonlySet<string>
 ): JoinChainSql {
-  const plan = planJoinChain(n, tables, approvedMatches, anchorOverride);
+  const plan = planJoinChain(n, tables, approvedMatches, anchorOverride, keyMatchIds);
   const { anchor, steps, columns, tableName } = plan;
 
   const alias = (logical: string): string => quoteIdent(logical);
@@ -975,13 +985,15 @@ export async function applyJoinChain(
   n: number,
   tables: JoinTableInput[],
   approvedMatches: MatchProposal[],
-  anchorOverride?: string
+  anchorOverride?: string,
+  keyMatchIds?: ReadonlySet<string>
 ): Promise<AppliedJoinChain> {
   const { tableName, createSql, columns, joinOrder } = buildJoinChainSql(
     n,
     tables,
     approvedMatches,
-    anchorOverride
+    anchorOverride,
+    keyMatchIds
   );
   await db.query(createSql);
   return { tableName, columns, joinOrder };
@@ -1195,7 +1207,8 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
       n,
       joinInputs,
       plan.approvedMatches,
-      plan.anchorTableName
+      plan.anchorTableName,
+      new Set(Object.values(plan.joinKeysByPair))
     );
     createdTableNames.push(joined.tableName);
 

@@ -421,7 +421,9 @@ function buildCategoryProposal(
 
 /**
  * A DuckDB expression that normalizes a cell for duplicate detection: text
- * columns are trimmed + whitespace-collapsed (matching {@link normalizeWhitespace});
+ * columns are trimmed, whitespace-collapsed (matching {@link normalizeWhitespace})
+ * and lower-cased, so rows that differ only by case ("Acme" and "ACME") count as
+ * duplicates, as they will after the case cleanups;
  * non-text columns are compared as-is (cast to VARCHAR for a stable, null-safe
  * key). NULLs are coalesced to a sentinel so two NULLs compare equal.
  */
@@ -433,8 +435,8 @@ function duplicateKeyExpr(column: ColumnSchema): string {
   // "duplicate", never corrupts data).
   const nullSentinel = `'\u2400NULL\u2400'`;
   if (column.type === "string") {
-    // trim + collapse internal whitespace, matching normalizeWhitespace.
-    const collapsed = `regexp_replace(trim(${ident}), '\\s+', ' ', 'g')`;
+    // trim + collapse internal whitespace (matching normalizeWhitespace), then fold case.
+    const collapsed = `lower(regexp_replace(trim(${ident}), '\\s+', ' ', 'g'))`;
     return `coalesce(${collapsed}, ${nullSentinel})`;
   }
   return `coalesce(CAST(${ident} AS VARCHAR), ${nullSentinel})`;

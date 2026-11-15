@@ -328,6 +328,8 @@ export function mapRecipeItems(
     ),
     cleanings: proposals.cleanings,
     aiUsed: proposals.aiUsed,
+    // Keep the key-likeness stats so the default key and anchor stay informed.
+    ...(proposals.columnStats ? { columnStats: proposals.columnStats } : {}),
   };
   return {
     proposals: augmented,
