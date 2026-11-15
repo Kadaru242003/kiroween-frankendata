@@ -68,7 +68,7 @@ test('month one, recipe, month two', async ({ page }) => {
   await page.getByRole('button', { name: 'Lab: next month' }).click()
   await expect(page.getByRole('region', { name: 'Preview of monsters', exact: true })).toBeVisible()
   await page.getByLabel('Apply recipe (JSON file)').setInputFiles(recipePath)
-  await expect(page.getByText(/proposals? pre-approved/).first()).toBeVisible()
+  await expect(page.getByText(/steps? pre-approved/).first()).toBeVisible()
   await page.getByRole('button', { name: 'Review in stitching table' }).click()
   await page.getByRole('button', { name: /Confirm & stitch/ }).click()
   await page.getByRole('button', { name: 'Apply & stitch' }).click()
@@ -123,7 +123,13 @@ test("business month two: the March recipe applies to next month's business file
   ).toBeVisible()
   await page.getByLabel('Apply recipe (JSON file)').setInputFiles(recipePath)
   // Every step pre-approved, nothing left over.
-  await expect(page.getByText(/proposals? pre-approved, 0 not applied/).first()).toBeVisible()
+  await expect(page.getByText(/steps? pre-approved, 0 not applied/).first()).toBeVisible()
+  // The status is shown once, as one line, with the review button; centered under the toolbar.
+  await expect(page.getByText(/pre-approved/)).toHaveCount(1)
+  await expect(page.getByText('Recipe applied: ', { exact: false })).toHaveCount(1)
+  const line = (await page.getByText(/pre-approved/).boundingBox())!
+  const bar = (await page.getByRole('region', { name: 'Lab toolbar' }).boundingBox())!
+  expect(Math.abs(line.x + line.width / 2 - (bar.x + bar.width / 2))).toBeLessThan(3)
   await expect(page.getByRole('region', { name: 'Recipe items not applied' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Review in stitching table' }).click()
   await page.getByRole('button', { name: /Confirm & stitch/ }).click()
@@ -162,6 +168,37 @@ test('Load demo menu order, and a demo replaces the loaded tables while Add file
   })
   await expect(page.getByRole('region', { name: 'Preview of extra', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Preview of monsters', exact: true })).toBeVisible()
+})
+
+test('Apply recipe tooltip: hover and focus only, below the button, covering no other control', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+  const tooltip = page.getByRole('tooltip')
+  await expect(tooltip).toBeHidden()
+  const label = page.getByText('Apply recipe', { exact: true })
+  const covered = async () => {
+    const tip = (await tooltip.boundingBox())!
+    const btn = (await label.boundingBox())!
+    expect(tip.y).toBeGreaterThanOrEqual(btn.y + btn.height)
+    const boxes = await page.locator('button:visible, a:visible, label:visible, input:visible').evaluateAll((els) =>
+      els.map((el) => ({ name: (el.textContent || el.getAttribute('aria-label') || '').trim(), r: el.getBoundingClientRect() })),
+    )
+    for (const b of boxes) {
+      if (b.r.width === 0 || b.r.height === 0 || b.name === 'Apply recipe') continue
+      const overlap = tip.x < b.r.right && tip.x + tip.width > b.r.left && tip.y < b.r.bottom && tip.y + tip.height > b.r.top
+      expect(overlap, 'tooltip covers: ' + b.name).toBe(false)
+    }
+  }
+  await label.hover()
+  await expect(tooltip).toBeVisible()
+  await expect(tooltip).toHaveText('Reuse a saved stitch on new files')
+  await covered()
+  await page.mouse.move(5, 5)
+  await expect(tooltip).toBeHidden()
+  await page.getByLabel('Apply recipe (JSON file)').focus()
+  await expect(tooltip).toBeVisible()
+  await covered()
 })
 
 test('Autopsy opens and scrolls into view after stitching and asking, on every table', async ({ page }) => {

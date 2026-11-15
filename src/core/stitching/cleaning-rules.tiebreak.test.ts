@@ -29,3 +29,29 @@ describe("canonical tie-break", () => {
     expect(mostFrequentSurfaceForm([e("X")])).toBe("X");
   });
 });
+
+describe("canonical tie-break for emails, URLs and identifiers", () => {
+  it("prefers the all-lowercase variant when one exists", () => {
+    expect(
+      mostFrequentSurfaceForm([e("Jane.Doe@Northwind-Analytics.Example"), e("jane.doe@northwind-analytics.example")])
+    ).toBe("jane.doe@northwind-analytics.example");
+    expect(mostFrequentSurfaceForm([e("HTTPS://Example.com/A"), e("https://example.com/a")])).toBe("https://example.com/a");
+    expect(mostFrequentSurfaceForm([e("Order_Id_42"), e("order_id_42"), e("ORDER_ID_42")])).toBe("order_id_42");
+    expect(mostFrequentSurfaceForm([e("Acme.Corp"), e("acme.corp")])).toBe("acme.corp");
+  });
+  it("still takes the most frequent variant, and the best of the rest when there is no lowercase one", () => {
+    expect(mostFrequentSurfaceForm([e("Jane.Doe@X.Example", 2), e("jane.doe@x.example", 1)])).toBe("Jane.Doe@X.Example");
+    expect(mostFrequentSurfaceForm([e("JANE.DOE@X.EXAMPLE"), e("Jane.Doe@X.Example")])).toBe("JANE.DOE@X.EXAMPLE");
+  });
+  it("keeps Title Case for name-like text", () => {
+    expect(caseShapeRank("jane doe")).toBe(2);
+    expect(mostFrequentSurfaceForm([e("jane doe"), e("Jane Doe")])).toBe("Jane Doe");
+    expect(mostFrequentSurfaceForm([e("swamp"), e("Swamp")])).toBe("Swamp");
+    expect(mostFrequentSurfaceForm([e("Jean-Luc"), e("jean-luc")])).toBe("Jean-Luc");
+  });
+  it("ranks a lowercase identifier first and leaves digits-only text alone", () => {
+    expect(caseShapeRank("jane.doe@x.example")).toBe(0);
+    expect(caseShapeRank("Jane.Doe@X.Example")).toBe(2);
+    expect(caseShapeRank("123")).toBe(2);
+  });
+});

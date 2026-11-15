@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadBusinessFiles } from "../business-demo";
 import { assembleStitchPlan } from "../stitching/plan-assembly";
 import type { ApprovalDecision } from "../stitching/types";
-import { loadBusinessNextMonthFiles } from "./business-next-month-demo";
+import { BUSINESS_NEXT_MONTH_BILLING_CSV, loadBusinessNextMonthFiles } from "./business-next-month-demo";
 import { applyRecipeText } from "./recipe-apply";
 import { buildRecipe, serializeRecipe } from "./recipe-builder";
 import { applyRecipeOverrides } from "./recipe-mapper";
@@ -97,6 +97,18 @@ describe("business month two", () => {
     const unmatched = result.filter((r) => !crmEmails.has(String(r.email).trim().toLowerCase()));
     expect(inCrm.filter((r) => r.Plan === null || r.Plan === undefined)).toEqual([]);
     expect(inCrm.filter((r) => r.Customer_Name === null || r.Customer_Name === undefined)).toEqual([]);
+    // Email casing: every email in the stitched result is lowercase when a
+    // lowercase variant exists in the billing column, and the capitalized
+    // Jane.Doe spelling never wins the tie.
+    const raw = new Set(
+      BUSINESS_NEXT_MONTH_BILLING_CSV.split("\n").slice(1).filter(Boolean).map((l) => l.split(",")[1])
+    );
+    const emails = result.map((r) => String(r.email));
+    for (const e of emails) {
+      if (raw.has(e.toLowerCase())) expect(e, e).toBe(e.toLowerCase());
+    }
+    expect(emails).not.toContain("Jane.Doe@Northwind-Analytics.Example");
+    expect(emails.filter((e) => e === "jane.doe@northwind-analytics.example")).toHaveLength(2);
     // Every April invoice belongs to a CRM customer (the 2 new ones are in the CRM file).
     expect(unmatched).toHaveLength(0);
     expect(inCrm).toHaveLength(24);

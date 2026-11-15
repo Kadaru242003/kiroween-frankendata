@@ -6,7 +6,7 @@
  * navigation to the approval screen happens only from the explicit "Review in
  * stitching table" button.
  */
-import { useCallback, useRef, useState, type DragEvent, type JSX } from "react";
+import { useCallback, useId, useRef, useState, type DragEvent, type JSX } from "react";
 import type {
   NotAppliedItem,
   RecipeIssue,
@@ -41,6 +41,11 @@ export interface ApplyRecipeProps {
   compact?: boolean;
 }
 
+/** The one status line shown after a recipe was applied. */
+export function recipeAppliedLine(preApproved: number, notApplied: number): string {
+  return `Recipe applied: ${preApproved} ${preApproved === 1 ? "step" : "steps"} pre-approved, ${notApplied} not applied.`;
+}
+
 /** "Apply recipe": a secondary button with a drop target, plus its feedback. */
 export function ApplyRecipe({
   onApplyRecipe,
@@ -53,6 +58,7 @@ export function ApplyRecipe({
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const tooltipId = useId();
 
   const applyFile = useCallback(
     async (file: File) => {
@@ -67,11 +73,9 @@ export function ApplyRecipe({
         }
         const text = await file.text();
         const res = await onApplyRecipe(text);
-        setMessage(
-          res.ok
-            ? `Recipe applied: ${res.preApproved} ${res.preApproved === 1 ? "proposal" : "proposals"} pre-approved, ${res.notApplied.length} not applied.`
-            : "That file is not a valid recipe, so nothing was changed."
-        );
+        // A successful apply is shown once, from `outcome` (below). Only a
+        // failure has its own message here.
+        setMessage(res.ok ? "" : "That file is not a valid recipe, so nothing was changed.");
       } catch {
         setMessage("The recipe file could not be read, so nothing was changed.");
       } finally {
@@ -100,10 +104,8 @@ export function ApplyRecipe({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <label
-          className="recipe-panel__button recipe-panel__button--secondary"
-          title="Reuse a saved stitch on new files"
-        >
+        <span className="apply-recipe__anchor">
+        <label className="recipe-panel__button recipe-panel__button--secondary">
           <span>{busy ? "Reading recipe..." : "Apply recipe"}</span>
           <input
             ref={inputRef}
@@ -111,6 +113,7 @@ export function ApplyRecipe({
             accept=".json,application/json"
             className="recipe-panel__file"
             aria-label="Apply recipe (JSON file)"
+            aria-describedby={tooltipId}
             disabled={busy || disabled}
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -118,12 +121,16 @@ export function ApplyRecipe({
             }}
           />
         </label>
-        {compact ? null : (
-          <span className="recipe-panel__hint">Reuse a saved stitch on new files</span>
-        )}
+        {/* Tooltip: shown on hover and keyboard focus only, below the button. */}
+        <span id={tooltipId} role="tooltip" className="apply-recipe__tooltip">
+          Reuse a saved stitch on new files
+        </span>
+        </span>
       </div>
       <p className="recipe-panel__message" role="status" aria-live="polite">
-        {message}
+        {outcome && outcome.ok
+          ? recipeAppliedLine(outcome.preApproved, outcome.notApplied.length)
+          : message}
       </p>
       {outcome && !outcome.ok ? (
         <div className="recipe-panel__errors" role="alert">
@@ -142,10 +149,6 @@ export function ApplyRecipe({
       ) : null}
       {outcome && outcome.ok ? (
         <div className="recipe-panel__result">
-          <p>
-            {outcome.preApproved} {outcome.preApproved === 1 ? "proposal" : "proposals"} pre-approved,{" "}
-            {outcome.notApplied.length} not applied.
-          </p>
           <button type="button" className="recipe-panel__button recipe-panel__button--secondary" onClick={onReview}>
             Review in stitching table
           </button>

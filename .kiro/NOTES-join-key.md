@@ -196,3 +196,48 @@ The two next-month buttons used to be "Load next month's business files" and "Lo
 files"; their landing labels changed, so the e2e tests were updated. The Load demo menu labels
 are unchanged. The landing baseline test lists the five in the new order and still passes: all
 five share one row at 1280px (spacing from the previous commit).
+
+## Follow-up commit: polish: email casing, recipe status, tooltip
+
+### 1. Casing tie-break for emails, URLs and identifiers
+
+`caseShapeRank` (`cleaning-rules.ts`) now separates two kinds of text. A value is
+identifier-like (`looksLikeIdentifier`) when it contains `@` or `://`, or has no spaces and a
+dot, underscore or digit (`order_id_42`, `acme.corp`). For those, the all-lowercase variant ranks
+0 and every other casing ranks 2, so a frequency tie goes to the lowercase one (else the
+lexicographically smallest, as before). Name-like text (a space, or plain letters like `Swamp`,
+`Jean-Luc`) keeps the old Title Case, mixed, other order. Text with no letters (`123`) keeps its
+old rank. Only ties are affected: a more frequent variant still wins, so `Jane.Doe@X.Example`
+seen twice beats `jane.doe@x.example` seen once. `mostFrequentSurfaceForm` uses the same rank,
+so the existing tie-break property test passes unchanged.
+
+Regression test (`business-recipe.duckdb.test.ts`, the April flow: business demo, stitch, recipe,
+Business: next month, apply, confirm): every email in the stitched result is lowercase when a
+lowercase variant exists in the April billing column, `Jane.Doe@Northwind-Analytics.Example`
+never appears, and both Jane Doe invoices read `jane.doe@northwind-analytics.example`. Emails
+that exist only in another casing in the file (`LI.WEI@...`, `Tom.Ainsley@...`) stay as written,
+because there is no lowercase variant to prefer. Unit tests are in
+`cleaning-rules.tiebreak.test.ts`. The "Northwind Analytics" test, its property test, the March
+business result (hash identical to the previous commit) and all goldens are unchanged.
+
+### 2. Recipe status shown once
+
+After Apply recipe there is one line, "Recipe applied: N steps pre-approved, M not applied." (1
+step for one), in the existing polite live region, with the "Review in stitching table" button
+below it. The second, larger line is gone, and so is the old "proposals" wording. The line now comes
+from the App's apply outcome, so it also clears on Reset lab (the old text stayed). It is centered
+under the toolbar (`text-align` and `align-items` on the compact layout); e2e checks it appears
+once and that its center is within 3px of the toolbar's center. The not-applied list still
+shows under it when there are items.
+
+### 3. Tooltip on Apply recipe
+
+The hint was the browser's `title` tooltip, which the browser places wherever it likes (over
+Stitch tables). It is now a real tooltip: `role="tooltip"`, linked with `aria-describedby`, shown
+only on hover and keyboard focus of the Apply recipe control, positioned directly below that
+button and never over it. No animation. Kept (not removed): e2e hovers and focuses it with the
+toolbar and the Stitch tables button on screen and asserts the tooltip box intersects no other
+button, label or input and sits below the Apply recipe button.
+
+Gate: `npm test`, `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e`
+(8 passed) all pass.
