@@ -206,3 +206,7 @@ These constants SHALL be exposed as named values in the implementation so that t
 2. THE AskTheLab SHALL NOT save or persist queries.
 3. THE AskTheLab SHALL NOT maintain multi-turn chat memory across questions; each AskQuestion is answered independently (the RepairCall in Requirement 6 is a single follow-up for one failed query, not conversational memory).
 4. THE AskTheLab SHALL NOT provide PDF export.
+
+## Implementation status notes
+
+Requirement 8 (charts): bar charts are implemented as written. Line charts were implemented later by the Smarter Ask feature. Pie charts are not implemented. The requirements above are left as originally written.

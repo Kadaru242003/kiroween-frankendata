@@ -202,3 +202,14 @@ Stage A is one pass. Stage B issues at most three small aggregate queries per co
 | 9.7 Golden findings on the mismatched demo | `autopsy-golden.duckdb.test.ts` | DuckDB golden |
 
 Unit tests cover the SQL builders, `numLit`, the score formulas and thresholds, Markdown escaping, JSON round trip, the date epoch conversion, and the engine on small hand-made tables. UI smoke tests cover the panel (partial and complete render, too-large message, error and retry), the export buttons, the Fix it button, the TablePreview Autopsy button, and Little Frank's magnifying glass. A performance test measures 100,000 rows by 20 columns.
+
+## Implementation notes and deviations
+
+The full list of decisions is in `NOTES.md` next to this file. The main differences from the plan:
+
+- **Duplicate semantics.** The report's `duplicateRows` is exact (`SELECT DISTINCT *`). The existing cleaning rule counts duplicates on whitespace-normalized keys, so the Fix it label reads "Remove duplicate rows (ignoring extra whitespace)" and applying it can remove at least as many rows as reported. Requirement 9.5 was reworded accordingly.
+- **Category variants** come from the existing rule's bounded sample, a documented exception to "full table".
+- **No `conversionFailures`**, because intake records none.
+- **The string-variants SQL** groups raw values first and normalizes each distinct value once. Grouping on a `regexp_replace` expression crashes the DuckDB-WASM MVP bundle, and the rewrite is also about 10 times faster.
+- **Fix it** is offered only for loaded tables, not for stitched results. It opens the approval screen in a cleanup-only mode (one table). Later it was changed to stay in place: the button turns into a disabled "Added" state and a sticky bar "N fixes added" with "Review in stitching table" does the navigation.
+- **MCP:** the same engine is exposed by the `frankendata_autopsy` tool (`allowFixes: false`).

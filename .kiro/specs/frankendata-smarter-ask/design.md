@@ -99,3 +99,11 @@ Provider failure and repair paths are unchanged (`ai-unavailable` or the friendl
 | 5 proxy thread validation | `src/core/chat/sql-proxy.thread.property.test.ts` |
 
 Other tests: `thread.test.ts`, `chart-choice.test.ts`, `ask-controller.thread.test.ts` (request carries a thread, no thread when empty, temporal outcome gets a line), `sql-proxy.thread.test.ts` (accepts a valid thread, prompt includes it, same codes), `ask-store.test.ts` additions, `LineChart.smoke.test.tsx`, `AskTheLabPanel.thread.smoke.test.tsx` (cards, New topic, focus, Ask about this prefill), `reset-lock.test.ts`, `ResetLocked.smoke.test.tsx` (disabled props), and the Playwright spec.
+
+## Implementation notes and deviations
+
+The full list is in `NOTES.md` next to this file. After the first release, two polish fixes changed behavior slightly:
+
+- **Reset and New topic:** `AskStore` has an `epoch` that `reset()` always bumps, so the panel clears its own input text on Reset lab. "New topic" clears the input and moves focus to it.
+- **One-shot prefill:** the "Ask about this" request is consumed after it is applied (`onPrefillHandled`) and is cleared by Reset lab, so a remount can never re-apply it.
+- **Follow-up prompt:** the proxy system prompt now tells the model to build a refinement from the most recent turn's SQL and keep its aggregation, grouping and ordering. A prompt test pins this line and the existing safety lines.

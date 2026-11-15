@@ -281,3 +281,13 @@ Golden test: with the mismatched demo loaded, plan the stitch (all proposals app
 - Recipe names reach SQL only after being matched to existing loaded table and column names (the mapper resolves every reference against `LoadedTable`s) and are then quoted by the existing builders. A recipe name that is not a loaded name never reaches SQL.
 - Recipe text is rendered as React text, never as markup.
 - Exports and the script never include more than the user's own table contents (exports) or no row values (recipe and script).
+
+## Implementation notes and deviations
+
+The full list is in `NOTES.md` next to this file. The main differences from the plan:
+
+- **Parquet export was removed.** In DuckDB-WASM the Parquet extension is a loadable extension fetched over the network, which conflicts with `security.md`. Export is CSV and Excel only. The optional `exportFileBytes` plumbing in the DuckDB service and the test harness is left in place and unused. The Parquet parts of the Export implementations section above no longer apply.
+- **Layout.** "Apply recipe" lives in the top area under the demo buttons and Reset lab and is visible whenever a table is loaded. The Recipes panel (Save recipe, Export SQL script, CSV and Excel for the stitched result) renders only while a stitched result exists, directly above Ask the Lab. Per-table CSV and Excel buttons are on each table preview card.
+- **SQL script.** Each source table is loaded with a typed `CREATE TABLE` plus `INSERT ... SELECT ... FROM read_csv(...)`, not one `CREATE TABLE AS`. The conversions are simpler than the app's (for example percent values are not divided by 100). The test runs the script in DuckDB and reproduces the app's stitched result.
+- **Next month demo:** `loadNextMonthFiles()` is a third demo button, "Load next month's files".
+- **Recipes in MCP:** the `frankendata_apply_recipe` tool uses the same validator, mapper and applier.

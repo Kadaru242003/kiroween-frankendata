@@ -101,7 +101,7 @@ This plan is ordered so **value lands early and the feature works fully with AI 
 
 ### Group G — optional polish
 
-- [ ] 13.* LineChart and PieChart
+- [ ] 13.* LineChart and PieChart (LineChart was implemented by the Smarter Ask feature; PieChart is not implemented and stays optional)
   - Implement `src/components/chat/charts/LineChart.tsx` and `PieChart.tsx` (hand-built SVG, lab theme, plain-text labels, ≥4.5:1), rendered when the validated `ChartSpec` type is `line`/`pie`; pie groups beyond `ASK_CHART_MAX_CATEGORIES` as "Other"
   - Unit/smoke tests for rendering
   - _Design: Charts; Requirements 8.1, 8.3, 8.4_

@@ -161,3 +161,15 @@ Other tests: `path-guard.test.ts`, one test file per tool handler (invalid input
 ## Feasibility gate
 
 Task 1 proves that the server boots over stdio and `load_files` works on the demo CSVs under Node, using a real subprocess smoke test. If the DuckDB node bundle or the core bundling cannot run under the built server, the run stops there and `NOTES.md` records exactly what failed.
+
+## Implementation notes and deviations
+
+The full list is in `NOTES.md` next to this file. The main differences from the plan:
+
+- **Bundling:** the server is bundled by Vite's SSR build through its JavaScript API (`mcp/build.mjs`), with packages left external. `mcp:build` therefore needs `npm install` first.
+- **`invalid-input`:** the SDK validates input before a handler runs and returns plain text, so `createFrankenDataServer` overrides the SDK's `createToolError` on the instance to return the structured `{ error: { code: "invalid-input" } }`.
+- **Query limits:** an unbounded query returns at most 1000 rows because the validator adds `LIMIT 1000`. Inline rows are capped at 200 with `truncated`.
+- **FROM-first shorthand** is rejected (`sql-rejected`). The property test's oracle was fixed to check that nothing outside the tool's own catalog lookups reaches DuckDB.
+- **Optional `createDb`** on the session options lets tests wrap the DuckDB service with a spy.
+- **Reset** returns every table name present before dropping, including `stitch_` tables.
+- **Dependencies:** `@modelcontextprotocol/sdk` and `zod` are exact-pinned devDependencies.

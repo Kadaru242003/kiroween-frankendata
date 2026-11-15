@@ -245,7 +245,7 @@ Tasks are incremental: each builds on the previous, ending with full wiring in t
     - Visible column separators and sticky, readable headers against the themed background
     - _Requirements: 7.2, 7.3, 7.4, 12.3_
 
-  - [ ]* 14.4 Write unit test for theme contrast over color-token pairs
+  - [ ]* 14.4 Write unit test for theme contrast over color-token pairs (optional, not implemented)
     - Example-based test asserting a contrast ratio of at least 4.5:1 over the defined theme color-token pairs
     - _Requirements: 12.2_
 
@@ -256,7 +256,7 @@ Tasks are incremental: each builds on the previous, ending with full wiring in t
     - Show the informational "2 to 4 files is the intended range" message when the count is outside the 2–4 range (acceptance, not rejection)
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ]* 15.2 Write property test for file-count guidance message
+  - [ ]* 15.2 Write property test for file-count guidance message (optional, not implemented)
     - **Property 9: File-count guidance message**
     - **Validates: Requirements 1.3**
 
@@ -265,7 +265,7 @@ Tasks are incremental: each builds on the previous, ending with full wiring in t
     - Render one card per loaded table: first `min(rowCount, 20)` rows, column names, inferred column types, and total row count
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ]* 16.2 Write property test for preview completeness
+  - [ ]* 16.2 Write property test for preview completeness (optional, not implemented)
     - **Property 28: Preview completeness**
     - **Validates: Requirements 7.2, 7.3, 7.4, 7.5**
 
@@ -284,11 +284,11 @@ Tasks are incremental: each builds on the previous, ending with full wiring in t
     - Render a "Load demo data" control alongside the DropZone; on activation invoke `DemoDataLoader`
     - _Requirements: 13.1, 13.2_
 
-  - [ ]* 18.3 Write unit tests for demo dataset contents
+  - [x]* 18.3 Write unit tests for demo dataset contents
     - Assert the three bundled datasets contain messy values (currency, percent, `NullToken`s, multiple date formats)
     - _Requirements: 13.3_
 
-  - [ ]* 18.4 Write smoke test for demo data bundling
+  - [x]* 18.4 Write smoke test for demo data bundling
     - Assert datasets are bundled with the app so loading requires no network access
     - _Requirements: 13.4_
 
@@ -297,11 +297,11 @@ Tasks are incremental: each builds on the previous, ending with full wiring in t
     - Initialize the `DuckDBService` on app start, mount `DropZone`, `DemoDataControl`, `TablePreview`(s), and `ErrorDisplay` against the `IntakeStore`; connect `DropZone`/`DemoDataControl` to the `IntakeController`
     - _Requirements: 1.1, 7.1, 9.3, 11.1, 11.2, 13.1_
 
-  - [ ]* 19.2 Write integration test for the full pipeline round trip
+  - [ ]* 19.2 Write integration test for the full pipeline round trip (optional, not implemented)
     - Example-based integration test: parse a representative CSV and XLSX file → infer types → create typed DuckDB table → assert preview rows, types, and row count via the in-memory DuckDB instance
     - _Requirements: 3.1, 4.1, 5.3, 6.5, 6.6, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ]* 19.3 Write smoke tests for persistence configuration
+  - [ ]* 19.3 Write smoke tests for persistence configuration (optional, not implemented)
     - Assert DuckDB is configured in-memory with no persistent backing store (no IndexedDB) and that the toolchain (React + Vite + TS, DuckDB-WASM client-side, PapaParse, SheetJS) is wired
     - _Requirements: 8.1, 8.3, 11.1, 11.2, 11.3_
 

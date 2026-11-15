@@ -565,3 +565,15 @@ The following acceptance criteria are not amenable to property-based testing and
 - **13.2** (demo data loads through the pipeline) — integration test (1–3 examples) asserting the three bundled datasets load via the shared pipeline.
 - **13.3** (demo data contains messy values) — example test inspecting the bundled fixtures.
 - **13.4** (demo data bundled, no network) — smoke test asserting datasets are bundled and require no network access.
+
+## Implementation notes and deviations
+
+Where the built code differs from the plan above. The requirements are unchanged.
+
+- **Table and column names:** table names are lowercased from the file name and de-duplicated with a numeric suffix (`monsters`, `monsters_2`). The suffixing also covers tables loaded in earlier intake calls: the intake controller seeds its used names from the session store. Column names are sanitized but keep their case (`Monster Name` becomes `Monster_Name`).
+- **`loadId`:** every `LoadedTable` carries a monotonically increasing `loadId` stamped by `IntakeStore.addTable`. Feature 2 derives its `datasetVersion` from the sorted ids, so re-dropping an identical file still invalidates cached proposals. Ids are never reused, not even after `reset()`.
+- **Demo data:** `BundledDemoDataLoader` has `load()` (three files) and `loadMismatched()` (two files for stitching). The recipes feature adds `loadNextMonthFiles()` in `src/core/recipes/next-month-demo.ts`. Demo buttons are idempotent per demo id (`src/core/chat/demo-loader.ts`) until Reset lab.
+- **DuckDB assets:** the browser bundle's Wasm and worker files are imported as Vite `?url` assets and served locally. Nothing is fetched from a CDN. DATE values arrive from the browser bundle as epoch values and are converted to ISO strings in `getPreviewRows` (`duckDbDateToIso`).
+- **XLSX:** the `xlsx` package is installed from the official SheetJS 0.20.3 tarball (the npm registry copy has unfixed advisories). No code change was needed.
+- **Optional tasks:** the optional tests 14.4, 15.2, 16.2, 19.2 and 19.3 in `tasks.md` were not written. Their behavior is covered indirectly by component and property tests elsewhere.
+- **Additions since:** `DropZone` accepts an optional `disabled` prop (used while Reset lab runs). `DemoDataControl` accepts `disabled` as well.

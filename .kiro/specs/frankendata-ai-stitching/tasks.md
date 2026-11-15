@@ -154,7 +154,7 @@ This plan is ordered so the **app works end to end on the rules engine as early 
   - Update steering docs (`.kiro/steering/structure.md` and `tech.md`) to describe the stitching module layout, the `/api/ai` proxy + env vars, and the deterministic-engine/offline-fallback rule
   - _Note: showcases Kiro hooks + steering_
 
-- [ ] 24. Lab "stitching table" theme polish
+- [ ] 24. Lab "stitching table" theme polish (optional; the screen was themed in later UI batches, the contrast test was not written)
   - [ ]* 24.1 Style the `ApprovalScreen`/diffs as the mad-scientist stitching table (presentation only; no logic change)
   - [ ]* 24.2 Contrast test (≥ 4.5:1) over the theme token pairs used by the approval screen
   - _Design: Visual theme; Requirements 9.1, 9.2, 9.3_
