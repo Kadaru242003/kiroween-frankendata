@@ -113,20 +113,60 @@ export function readBodyCapped(
   });
 }
 
+/** Timeout for every upstream call (Upstash REST and the LLM), request and body. */
+export const UPSTREAM_TIMEOUT_MS = 10_000;
+
+/** Overrides for tests. Production uses the defaults. */
+export interface UpstreamOptions {
+  timeoutMs?: number;
+  fetchFn?: typeof fetch;
+}
+
+/**
+ * `fetch` a JSON reply with a hard timeout that covers BOTH the request and the
+ * body read. On timeout the request is aborted and this rejects, which the core
+ * handlers turn into the fail-closed "unavailable" (503) status. A non-2xx
+ * status rejects too. `label` names the upstream in the error message only.
+ */
+async function fetchJsonWithTimeout(
+  url: string,
+  init: RequestInit,
+  label: string,
+  options: UpstreamOptions,
+): Promise<unknown> {
+  const timeoutMs = options.timeoutMs ?? UPSTREAM_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    // Resolve the global at call time so a stubbed fetch is honored in tests.
+    const doFetch = options.fetchFn ?? ((u: string, i: RequestInit) => globalThis.fetch(u, i));
+    const res = await doFetch(url, { ...init, signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`${label} error ${res.status}`);
+    }
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Build the Upstash REST Redis client. Uses the REST API (`/incr/<key>` then
  * `/expire/<key>/<ttl>/NX`). Any non-OK response or network error rejects,
  * which the core handlers turn into a fail-closed "unavailable" (no upstream).
  */
-export function makeUpstashRedis(restUrl: string, restToken: string): RedisClient {
+export function makeUpstashRedis(
+  restUrl: string,
+  restToken: string,
+  options: UpstreamOptions = {},
+): RedisClient {
   async function cmd(path: string): Promise<unknown> {
-    const res = await fetch(`${restUrl}/${path}`, {
-      headers: { Authorization: `Bearer ${restToken}` },
-    });
-    if (!res.ok) {
-      throw new Error(`Upstash REST error ${res.status}`);
-    }
-    const json = (await res.json()) as { result?: unknown; error?: string };
+    const json = (await fetchJsonWithTimeout(
+      `${restUrl}/${path}`,
+      { headers: { Authorization: `Bearer ${restToken}` } },
+      "Upstash REST",
+      options,
+    )) as { result?: unknown; error?: string };
     if (json.error) throw new Error(json.error);
     return json.result;
   }
@@ -152,29 +192,34 @@ export function makeUpstashRedis(restUrl: string, restToken: string): RedisClien
  * caller from env and never leaves the server. Wires the OpenAI-compatible Chat
  * Completions shape; the MODEL is passed through from env — never hard-coded.
  */
-export function makeLlmClient(apiKey: string, baseUrl: string): LlmClient {
+export function makeLlmClient(
+  apiKey: string,
+  baseUrl: string,
+  options: UpstreamOptions = {},
+): LlmClient {
   return {
     async complete(input: LlmCompletionInput): Promise<string> {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+      const json = (await fetchJsonWithTimeout(
+        `${baseUrl}/chat/completions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: input.model,
+            max_tokens: input.maxOutputTokens,
+            temperature: 0,
+            messages: [
+              { role: "system", content: input.systemPrompt },
+              { role: "user", content: input.userPrompt },
+            ],
+          }),
         },
-        body: JSON.stringify({
-          model: input.model,
-          max_tokens: input.maxOutputTokens,
-          temperature: 0,
-          messages: [
-            { role: "system", content: input.systemPrompt },
-            { role: "user", content: input.userPrompt },
-          ],
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(`LLM upstream error ${res.status}`);
-      }
-      const json = (await res.json()) as {
+        "LLM upstream",
+        options,
+      )) as {
         choices?: { message?: { content?: string } }[];
       };
       const content = json.choices?.[0]?.message?.content;

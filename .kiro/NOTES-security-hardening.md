@@ -124,3 +124,25 @@ Decisions to know about:
 - No change to status codes, error codes, the shared `cap:<day>` key or the `rlsql:` prefix.
 
 Gate after commit B: `npm test` (173 files, 1082 tests), `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e` (5 passed).
+
+## Commit C: proxies
+
+| # | Finding | Reproduced? | Fixed | Covering tests |
+| --- | --- | --- | --- | --- |
+| C1 | A non-numeric Redis counter reply compared as "not over the limit" and failed OPEN (Low). | Yes. NaN, Infinity, `"5"`, `"abc"`, null, undefined, 0, -3, 1.5 and an object were each served a 200 and reached the LLM, for both the per-client and the daily counter, in both proxies. | Yes: `requireCount` (positive safe integer) inside the counter `try`, so any other value is `503 unavailable` with no LLM call. | `ai-proxy.hardening.test.ts`, `sql-proxy.hardening.test.ts` (20 cases each) |
+| C2 | No timeout on the Upstash and LLM `fetch` calls (Low). | Yes. With a stubbed `fetch` that only answers on abort, both handlers never finished; the test loop ended with no response. | Yes: 10 seconds (`UPSTREAM_TIMEOUT_MS`) covering the request AND the body read, via an `AbortController`. A timeout rejects, which the core turns into `503 unavailable`. When Upstash hangs the LLM is never called. | `api/upstream.timeout.test.ts` (both handlers, both upstreams, body-read timeout, normal reply still works) |
+| C3 | `parseLlmResponse` and `parseSqlLlmResponse` returned the whole model object, so unknown fields reached the browser (Low). | Yes. `apiKey`, `debug`, nested objects and extra chart keys were passed through. | Yes: only `id`/`confidence`/`reason` per refinement (wrong-typed entries dropped, at most 30) and only `sql`/`explanation`/`chart{type,x,y}` (chart dropped unless well formed and `bar|line|pie`). | the "returns only the known fields" blocks in both hardening test files |
+
+Not changed on purpose: status codes, error codes, `rl:`/`rlsql:` prefixes, the shared `cap:<day>` key, the check order, `api/ai.test.ts`, `api/sql.test.ts` and the existing proxy tests (all pass unchanged). `makeUpstashRedis` and `makeLlmClient` gained an optional third argument used only by tests.
+
+### Is `ALLOWED_ORIGINS` required? No. Should you set it? Yes, for production.
+
+- The proxies work without it. When it is unset or empty the origin check is skipped (`originAllowed` returns true when the allow-list is empty), which is also what `DEPLOY.md` and `.env.example` document. Nothing breaks and nothing fails closed because of it.
+- It is a courtesy check, not authentication. `curl` or a script can send any `Origin` header, so it does not stop a determined caller. What actually protects you is the per-client hourly limit (20), the shared daily cap (500) and a provider-side monthly budget.
+- Why set it anyway: it makes the proxies refuse requests that declare a foreign `Origin`, which cuts casual abuse and noise. Browsers already block cross-site `fetch` calls to these routes (no CORS headers are sent and a JSON `Content-Type` forces a preflight), so this adds little against browsers.
+- If you set it: use your deployed origin, with scheme and no trailing slash (`https://your-app.vercel.app`), comma separated for several (production domain, custom domain). Once it is set, a request with no `Origin` header or any other origin gets `403 forbidden_origin`. Vercel preview deployments have their own origins and will be refused unless you list them. Same-origin `POST` requests from the app do carry an `Origin` header.
+- I did not change any Vercel setting or `.env.example`.
+
+The two real exposures the audit found are unchanged by this and need your decision: there is no authentication (so anyone can spend the shared daily cap of 500), and the client IP is read from `x-forwarded-for`, which is only trustworthy behind Vercel.
+
+Gate after commit C: `npm test` (176 files, 1142 tests), `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e` (5 passed).
