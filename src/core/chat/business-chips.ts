@@ -13,6 +13,28 @@ function findColumn(table: QueryableTable, name: string): string | undefined {
 
 export function generateBusinessChips(tables: readonly QueryableTable[]): StarterChip[] {
   const chips: StarterChip[] = [];
+  // After stitching: invoiced revenue by the CLEANED CRM region (Region_1 in
+  // the stitched result). Listed first; the raw-table chip below stays.
+  const stitched = tables.find(
+    (t) =>
+      /^stitch_\d+_result$/.test(t.tableName) &&
+      findColumn(t, "Region_1") !== undefined &&
+      findColumn(t, "amount") !== undefined
+  );
+  if (stitched) {
+    const region = findColumn(stitched, "Region_1")!;
+    const amount = findColumn(stitched, "amount")!;
+    chips.push({
+      tableName: stitched.tableName,
+      question: `What is the invoiced revenue by region in ${stitched.tableName}?`,
+      sql:
+        `SELECT ${quoteIdent(region)}, SUM(${quoteIdent(amount)}) AS invoiced_revenue ` +
+        `FROM ${quoteIdent(stitched.tableName)} GROUP BY ${quoteIdent(region)} ` +
+        `ORDER BY invoiced_revenue DESC`,
+      kind: "numeric",
+      chart: { type: "bar", x: region, y: "invoiced_revenue" },
+    });
+  }
   const crm = tables.find((t) => t.tableName === "crm_customers");
   if (crm) {
     const region = findColumn(crm, "Region");

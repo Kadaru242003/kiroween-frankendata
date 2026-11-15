@@ -23,6 +23,7 @@ beforeAll(async () => {
 afterAll(() => lab.dispose());
 
 const num = (v: unknown) => Number(v);
+const CLEANED_REGION_ANSWER: [string, number][] = [["North America", 105200.4], ["EMEA", 59100], ["APAC", 27988.5]];
 
 describe("business demo", () => {
   it("loads typed tables (currency and mixed dates inferred)", () => {
@@ -82,17 +83,26 @@ describe("business demo", () => {
   });
 
   it("starter chips pass the validator and give the pinned answers", async () => {
-    const chips = generateBusinessChips(lab.tables().map((t) => ({ tableName: t.tableName, columns: t.schema })));
-    expect(chips.map((c) => c.chart?.type)).toEqual(["bar", "line"]);
-    const names = [...lab.tables().map((t) => t.tableName), "stitch_1_result"];
+    const stitched = lab.stitchStore.getState().stitchedTable!;
+    const queryable = [...lab.tables(), stitched].map((t) => ({ tableName: t.tableName, columns: t.schema }));
+    const chips = generateBusinessChips(queryable);
+    // The cleaned-region chip on the stitched result comes first; the raw-table chips stay.
+    expect(chips.map((c) => [c.tableName, c.chart?.type])).toEqual([
+      ["stitch_1_result", "bar"], ["crm_customers", "bar"], ["billing_invoices", "line"],
+    ]);
+    // Without a stitched result only the two raw-table chips exist.
+    expect(generateBusinessChips(queryable.slice(0, 2)).map((c) => c.tableName)).toEqual(["crm_customers", "billing_invoices"]);
+    const names = queryable.map((t) => t.tableName);
     const run = async (i: number) => {
       const v = validateSql(chips[i].sql, names);
       expect(v.ok).toBe(true);
       return v.ok ? lab.db.query<Record<string, unknown>>(v.sql) : [];
     };
-    const region = (await run(0)).map((r) => [r.Region, num(r.monthly_revenue)]);
+    const cleaned = (await run(0)).map((r) => [r.Region_1, Math.round(num(r.invoiced_revenue) * 100) / 100]);
+    expect(cleaned).toEqual(CLEANED_REGION_ANSWER);
+    const region = (await run(1)).map((r) => [r.Region, num(r.monthly_revenue)]);
     expect(region).toEqual([["North America", 34220], ["EMEA", 17850], ["APAC", 9430], ["emea", 1750]]);
-    const monthly = (await run(1)).map((r) => num(r.total_amount));
+    const monthly = (await run(2)).map((r) => num(r.total_amount));
     expect(monthly).toEqual([25982.5, 34368.6, 27623.5, 36472.8, 29264.5, 38577]);
   });
 
