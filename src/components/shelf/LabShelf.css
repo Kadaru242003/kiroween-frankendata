@@ -1,31 +1,25 @@
 /*
- * The lab shelf: decorative, fixed in the empty right gutter beside the 1200px
- * main column, so it never shifts the column. Only rendered at 1440px and up
- * (the CSS hides it below as well). Only the jar buttons take the pointer;
- * everything else ignores it. Animations use only transform, opacity and
- * filter, and are off under reduced motion and Calm Frank.
+ * The lab shelf: page navigation in the empty right gutter beside the 1200px
+ * main column. Fixed, centred in the gutter and in the window, and scaled down
+ * (not below 70%) when the jars do not fit. Only rendered at 1440px and up (the
+ * CSS hides it below as well). Only the jar buttons take the pointer. Motion
+ * uses only transform, opacity and filter, and is off under reduced motion and
+ * Calm Frank.
  */
 .lab-shelf {
   position: fixed;
-  top: 72px;
-  /* Just right of the 1200px column (the #root box), at most 104px wide. */
-  left: calc(50% + 600px + 10px);
+  /* The middle of the right gutter: (50vw + 600px) to 100vw. */
+  left: calc(75vw + 300px);
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--shelf-scale, 1));
+  transform-origin: center;
   width: min(104px, calc(50vw - 600px - 16px));
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  z-index: 20;
   pointer-events: none;
 }
 @media (max-width: 1439px) {
   .lab-shelf {
     display: none;
-  }
-}
-@media (max-height: 780px) {
-  .lab-shelf {
-    top: 40px;
   }
 }
 
@@ -37,11 +31,21 @@
   pointer-events: auto;
 }
 
-.lab-shelf__jars {
+.lab-shelf__inner {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  /* Room above the coil for its static arcs. */
+  padding-top: 28px;
+}
+.lab-shelf__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* ── The coil ─────────────────────────────────────────────────────────────── */
@@ -121,26 +125,37 @@
 .shelf-arc__core path {
   stroke: #ffffff;
 }
+/* The static dancing on the ball: tiny, jagged and faint. */
+.shelf-static polyline {
+  stroke: #d9fbff;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: miter;
+  opacity: 0.4;
+}
 
 /* ── Jars ─────────────────────────────────────────────────────────────────── */
+.shelf-item {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
 .shelf-jar {
-  display: block;
-  width: 84px;
-  height: 66px;
-  margin: 0 auto;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 100%;
+  padding: 2px 0 3px;
   border: 0;
   border-radius: 8px;
   background: none;
-  color: inherit;
+  color: var(--text-primary);
   font: inherit;
   animation: shelf-pop 300ms ease-out both;
 }
 button.shelf-jar {
   cursor: pointer;
-}
-button.shelf-jar:hover .shelf-jar__glass {
-  stroke: var(--lab-green);
 }
 button.shelf-jar:focus-visible {
   outline: 2px solid var(--accent);
@@ -148,14 +163,19 @@ button.shelf-jar:focus-visible {
 }
 .shelf-jar__art {
   display: block;
-  width: 84px;
-  height: 66px;
+  width: 56px;
+  height: 54px;
   overflow: visible;
 }
-.shelf-jar__plank {
-  fill: #3a3326;
-  stroke: #1f1b13;
-  stroke-width: 0.8;
+/* The section's name, under the jar: real text, never truncated. */
+.shelf-jar__text {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 .shelf-jar__glass {
   fill: rgba(190, 240, 220, 0.07);
@@ -173,76 +193,69 @@ button.shelf-jar:focus-visible {
   stroke-width: 1.6;
   stroke-linecap: round;
 }
+/* The liquid is a full-height rectangle scaled to the step's progress, so it rises smoothly. */
 .shelf-jar__liquid {
-  fill: rgba(57, 255, 20, 0.55);
+  fill: rgba(57, 255, 20, 0.6);
   transform-box: fill-box;
   transform-origin: bottom;
-}
-.shelf-jar--stitched .shelf-jar__liquid {
-  fill: rgba(80, 255, 214, 0.6);
-}
-.shelf-jar__surface {
-  fill: rgba(200, 255, 190, 0.8);
+  transform: scaleY(var(--fill, 0));
+  transition: transform 700ms ease-out;
+  animation: shelf-rise 700ms ease-out;
 }
 .shelf-jar__bubble {
   fill: rgba(220, 255, 220, 0.9);
   opacity: 0;
   animation: shelf-bubble 2400ms ease-in infinite;
 }
-.shelf-jar__paper {
-  fill: #efe6c8;
-  stroke: #b8a978;
-  stroke-width: 0.8;
+
+/* The section in view: a brighter glow and the label in the accent color. */
+.shelf-jar--active {
+  filter: drop-shadow(0 0 7px rgba(57, 255, 20, 0.85));
 }
-.shelf-jar__name {
-  fill: #2b2a22;
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 6.5px;
-  font-weight: 700;
-}
-.shelf-jar__rows {
-  fill: #5a5538;
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 6.2px;
-}
-.shelf-jar__more {
-  fill: var(--lab-green);
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 15px;
-  font-weight: 700;
-}
-/* Stitched seams: a dashed stitch line around the label, cross-stitches at two
-   corners, and a zigzag seam across the glass. */
-.shelf-jar__stitch {
-  fill: none;
-  stroke: #3f7d3a;
-  stroke-width: 0.9;
-  stroke-dasharray: 2.2 1.6;
-}
-.shelf-jar__cross {
-  fill: none;
-  stroke: #3f7d3a;
-  stroke-width: 1.1;
-  stroke-linecap: round;
-}
-.shelf-jar__seam-body {
-  fill: none;
+.shelf-jar--active .shelf-jar__glass {
   stroke: var(--lab-green);
-  stroke-width: 1.1;
-  stroke-dasharray: 3 2;
-  stroke-linecap: round;
-  opacity: 0.8;
+}
+.shelf-jar--active .shelf-jar__text {
+  color: var(--accent);
+}
+button.shelf-jar:hover .shelf-jar__glass {
+  stroke: var(--lab-green);
 }
 
-/* Reset lab (or undo): the liquid falls, then the jar fades. */
-.shelf-jar--leaving {
+/* The tooltip, to the left of the jar: the section and a one-line status. */
+.shelf-tip {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 5px 9px;
+  border: 1px solid var(--lab-green);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease-out;
+}
+button.shelf-jar:hover + .shelf-tip,
+button.shelf-jar:focus-visible + .shelf-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Its section went away (Reset lab, undo, closed): the liquid falls, then the jar fades. */
+.shelf-item--leaving .shelf-jar {
   animation: shelf-fade-out 350ms ease-out 600ms both;
 }
-.shelf-jar--leaving .shelf-jar__liquid {
+.shelf-item--leaving .shelf-jar__liquid {
   animation: shelf-drain 600ms ease-in both;
-}
-.shelf-jar--leaving .shelf-jar__surface {
-  display: none;
 }
 
 @keyframes shelf-pop {
@@ -250,9 +263,13 @@ button.shelf-jar:focus-visible {
   60% { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
+@keyframes shelf-rise {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(var(--fill, 0)); }
+}
 @keyframes shelf-drain {
-  from { transform: scaleY(1); }
-  to { transform: scaleY(0.04); }
+  from { transform: scaleY(var(--fill, 0)); }
+  to { transform: scaleY(0); }
 }
 @keyframes shelf-fade-out {
   from { opacity: 1; }
@@ -284,7 +301,7 @@ button.shelf-jar:focus-visible {
   100% { opacity: 0; }
 }
 
-/* Calm Frank and reduced motion: static jars. No bubbles, arcs, pops or fades. */
+/* Calm Frank and reduced motion: static jars. No bubbles, arcs, pops, rises or fades. */
 .lab-shelf--still,
 .lab-shelf--still * {
   animation: none !important;

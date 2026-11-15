@@ -13,6 +13,8 @@ export interface FrankFeedSnapshot {
   /** Bumps whenever a Reaction starts (the same one twice is two strikes). */
   seq: number;
   calm: boolean;
+  /** He fell asleep from sitting idle. */
+  idle: boolean;
 }
 
 export class FrankFeed {
@@ -20,7 +22,7 @@ export class FrankFeed {
   private readonly listeners = new Set<() => void>();
 
   constructor(calm: boolean = readCalm()) {
-    this.snapshot = { reaction: null, seq: 0, calm };
+    this.snapshot = { reaction: null, seq: 0, calm, idle: false };
   }
 
   getSnapshot = (): FrankFeedSnapshot => this.snapshot;
@@ -35,7 +37,7 @@ export class FrankFeed {
   /** Publish the current state. Does nothing when nothing changed. */
   publish = (next: FrankFeedSnapshot): void => {
     const cur = this.snapshot;
-    if (cur.reaction === next.reaction && cur.seq === next.seq && cur.calm === next.calm) return;
+    if (cur.reaction === next.reaction && cur.seq === next.seq && cur.calm === next.calm && cur.idle === next.idle) return;
     this.snapshot = next;
     for (const listener of [...this.listeners]) {
       try {

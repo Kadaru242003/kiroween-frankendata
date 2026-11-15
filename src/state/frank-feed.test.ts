@@ -7,15 +7,15 @@ describe("FrankFeed", () => {
     const feed = new FrankFeed(false);
     const listener = vi.fn();
     const off = feed.subscribe(listener);
-    expect(feed.getSnapshot()).toEqual({ reaction: null, seq: 0, calm: false });
+    expect(feed.getSnapshot()).toEqual({ reaction: null, seq: 0, calm: false, idle: false });
     const wake = reactionFor({ type: "wake" });
-    feed.publish({ reaction: wake, seq: 1, calm: false });
+    feed.publish({ reaction: wake, seq: 1, calm: false, idle: false });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(feed.getSnapshot().reaction?.id).toBe("wake");
-    feed.publish({ reaction: wake, seq: 1, calm: false });
+    feed.publish({ reaction: wake, seq: 1, calm: false, idle: false });
     expect(listener).toHaveBeenCalledTimes(1);
     off();
-    feed.publish({ reaction: null, seq: 1, calm: true });
+    feed.publish({ reaction: null, seq: 1, calm: true, idle: false });
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
@@ -26,7 +26,7 @@ describe("FrankFeed", () => {
     });
     const ok = vi.fn();
     feed.subscribe(ok);
-    expect(() => feed.publish({ reaction: null, seq: 2, calm: false })).not.toThrow();
+    expect(() => feed.publish({ reaction: null, seq: 2, calm: false, idle: false })).not.toThrow();
     expect(ok).toHaveBeenCalled();
   });
 });

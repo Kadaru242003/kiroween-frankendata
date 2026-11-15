@@ -46,8 +46,8 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
 
   // Tell anything decorative that moves with him (the lab shelf) what he is doing.
   useEffect(() => {
-    frankFeed.publish({ reaction: frank.reaction, seq: frank.reactionSeq, calm: frank.calm });
-  }, [frank.reaction, frank.reactionSeq, frank.calm]);
+    frankFeed.publish({ reaction: frank.reaction, seq: frank.reactionSeq, calm: frank.calm, idle: frank.idle });
+  }, [frank.reaction, frank.reactionSeq, frank.calm, frank.idle]);
 
   useFrankEvents({
     emit: frank.emit,

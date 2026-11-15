@@ -1,102 +1,170 @@
 import { describe, expect, it } from "vitest";
 import {
   CRACKLE_MIN_GAP_MS,
-  JAR_LEVEL_MAX,
-  JAR_LEVEL_MIN,
-  JAR_NAME_MAX_CHARS,
-  SHELF_MAX_JARS,
-  buildJars,
-  jarAriaLabel,
-  liquidLevel,
+  PROGRESS_FILL,
+  SECTION_ORDER,
+  STATIC_ARC_MAX_MS,
+  STATIC_ARC_MIN_MS,
+  STATIC_ARC_RADIUS_PX,
+  buildSectionJars,
+  generateStaticArcs,
   nextCrackleDelayMs,
-  rowsText,
-  truncateName,
+  nextStaticArcDelayMs,
+  pickActiveSection,
+  sectionProgress,
+  sectionStatus,
+  tablesTooltip,
+  visibleSections,
+  type SectionId,
+  type ShelfInput,
 } from "./shelf-model";
 
-const t = (name: string, rows: number) => ({ tableName: name, rowCount: rows });
-const many = (n: number) => Array.from({ length: n }, (_, i) => t(`table_${i + 1}`, 10 * (i + 1)));
+const crm = { tableName: "crm_customers", rowCount: 22 };
+const billing = { tableName: "billing_invoices", rowCount: 48 };
+const result = { tableName: "stitch_1_result", rowCount: 48 };
+const none: ShelfInput = {
+  tables: [],
+  stitchOpen: false,
+  proposals: null,
+  stitched: null,
+  recipeDone: false,
+  autopsy: null,
+  ask: { answered: false, loading: false },
+};
+const loaded: ShelfInput = { ...none, tables: [crm, billing] };
+const pending: ShelfInput = { ...loaded, stitchOpen: true, proposals: { total: 14, approved: 14 } };
+const stitched: ShelfInput = { ...pending, stitched: result };
+const ids = (input: ShelfInput) => visibleSections(input);
 
-describe("liquidLevel", () => {
-  it("is clamped to the minimum and maximum, whatever the row count", () => {
-    for (const rows of [0, 1, -5, NaN, -Infinity]) expect(liquidLevel(rows)).toBe(JAR_LEVEL_MIN);
-    for (const rows of [1e6, 1e9, Infinity]) expect(liquidLevel(rows)).toBe(JAR_LEVEL_MAX);
+describe("which jars are shown, and in what order", () => {
+  it("shows only Intake on the landing page", () => {
+    expect(ids(none)).toEqual(["intake"]);
   });
-  it("rises gently and never falls as rows grow", () => {
-    let last = 0;
-    for (const rows of [1, 2, 10, 48, 100, 1000, 10000, 100000]) {
-      const level = liquidLevel(rows);
-      expect(level).toBeGreaterThanOrEqual(last);
-      expect(level).toBeGreaterThanOrEqual(JAR_LEVEL_MIN);
-      expect(level).toBeLessThanOrEqual(JAR_LEVEL_MAX);
-      last = level;
-    }
-    // Gentle: a hundred times the rows is nowhere near a hundred times the liquid.
-    expect(liquidLevel(1000) / liquidLevel(10)).toBeLessThan(2);
+  it("adds Tables and Ask when tables are loaded", () => {
+    expect(ids(loaded)).toEqual(["intake", "tables", "ask"]);
+  });
+  it("adds Stitching while proposals exist and the stitching table is open", () => {
+    expect(ids(pending)).toEqual(["intake", "tables", "stitching", "ask"]);
+    expect(ids({ ...pending, stitchOpen: false })).toEqual(["intake", "tables", "ask"]);
+    expect(ids({ ...loaded, stitchOpen: true })).toEqual(["intake", "tables", "ask"]);
+  });
+  it("adds Result and Recipes once a stitch exists", () => {
+    expect(ids(stitched)).toEqual(["intake", "tables", "stitching", "result", "recipes", "ask"]);
+  });
+  it("adds Autopsy only while one is open", () => {
+    const withAutopsy = { ...stitched, autopsy: { tableName: "crm_customers", score: null } };
+    expect(ids(withAutopsy)).toEqual(["intake", "tables", "stitching", "result", "recipes", "autopsy", "ask"]);
+    expect(ids(loaded)).not.toContain("autopsy");
+  });
+  it("always keeps workflow order, whatever is shown", () => {
+    const all = { ...stitched, autopsy: { tableName: "x", score: 90 } };
+    expect(ids(all)).toEqual([...SECTION_ORDER]);
+    const order = ids(all).map((id) => SECTION_ORDER.indexOf(id));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+  it("has no per-table jars: two tables or ten, the jars are the same sections", () => {
+    const many = { ...loaded, tables: Array.from({ length: 10 }, (_, i) => ({ tableName: `t${i}`, rowCount: i })) };
+    expect(ids(many)).toEqual(ids(loaded));
   });
 });
 
-describe("labels", () => {
-  it("truncates long names with an ellipsis and keeps short ones", () => {
-    expect(truncateName("monsters")).toBe("monsters");
-    expect(truncateName("a".repeat(JAR_NAME_MAX_CHARS))).toBe("a".repeat(JAR_NAME_MAX_CHARS));
-    const cut = truncateName("billing_invoices_2026");
-    expect(Array.from(cut)).toHaveLength(JAR_NAME_MAX_CHARS);
-    expect(cut.endsWith("\u2026")).toBe(true);
+describe("progress rules", () => {
+  const p = (id: SectionId, input: ShelfInput) => sectionProgress(id, input);
+  it("Intake and Tables: full when tables are loaded, empty before", () => {
+    expect(p("intake", none)).toBe("empty");
+    expect(p("intake", loaded)).toBe("full");
+    expect(p("tables", loaded)).toBe("full");
   });
-  it("says rows in the plural, and row for one", () => {
-    expect(rowsText(1)).toBe("1 row");
-    expect(rowsText(0)).toBe("0 rows");
-    expect(rowsText(1234)).toBe("1,234 rows");
-    expect(jarAriaLabel("crm_customers", 24)).toBe("Go to table crm_customers, 24 rows");
+  it("Stitching: half while proposals are pending, full when stitched", () => {
+    expect(p("stitching", pending)).toBe("half");
+    expect(p("stitching", stitched)).toBe("full");
   });
-});
-
-describe("buildJars", () => {
-  it("makes no jars for no tables, and one jar per table in order", () => {
-    expect(buildJars([], null)).toEqual([]);
-    const jars = buildJars([t("crm_customers", 24), t("billing_invoices", 24)], null);
-    expect(jars.map((j) => j.name)).toEqual(["crm_customers", "billing_invoices"]);
-    expect(jars.map((j) => j.kind)).toEqual(["table", "table"]);
-    expect(jars[0].ariaLabel).toBe("Go to table crm_customers, 24 rows");
-    expect(jars[1].label).toBe("billing_inv\u2026");
+  it("Result: full when stitched", () => {
+    expect(p("result", stitched)).toBe("full");
+    expect(p("result", pending)).toBe("empty");
   });
-  it("gives a stitched result its own jar, last", () => {
-    const jars = buildJars([t("a", 5), t("b", 7)], t("stitch_1_result", 48));
-    expect(jars).toHaveLength(3);
-    expect(jars[2]).toMatchObject({ kind: "stitched", name: "stitch_1_result", rowCount: 48 });
-    expect(new Set(jars.map((j) => j.key)).size).toBe(3);
+  it("Recipes: full after Save recipe or Apply recipe", () => {
+    expect(p("recipes", stitched)).toBe("empty");
+    expect(p("recipes", { ...stitched, recipeDone: true })).toBe("full");
   });
-  it("shows up to six jars with no +N jar", () => {
-    const jars = buildJars(many(6), null);
-    expect(jars).toHaveLength(SHELF_MAX_JARS);
-    expect(jars.some((j) => j.kind === "more")).toBe(false);
-    expect(buildJars(many(5), t("stitch_1_result", 3))).toHaveLength(SHELF_MAX_JARS);
+  it("Ask the Lab: half while a question is pending, full after the first answer", () => {
+    expect(p("ask", loaded)).toBe("empty");
+    expect(p("ask", { ...loaded, ask: { answered: false, loading: true } })).toBe("half");
+    expect(p("ask", { ...loaded, ask: { answered: true, loading: false } })).toBe("full");
   });
-  it("shows six jars plus a +N jar when there are more than six tables", () => {
-    const jars = buildJars(many(9), null);
-    expect(jars).toHaveLength(SHELF_MAX_JARS + 1);
-    expect(jars.slice(0, 6).every((j) => j.kind === "table")).toBe(true);
-    expect(jars[6]).toMatchObject({ kind: "more", more: 3, label: "+3", ariaLabel: null });
+  it("Autopsy: half while it examines, full when the panel shows a score", () => {
+    expect(p("autopsy", { ...loaded, autopsy: { tableName: "crm_customers", score: null } })).toBe("half");
+    expect(p("autopsy", { ...loaded, autopsy: { tableName: "crm_customers", score: 81 } })).toBe("full");
   });
-  it("keeps the stitched jar among the six when there are too many tables", () => {
-    const jars = buildJars(many(8), t("stitch_1_result", 3));
-    expect(jars).toHaveLength(SHELF_MAX_JARS + 1);
-    expect(jars[5].kind).toBe("stitched");
-    expect(jars[6]).toMatchObject({ kind: "more", more: 3 });
-    expect(jars.filter((j) => j.kind === "table")).toHaveLength(5);
-  });
-  it("clamps every jar's level", () => {
-    for (const jar of buildJars([t("tiny", 0), t("huge", 5_000_000)], null)) {
-      expect(jar.level).toBeGreaterThanOrEqual(JAR_LEVEL_MIN);
-      expect(jar.level).toBeLessThanOrEqual(JAR_LEVEL_MAX);
-    }
+  it("maps progress to empty, half and full liquid", () => {
+    expect(PROGRESS_FILL).toEqual({ empty: 0, half: 0.5, full: 1 });
+    const jars = buildSectionJars(stitched);
+    expect(jars.find((j) => j.id === "result")).toMatchObject({ progress: "full", fill: 1 });
+    expect(jars.find((j) => j.id === "recipes")).toMatchObject({ progress: "empty", fill: 0 });
   });
 });
 
-describe("nextCrackleDelayMs", () => {
-  it("never allows a crackle sooner than every 20 seconds", () => {
-    for (const roll of [0, 0.25, 0.5, 0.999, 1, 5, -3, NaN]) {
-      expect(nextCrackleDelayMs(roll)).toBeGreaterThanOrEqual(CRACKLE_MIN_GAP_MS);
+describe("labels, names and tooltips", () => {
+  it("names each jar with short labels and 'Go to <section>'", () => {
+    const jars = buildSectionJars({ ...stitched, autopsy: { tableName: "x", score: 1 } });
+    expect(jars.map((j) => j.label)).toEqual(["Intake", "Tables", "Stitching", "Result", "Recipes", "Autopsy", "Ask"]);
+    expect(jars.map((j) => j.ariaLabel)).toEqual([
+      "Go to Intake", "Go to Tables", "Go to Stitching", "Go to Result", "Go to Recipes", "Go to Autopsy", "Go to Ask the Lab",
+    ]);
+  });
+  it("puts the table names and row counts in the Tables tooltip", () => {
+    expect(tablesTooltip([crm, billing])).toBe("Tables: crm_customers 22 rows, billing_invoices 48 rows");
+    expect(tablesTooltip([{ tableName: "one", rowCount: 1 }])).toBe("Tables: one 1 row");
+    const nine = Array.from({ length: 9 }, (_, i) => ({ tableName: `t${i + 1}`, rowCount: 5 }));
+    expect(tablesTooltip(nine)).toMatch(/t6 5 rows, and 3 more$/);
+    expect(sectionStatus("tables", loaded)).toBe("Tables: crm_customers 22 rows, billing_invoices 48 rows");
+  });
+  it("gives a one-line status for the other sections", () => {
+    expect(sectionStatus("result", stitched)).toBe("Result: 48 rows");
+    expect(sectionStatus("stitching", pending)).toBe("Stitching: 14 of 14 approved");
+    expect(sectionStatus("intake", loaded)).toBe("Intake: 2 tables loaded");
+    expect(sectionStatus("autopsy", { ...loaded, autopsy: { tableName: "crm_customers", score: 81 } })).toBe(
+      "Autopsy: crm_customers, health score 81"
+    );
+    expect(sectionStatus("recipes", { ...stitched, recipeDone: true })).toBe("Recipes: saved or applied");
+  });
+  it("uses no em dash or en dash", () => {
+    const all = { ...stitched, recipeDone: true, autopsy: { tableName: "x", score: 9 } };
+    for (const j of buildSectionJars(all)) expect(`${j.label}${j.ariaLabel}${j.status}`).not.toMatch(/[\u2013\u2014]/);
+  });
+});
+
+describe("the active section", () => {
+  it("picks the one crossing the middle, and prefers the nested result over its stitching table", () => {
+    expect(pickActiveSection([])).toBeNull();
+    expect(pickActiveSection(["ask"])).toBe("ask");
+    expect(pickActiveSection(["stitching", "result"])).toBe("result");
+    expect(pickActiveSection(["ask", "tables"], ["intake", "stitching", "ask", "tables"])).toBe("ask");
+  });
+});
+
+describe("timing and static arcs", () => {
+  it("never crackles sooner than every 20 seconds", () => {
+    for (const roll of [0, 0.5, 1, -2, NaN]) expect(nextCrackleDelayMs(roll)).toBeGreaterThanOrEqual(CRACKLE_MIN_GAP_MS);
+  });
+  it("redraws the static arcs every 300 to 600ms", () => {
+    for (const roll of [0, 0.3, 0.999, 7, -1, NaN]) {
+      const ms = nextStaticArcDelayMs(roll);
+      expect(ms).toBeGreaterThanOrEqual(STATIC_ARC_MIN_MS);
+      expect(ms).toBeLessThanOrEqual(STATIC_ARC_MAX_MS);
     }
+  });
+  it("makes 2 to 3 tiny jagged arcs within 40px of the ball, the same for a seed", () => {
+    for (let seed = 0; seed < 200; seed += 1) {
+      const arcs = generateStaticArcs(seed);
+      expect(arcs.length).toBeGreaterThanOrEqual(2);
+      expect(arcs.length).toBeLessThanOrEqual(3);
+      expect(generateStaticArcs(seed)).toEqual(arcs);
+      for (const arc of arcs) {
+        expect(arc.length).toBeGreaterThanOrEqual(4);
+        for (const p of arc) expect(Math.hypot(p.x, p.y)).toBeLessThanOrEqual(STATIC_ARC_RADIUS_PX);
+      }
+    }
+    expect(generateStaticArcs(1)).not.toEqual(generateStaticArcs(2));
   });
 });

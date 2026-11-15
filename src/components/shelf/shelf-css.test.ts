@@ -9,8 +9,20 @@ describe("LabShelf.css", () => {
   it("is fixed beside the 1200px column and ignores the pointer except on jar buttons", () => {
     expect(css).toMatch(/\.lab-shelf\s*\{[^}]*position:\s*fixed/);
     expect(css).toMatch(/\.lab-shelf\s*\{[^}]*pointer-events:\s*none/);
+    expect(css).toMatch(/\.lab-shelf\s*\{[^}]*top:\s*50%/);
+    expect(css).toMatch(/\.lab-shelf\s*\{[^}]*translate\(-50%, -50%\) scale\(var\(--shelf-scale/);
     expect(css).toMatch(/\.lab-shelf \*\s*\{\s*pointer-events:\s*none/);
     expect(css).toMatch(/\.lab-shelf button\.shelf-jar,[^{]*\{\s*pointer-events:\s*auto/);
+  });
+  it("prints the section name as real text of at least 12px under each jar", () => {
+    const m = /\.shelf-jar__text\s*\{([^}]*)\}/.exec(css);
+    expect(m).not.toBeNull();
+    expect(m![1]).toMatch(/font-size:\s*(1[2-9]|[2-9]\d)px/);
+    expect(m![1]).not.toMatch(/text-overflow|overflow:\s*hidden/);
+  });
+  it("shows the tooltip to the left on hover and keyboard focus", () => {
+    expect(css).toMatch(/\.shelf-tip\s*\{[^}]*right:\s*calc\(100% \+ 8px\)/);
+    expect(css).toMatch(/button\.shelf-jar:hover \+ \.shelf-tip,\s*\nbutton\.shelf-jar:focus-visible \+ \.shelf-tip/);
   });
   it("is hidden below 1440px", () => {
     expect(css).toMatch(/@media \(max-width: 1439px\)\s*\{\s*\.lab-shelf\s*\{\s*display:\s*none/);

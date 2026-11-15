@@ -1,35 +1,51 @@
-# Lab shelf
+# Lab shelf (page navigation)
 
 Branch `lab-shelf`, cut from `main` (which already includes `little-frank`). Not merged.
 
+The shelf began as a decorative row of per-table jars. It is now page navigation: a Tesla coil over one jar per page section, in the empty right gutter. The first commit (per-table jars) is superseded; this note describes the current design.
+
 ## What it is
 
-A decorative shelf in the empty right gutter, rendered only when the viewport is at least 1440px wide. Below that it is not in the DOM at all (the CSS also hides it, as a second guard). It is `position: fixed` beside the 1200px main column (`left: 50% + 610px`, at most 104px wide), so it takes no space in the layout and cannot shift the column.
+- **Where**: a `<nav aria-label="Lab sections">`, `position: fixed`, centred in the right gutter (`left: 75vw + 300px`, the middle of the space right of the 1200px column) and in the window (`top: 50%`, `translate(-50%, -50%)`). It is rendered only at 1440px and wider; below that it is not in the DOM (the CSS hides it as a second guard). It takes no space in the layout, so it cannot shift the main column. If the jars do not fit the window height it scales down to as little as 70% (`--shelf-scale`, measured on resize and when jars come and go) instead of clipping.
+- **Jars are sections**, in workflow order, each shown only while its section exists:
 
-- **Tesla coil** at the top (SVG, aria-hidden). Powered while tables are loaded (soft cyan glow), unpowered before data and after Reset lab (the glow fades over 900ms). While powered, a faint crackle at most once every 20 seconds (a random 20 to 35 second wait, from `nextCrackleDelayMs`). On Frank's wake strike a big forked arc lands on the coil's top terminal, drawn from the same `generateBolt` generator and with the same flicker keyframes (on, off, on, off, on over 350ms, fade over 250ms). On Confirm & stitch a small spark.
-- **Jars**, one per loaded table, then one for the stitched result. Each is an SVG jar with green liquid, rising bubbles, and a paper label with the table name (cut to 12 characters with an ellipsis; the full name and row count are the `title` tooltip) and the row count. The liquid level is a log scale of the row count clamped to 30 to 85 percent, so it rises gently. A stitched result is teal and its label has a dashed stitch line, cross-stitches at two corners and a zigzag seam across the glass. New jars pop in (300ms). On Reset lab (or undo) the liquid falls (600ms), then the jar fades (350ms) and is removed after 1 second.
-- **More than 6**: six jars plus one "+N" jar. The stitched jar keeps its place among the six, so with 8 tables and a stitched result you see 5 tables, the stitched jar and "+3".
-- **Interaction**: a table or stitched jar is a real button, `aria-label="Go to table <name>, <n> rows"` ("1 row" for one). Click, Enter or Space scrolls that table's card into view (smooth, or at once under reduced motion) and moves no focus. The "+N" jar and a draining jar are decorative. Everything else on the shelf is aria-hidden and `pointer-events: none`.
-- **Motion**: under `prefers-reduced-motion` or Calm Frank the shelf gets `lab-shelf--still`: no bubbles are rendered, no arcs are rendered, no pops, drains or fades (jars vanish at once), no transitions. Only transform, opacity and filter animate. CSS and SVG only, no dependency.
+  | Jar | Section it scrolls to | Shown when | Liquid |
+  |---|---|---|---|
+  | Intake | the drop zone or the toolbar | always | full when tables are loaded, else empty |
+  | Tables | the loaded table cards | tables loaded | full |
+  | Stitching | the stitching table | proposals exist and the stitching table is open | half while pending, full when stitched |
+  | Result | the stitched result card | a stitch exists (and the stitching table is open) | full |
+  | Recipes | the recipes panel | a stitch exists (the panel's own rule) | full after Save recipe or Apply recipe |
+  | Autopsy | the open Autopsy panel | an Autopsy is open | half while it examines, full once it shows a score |
+  | Ask | Ask the Lab | tables loaded | half while a question is pending, full after the first answer |
+
+  There are no per-table jars. Table names and row counts live in the Tables tooltip ("Tables: crm_customers 22 rows, billing_invoices 48 rows", listing up to six tables then "and N more").
+- **Readable**: the short name (Intake, Tables, Stitching, Result, Recipes, Autopsy, Ask) is real text under each jar, 12px, high contrast, `nowrap`, never truncated. Hovering or focusing a jar shows a tooltip to the left with the section name and a one-line status ("Result: 48 rows", "Stitching: 14 of 14 approved"). The tooltip is wired to the button with `aria-describedby` and `role="tooltip"`.
+- **Navigation**: each jar is a button, `aria-label="Go to <section>"` ("Go to Ask the Lab" for Ask). Click, Enter or Space scrolls the section into view (smooth, instant under reduced motion) and moves keyboard focus to its heading (the intake and the table list have none, so the section itself takes the focus).
+- **Active section**: an IntersectionObserver on the sections' `data-lab-section` markers watches a thin band across the middle of the window. The jar of the section in it gets a brighter glow, an accent-coloured label and `aria-current="true"`. The result card sits inside the stitching table, so when both cross the band the inner one (Result) wins.
+- **Progress**: the liquid is a full-height rectangle scaled to 0, 0.5 or 1, so it rises smoothly (700ms, transform only). A jar's `data-progress` is `empty`, `half` or `full`.
+- **Coil**: powered (soft glow) while tables are loaded and fading out after Reset lab. While Frank is alive (tables loaded and not asleep from idling) 2 to 3 tiny jagged static arcs dance on the top ball, redrawn every 300 to 600ms at low opacity and never farther than 40px from the ball. A faint crackle at most once every 20 seconds. The big forked arc on Frank's wake strike and the small spark on Confirm & stitch are unchanged. All of these are off for Calm Frank and reduced motion, and the static is off when Frank sleeps.
+- **Motion**: under reduced motion or Calm Frank the shelf gets `lab-shelf--still`: no bubbles, arcs or static arcs are rendered, and no pops, rises, drains, fades or transitions run (jars appear and vanish at once, liquid is drawn at its level). Only transform, opacity and filter animate. CSS and SVG only, no dependency.
 
 ## How it hooks into the app (no duplicated state)
 
-- **Tables and stitched result**: `LabShelf` takes the same `tables` list the table cards come from and reads `stitchedTable` from the existing `StitchStore`. The jars are a pure function of those (`src/core/shelf/shelf-model.ts`). The one piece of shelf-owned state is a copy of the jars that just left, kept for about a second so they can drain.
-- **Frank's reactions**: the controller already decides what Frank does. `FrankRegion` now publishes the playing Reaction (id and sequence number) and the Calm Frank flag to a tiny read-only store, `src/state/frank-feed.ts`. The shelf subscribes with `useSyncExternalStore`: `wake` makes the big arc and `sew` (Confirm & stitch) the spark. The shelf never works the events out again, and a second wake strike is a second arc because the sequence number keys it.
-- **Power**: the coil is powered when at least one table is loaded, not tied to the `reset` reaction, because Frank skips that reaction for a quiet demo replace and the coil should not blink then either.
-- The reduced-motion hook moved out of `FrankRegion` into `src/components/frank/useReducedMotion.ts` so both use it.
+- **Page markers**: the sections carry `data-lab-section` (intake, tables, stitching, result, recipes, autopsy, ask). Added to the existing roots in `App.tsx`, `RecipePanel.tsx`, and an optional `sectionId` on `TablePreview` (which also makes the loaded table list a labelled region, "Loaded tables"). Nothing else on the page changes.
+- **State**: `LabShelf` is given the loaded tables, `stitchOpen` and the open Autopsy's table name, and reads the stitch store (proposals, decisions, stitched result) and the ask store (pending, first answer). The jars are a pure function of that (`src/core/shelf/shelf-model.ts`).
+- **Events with no store**: "recipe saved or applied" and "Autopsy score" come from the existing `frankBus` events (`save-recipe`, `apply-recipe`, `autopsy`), the same ones Little Frank already uses.
+- **Frank**: `FrankRegion` publishes the playing Reaction, Calm Frank and idle to a tiny read-only store (`src/state/frank-feed.ts`; `idle` was added in this rework). The coil listens to it.
+- The only state the shelf owns is a copy of the jars that just left (kept for 1 second so they can drain), the section in view, the clicked jar, a recipe-done flag and the first-answer flag, which reset with Reset lab.
 
 ## Decisions and limits
 
-- **Gutter width**: at exactly 1440px the gutter beside the 1200px column is 120px, so the shelf is 104px wide and the jars are compact (84 by 66). At 1600px it sits next to the column rather than at the screen edge, so it reads as part of the lab.
-- **Short windows**: the shelf is top-anchored (72px, or 40px under 780px tall). Seven jars and the coil need about 680px, so at very short windows the lowest jars would be off screen. I did not add an inner scroller for a decorative element.
-- **Where "More" counts**: the "+N" counts loaded tables plus the stitched result beyond six.
-- **Coil arc**: it reuses the strike generator, ending on the coil, instead of a separate arc generator.
-- Row labels use `en-US` thousands separators ("1,234 rows").
+- **Order is workflow order, not DOM order.** The brief's list was used as given: Intake, Tables, Stitching, Result, Recipes, Autopsy, Ask. On the page the table cards are rendered last, below Ask the Lab and the Autopsy panel, and Ask is above Autopsy. So jar order and scroll order differ for Tables, Autopsy and Ask. The order is one constant (`SECTION_ORDER`) if you want it to follow the page instead.
+- **Stitching and Result need the stitching table open.** They live inside it, so if the user closes it the jars go (a jar with nothing to scroll to would be dead). The brief said "when proposals exist" and "when a stitch exists"; that is the same except while the stitching table is closed.
+- **A clicked jar stays current** until the user scrolls by hand (wheel, touch, or a scroll key). Without that, a section the page cannot bring to the middle of the window (Ask, right above the table cards) loses the highlight as soon as the smooth scroll ends. I found this in a screenshot; the e2e test now waits for the scroll to settle before checking.
+- **Tooltips overlap the main column** while open, since they open to the left of a jar that sits in the gutter. They are transient and ignore the pointer.
+- **Very short windows**: at 70% the shelf still needs about 440px; below that it would clip. No inner scroller for a navigation aid.
+- Row labels use `en-US` thousands separators.
 
 ## Verification
 
-- `npm test`, `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e`: all pass (202 test files, 1301 tests; 18 e2e tests; lint shows warnings only). New tests: `shelf-model.test.ts` (tables to jars, the +N rule, the stitched jar's place, the level clamp, the crackle gap), `frank-feed.test.ts`, `LabShelf.smoke.test.tsx` (jars, labels and tooltips, stitched jar, +N, scroll, drain, arcs, Calm and reduced motion, crackle spacing), `shelf-css.test.ts`.
-- e2e at 1600px: loading the business demo gives 2 jars with the right labels (`crm_customers, 22 rows`, `billing_invoices, 48 rows`), the wake arc, the shelf sitting in the gutter outside the column; stitching gives 3 jars; clicking the stitched jar (and Enter on another) scrolls its card into view; Reset lab leaves 0 jars; reduced motion has no bubbles, arcs or running shelf animation. At 1280px the shelf is not rendered, and it appears when the window grows.
-- I looked at screenshots of the coil with its arc and of the three jars (temporary spec, removed).
-- No em dash or en dash in any shelf text, code string or in these notes.
+- Unit: `shelf-model.test.ts` (jar visibility and order, the progress rules, the Tables tooltip text, the active-section pick, the crackle gap, the static arcs), `frank-feed.test.ts`, `LabShelf.smoke.test.tsx` (jars, tooltips, navigation and focus, `aria-current`, pinned jar, progress, drain, arcs, static, Calm and reduced motion), `shelf-css.test.ts` (centring, 12px text, tooltip on the left, 1440px rule, motion off).
+- e2e at 1600px: landing shows only the Intake jar, centred in the gutter and the window; loading the business demo shows Intake, Tables and Ask (and the wake arc), names at 12px or more and not clipped, the Tables tooltip to the left of the jar; stitching adds Stitching, Result and Recipes with Result and Stitching full and Recipes empty; clicking the Ask jar scrolls Ask the Lab into view, focuses its heading, and the jar is `aria-current` after the scroll settles, until a manual scroll; Enter on the Result jar goes to the result card; Save recipe fills the Recipes jar; a 500px-tall window scales the shelf (70% or more) inside the window; Reset lab leaves only Intake. Reduced motion: no bubbles, arcs or static arcs and no running shelf animation. The static dances only while Frank is alive. At 1280px the shelf is not rendered.
+- Full gate: `npm test` 202 files and 1318 tests, `npm run build`, `npm run check:api`, `npm run mcp:build` and `npm run test:e2e` (20 tests) all pass; lint shows warnings only. No em dash or en dash in any shelf text, code string or in this note.

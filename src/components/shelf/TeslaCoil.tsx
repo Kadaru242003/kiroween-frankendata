@@ -3,14 +3,17 @@
  *
  *  - powered (tables loaded): a soft cyan glow; unpowered (before data, and
  *    after Reset lab): the glow fades out;
+ *  - while Frank is alive: 2 to 3 tiny static arcs dance on the top ball,
+ *    redrawn every 300 to 600ms at low opacity;
  *  - idle crackle: a faint little arc now and then (the shelf decides when);
  *  - wake: a big forked arc, drawn from the same generator and timing as the
  *    wake strike so it flickers with it;
  *  - Confirm & stitch: a small spark.
  * Under reduced motion or Calm Frank none of the arcs is rendered.
  */
-import { useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import { generateBolt, pointsToPath } from "../../core/frank/lightning";
+import { generateStaticArcs, nextStaticArcDelayMs } from "../../core/shelf/shelf-model";
 
 /** The big arc: the generator's bolt, ending on the coil's top terminal. */
 function BigArc({ seq }: { seq: number }): JSX.Element {
@@ -38,8 +41,34 @@ function BigArc({ seq }: { seq: number }): JSX.Element {
   );
 }
 
+/** Small, faint arcs dancing on the ball, redrawn every 300 to 600ms, within 40px of it. */
+function StaticArcs(): JSX.Element {
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 32));
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      timer = setTimeout(() => {
+        setSeed(Math.floor(Math.random() * 2 ** 32));
+        tick();
+      }, nextStaticArcDelayMs(Math.random()));
+    };
+    tick();
+    return () => clearTimeout(timer);
+  }, []);
+  const arcs = useMemo(() => generateStaticArcs(seed), [seed]);
+  return (
+    <g className="shelf-static" transform="translate(42 17)" data-testid="shelf-static">
+      {arcs.map((points, i) => (
+        <polyline key={i} points={points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" />
+      ))}
+    </g>
+  );
+}
+
 export interface TeslaCoilProps {
   powered: boolean;
+  /** Frank is alive (tables loaded and awake): the ball dances with static. */
+  alive: boolean;
   /** Reduced motion or Calm Frank. */
   still: boolean;
   /** A key that changes for each idle crackle (0 for none). */
@@ -50,7 +79,7 @@ export interface TeslaCoilProps {
   sparkSeq: number;
 }
 
-export function TeslaCoil({ powered, still, crackleSeq, wakeSeq, sparkSeq }: TeslaCoilProps): JSX.Element {
+export function TeslaCoil({ powered, alive, still, crackleSeq, wakeSeq, sparkSeq }: TeslaCoilProps): JSX.Element {
   return (
     <svg
       className={`shelf-coil${powered ? " shelf-coil--powered" : ""}`}
@@ -79,6 +108,7 @@ export function TeslaCoil({ powered, still, crackleSeq, wakeSeq, sparkSeq }: Tes
       <circle className="shelf-coil__terminal" cx="42" cy="17" r="7" />
       {still ? null : (
         <>
+          {alive ? <StaticArcs /> : null}
           {crackleSeq > 0 ? (
             <polyline
               key={`c${crackleSeq}`}
