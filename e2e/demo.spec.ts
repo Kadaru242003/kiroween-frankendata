@@ -97,6 +97,73 @@ test('business demo: stitch on the email key, revenue by region, Autopsy', async
   await expect(page.getByLabel('Health score 79 out of 100')).toBeVisible()
 })
 
+test("business month two: the March recipe applies to next month's business files", async ({ page }) => {
+  await page.goto('/')
+
+  // March: load, stitch on the email key, save the recipe.
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+  await stitchEverything(page)
+  await expect(
+    page.getByRole('region', { name: 'Stitched result preview' }).getByText('48 rows', { exact: true }),
+  ).toBeVisible()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+  const download = await downloadPromise
+  const recipePath = test.info().outputPath('business-recipe.json')
+  await download.saveAs(recipePath)
+
+  // April: reset, load next month's business files, apply the recipe.
+  await page.getByRole('button', { name: 'Reset lab' }).click()
+  await expect(page.getByRole('region', { name: /^Preview of/ })).toHaveCount(0)
+  await page.getByRole('button', { name: "Load next month's business files" }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Preview of billing_invoices_2026_04', exact: true }),
+  ).toBeVisible()
+  await page.getByLabel('Apply recipe (JSON file)').setInputFiles(recipePath)
+  // Every step pre-approved, nothing left over.
+  await expect(page.getByText(/proposals? pre-approved, 0 not applied/).first()).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Recipe items not applied' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Review in stitching table' }).click()
+  await page.getByRole('button', { name: /Confirm & stitch/ }).click()
+  await page.getByRole('button', { name: 'Apply & stitch' }).click()
+  // One row per April invoice, and no fan-out warning.
+  const result = page.getByRole('region', { name: 'Stitched result preview' })
+  await expect(result.getByText('24 rows', { exact: true })).toBeVisible()
+  await expect(page.getByText(/fan/i)).toHaveCount(0)
+})
+
+test('Load demo menu order, and a demo replaces the loaded tables while Add files adds on top', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: /^Load demo/ }).click()
+  await expect(page.getByRole('menuitem')).toHaveText([
+    'Business (loaded)',
+    'Business: next month',
+    'Lab',
+    'Mismatched',
+    'Lab: next month',
+  ])
+
+  // A demo replaces the loaded tables.
+  await page.getByRole('menuitem', { name: 'Lab', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Preview of monsters', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Preview of billing_invoices', exact: true })).toHaveCount(0)
+
+  // Add files still adds on top.
+  await page.getByLabel('Add files').setInputFiles({
+    name: 'extra.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('id,label\n1,a\n2,b\n'),
+  })
+  await expect(page.getByRole('region', { name: 'Preview of extra', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Preview of monsters', exact: true })).toBeVisible()
+})
+
 test('Autopsy opens and scrolls into view after stitching and asking, on every table', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Load business demo' }).click()
@@ -138,9 +205,9 @@ for (const [label, width] of [['100% zoom', 1280], ['67% zoom', 1910]] as const)
     expect(tagBox.y + tagBox.height).toBeLessThanOrEqual(btnBox.y + 1.5)
     // Centered over the button.
     expect(Math.abs(tagBox.x + tagBox.width / 2 - (btnBox.x + btnBox.width / 2))).toBeLessThan(2)
-    // All four demo buttons share one top edge when they fit on one row.
+    // All five demo buttons share one top edge when they fit on one row.
     const tops: number[] = []
-    for (const name of ['Load business demo', 'Load demo data', 'Load mismatched demo', "Load next month's files"]) {
+    for (const name of ['Load business demo', 'Load demo data', 'Load mismatched demo', "Load next month's files", "Load next month's business files"]) {
       tops.push((await page.getByRole('button', { name }).boundingBox())!.y)
     }
     if (width >= 1280) {

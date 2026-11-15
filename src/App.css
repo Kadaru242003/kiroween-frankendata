@@ -169,13 +169,13 @@
   max-width: 420px;
 }
 
-/* The four demo buttons sit on one baseline beneath the drop zone, centered. */
+/* The five demo buttons sit on one baseline beneath the drop zone, centered. */
 .lab-intake__demos {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: 28px 20px;
+  gap: 28px 8px;
   padding-top: 28px;
 }
 
@@ -186,10 +186,14 @@
   flex: 0 0 auto;
 }
 
+/* Slightly tighter buttons so all five fit on one row at 1280px. */
+.lab-intake .frankendata-demo-control__button {
+  padding: 8px 10px;
+}
 /* One-line caption under each demo button (keeps the lab theme). */
 .frankendata-demo-control__caption {
   margin: 6px 0 0;
-  max-width: 220px;
+  max-width: 190px;
   text-align: center;
   color: var(--text-secondary);
   font-size: 12px;

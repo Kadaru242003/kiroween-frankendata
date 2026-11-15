@@ -53,6 +53,12 @@ export interface SpecimenProps {
    * then chart sign, then clipboard. Optional, default false.
    */
   recipeApplied?: boolean;
+  /**
+   * While `current` is true a drop to zero tables is a quiet replace (a demo
+   * loading over the loaded tables), so the reset/flop reaction is skipped.
+   * Read when the table count changes, so it needs no re-render. Optional.
+   */
+  quietResetRef?: { current: boolean };
 }
 
 /** A transient reaction the Specimen plays for a short time, then clears. */
@@ -164,7 +170,7 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     if (p.tableCount === 0 && tableCount > 0) {
       play("alive", 2000);
     } else if (p.tableCount > 0 && tableCount === 0) {
-      play("reset", 2000);
+      if (!props.quietResetRef?.current) play("reset", 2000);
     } else if (stitched && !p.stitched) {
       // e. stitched result appeared.
       play("stitched", 2000);
