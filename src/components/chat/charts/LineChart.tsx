@@ -5,6 +5,7 @@
  * visually hidden table lists every plotted point for screen readers.
  */
 import { shapeLinePoints } from "../../../core/chat/chart-choice";
+import { formatNumber, humanize } from "../../../core/chat/format";
 import type { ChartSpec, DisplayValue } from "../../../core/chat/types";
 import "./chart.css";
 
@@ -14,20 +15,19 @@ export interface LineChartProps {
   rows: DisplayValue[][];
 }
 
-const WIDTH = 480;
-const HEIGHT = 240;
-const PAD_LEFT = 44;
-const PAD_RIGHT = 12;
-const PAD_TOP = 12;
+const WIDTH = 720;
+const HEIGHT = 280;
+const PAD_RIGHT = 16;
+const PAD_TOP = 18;
 const PAD_BOTTOM = 40;
-
-function formatNumber(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2);
-}
+const TICK_CHAR_WIDTH = 6.5;
 
 export function LineChart({ spec, columns, rows }: LineChartProps) {
   const points = shapeLinePoints(columns, rows, spec.x, spec.y);
   if (points.length < 2) return null;
+  const widest = Math.max(formatNumber(Math.max(0, ...points.map((p) => p.value))).length, formatNumber(Math.min(0, ...points.map((p) => p.value))).length);
+  // Reserve enough left padding for the widest tick label so it never clips.
+  const PAD_LEFT = Math.max(44, Math.ceil(widest * TICK_CHAR_WIDTH) + 16);
   const plotWidth = WIDTH - PAD_LEFT - PAD_RIGHT;
   const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
   const values = points.map((p) => p.value);
@@ -41,7 +41,7 @@ export function LineChart({ spec, columns, rows }: LineChartProps) {
   return (
     <figure className="ask-chart" aria-label={label}>
       <figcaption className="ask-chart__caption">
-        {spec.y} over {spec.x}
+        {humanize(spec.y)} over {humanize(spec.x).toLowerCase()}
       </figcaption>
       <svg
         className="ask-chart__svg"

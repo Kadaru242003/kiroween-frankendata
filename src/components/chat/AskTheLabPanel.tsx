@@ -315,12 +315,9 @@ export function AskTheLabPanel({
         <div className="ask-panel__outcome" ref={outcomeRef} tabIndex={-1} aria-label="Latest answer">
           {outcome.kind === "ok" ? (
             <>
-              <SqlBlock sql={outcome.sql} explanation={outcome.explanation} />
-              <ResultTableView
-                columns={outcome.columns}
-                rows={outcome.rows}
-                capped={outcome.capped}
-              />
+              {history[0] ? (
+                <p className="ask-panel__question">{history[0]}</p>
+              ) : null}
               {outcome.chart && outcome.chart.type === "bar" ? (
                 <BarChart
                   spec={outcome.chart}
@@ -335,6 +332,12 @@ export function AskTheLabPanel({
                   rows={outcome.rows}
                 />
               ) : null}
+              <ResultTableView
+                columns={outcome.columns}
+                rows={outcome.rows}
+                capped={outcome.capped}
+              />
+              <SqlBlock sql={outcome.sql} explanation={outcome.explanation} />
             </>
           ) : null}
           {outcome.kind === "ai-unavailable" ? (

@@ -69,6 +69,12 @@ function formatConfidence(confidence: number): string {
   return `${Math.round(confidence * 100)}%`;
 }
 
+/** 90 or above: high (green); 70 to 89: neutral; below 70: low (amber). */
+export function confidenceTone(confidence: number): "high" | "mid" | "low" {
+  const pct = Math.round(confidence * 100);
+  return pct >= 90 ? "high" : pct >= 70 ? "mid" : "low";
+}
+
 /**
  * A single match proposal rendered as a before/after column pairing with
  * approve / reject / re-pair controls and an engine badge.
@@ -129,7 +135,10 @@ export function MatchDiff({
             AI found this
           </span>
         ) : null}
-        <span className="stitch-proposal__confidence" aria-label="Confidence">
+        <span
+          className={`stitch-proposal__confidence stitch-proposal__confidence--${confidenceTone(confidence)}`}
+          aria-label="Confidence"
+        >
           {formatConfidence(confidence)}
         </span>
       </header>

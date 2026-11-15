@@ -13,7 +13,6 @@ import type {
 } from "../../core/recipes/types";
 import { RECIPE_MAX_BYTES } from "../../core/recipes/types";
 import type { DuckDBService, LoadedTable } from "../../core/types";
-import { ExportButtons } from "./ExportButtons";
 import { RecipeNotApplied } from "./RecipeNotApplied";
 import "./Recipes.css";
 
@@ -170,7 +169,6 @@ export interface RecipePanelProps {
 
 /** Save recipe and exports for the stitched result, shown after the result card. */
 export function RecipePanel({
-  db,
   stitchedTable,
   getRecipeDownload,
   getSqlDownload,
@@ -225,7 +223,6 @@ export function RecipePanel({
             {sqlMsg}
           </span>
         </span>
-        <ExportButtons db={db} table={stitchedTable} />
       </div>
     </section>
   );

@@ -27,11 +27,13 @@ describe("BarChart", () => {
     expect(container.textContent).toContain("vamp");
   });
 
-  it("truncates a long x label but keeps the full text in a <title>", () => {
-    const rows: DisplayValue[][] = [["a-very-long-category-name", 5]];
+  it("wraps a long x label to two lines, truncates beyond that, and keeps the full text in a <title>", () => {
+    const longLabel = "a-very-long-category-name-".repeat(12);
+    const rows: DisplayValue[][] = [[longLabel, 5], ["short", 3], ["mid size label here", 2], ["x", 1], ["y", 1], ["z", 1], ["w", 1], ["v", 1]];
     const { container } = render(<BarChart spec={spec} columns={cols} rows={rows} />);
     const titles = Array.from(container.querySelectorAll("title")).map((t) => t.textContent);
-    expect(titles).toContain("a-very-long-category-name");
+    expect(titles).toContain(longLabel);
+    expect(container.querySelectorAll("tspan").length).toBeGreaterThan(8);
     // The visible x label is truncated with an ellipsis.
     expect(container.textContent).toContain("…");
   });

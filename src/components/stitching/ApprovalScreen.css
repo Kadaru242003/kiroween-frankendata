@@ -182,7 +182,7 @@
 
 .stitch-proposal__confidence {
   margin-left: auto;
-  color: var(--amber-accent);
+  color: var(--text-primary);
   font-family: var(--mono);
   font-size: 14px;
 }
@@ -456,4 +456,40 @@
   margin: 0;
   color: var(--lab-green);
   font-weight: 600;
+}
+
+/* Confidence percent by value: 90+ green, 70 to 89 neutral, below 70 amber. */
+.stitch-proposal__confidence--high {
+  color: var(--lab-green);
+}
+.stitch-proposal__confidence--mid {
+  color: var(--text-primary);
+}
+.stitch-proposal__confidence--low {
+  color: var(--amber-accent);
+}
+
+/* Approve is the primary action; Reject is quiet. */
+.stitch-proposal__action--approve {
+  border-color: var(--lab-green);
+  background: var(--lab-green);
+  color: #07130a;
+  font-weight: 600;
+}
+.stitch-proposal__action--approve[aria-pressed="true"] {
+  background: var(--lab-green-deep);
+  border-color: var(--lab-green);
+  color: var(--text-primary);
+}
+.stitch-proposal__action--reject {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.stitch-proposal__action--reject:hover {
+  border-color: var(--border);
+}
+.stitch-proposal__action--reject[aria-pressed="true"] {
+  border-color: var(--amber-accent);
+  color: var(--text-primary);
 }

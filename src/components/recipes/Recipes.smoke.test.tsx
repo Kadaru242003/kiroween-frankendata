@@ -62,13 +62,13 @@ function apply(props: Partial<React.ComponentProps<typeof ApplyRecipe>> = {}) {
 const stitched: LoadedTable = { ...EXPERIMENTS, tableName: "stitch_1_result" };
 
 describe("RecipePanel", () => {
-  it("shows the panel only with a stitched result, in order: Save, SQL, CSV, Excel", () => {
+  it("shows the panel only with a stitched result, in order: Save, SQL", () => {
     const { rerender, container } = render(panel());
     expect(screen.queryByRole("button", { name: "Save recipe" })).toBeNull();
     rerender(panel({ stitchedTable: stitched }));
     expect(screen.getByText(/Save this stitch as a recipe and reuse it on next month/)).toBeInTheDocument();
     const names = Array.from(container.querySelectorAll("button")).map((b) => b.textContent);
-    expect(names).toEqual(["Save recipe", "Export SQL script", "CSV", "Excel"]);
+    expect(names).toEqual(["Save recipe", "Export SQL script"]);
     expect(screen.queryByText(/Parquet/)).toBeNull();
   });
   it("Apply recipe is always available with its hint", () => {
