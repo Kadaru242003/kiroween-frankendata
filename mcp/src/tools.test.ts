@@ -131,6 +131,36 @@ describe("query", () => {
     const bad = await h.call("frankendata_query", { sql: "SELECT CAST(Species AS INTEGER) FROM monsters" });
     expect(bad.data.error.code).toBe("query-failed");
   }, 60000);
+  it("rejects FROM-list, comment-split, quoted-function and NUL bypasses before DuckDB runs", async () => {
+    await loadBoth();
+    for (const sql of [
+      "SELECT * FROM (SELECT 1) q, secret_table",
+      "SELECT * FROM monsters AS m(a), secret_table",
+      "SELECT * FROM monsters TABLESAMPLE 10%, secret_table",
+      // Local file name on purpose: if a bypass ever works the test must not touch the network.
+      "SELECT * FROM (SELECT 1) q, read_/**/csv('nofile.csv')",
+      `SELECT * FROM "read_csv"('nofile.csv')`,
+      `SELECT * FROM "READ_CSV"('nofile.csv')`,
+      `SELECT * FROM (SELECT 1) q, "READ_CSV"('nofile.csv')`,
+      "SELECT * FROM (secret_table CROSS JOIN monsters)",
+      "SELECT * FROM monsters\u0000",
+    ]) {
+      const r = await h.call("frankendata_query", { sql });
+      expect(r.data.error?.code, sql).toBe("sql-rejected");
+    }
+  }, 60000);
+  it("accepts EXTRACT, SUBSTRING, TRIM and IS DISTINCT FROM", async () => {
+    await loadBoth();
+    for (const sql of [
+      "SELECT EXTRACT(year FROM CAST('2026-01-02' AS DATE)) AS y FROM monsters LIMIT 1",
+      "SELECT SUBSTRING(Monster_Name FROM 1 FOR 2) AS s FROM monsters LIMIT 1",
+      "SELECT TRIM(BOTH ' ' FROM Monster_Name) AS t FROM monsters LIMIT 1",
+      "SELECT Monster_Name FROM monsters WHERE Monster_Name IS DISTINCT FROM 'x' LIMIT 1",
+    ]) {
+      const r = await h.call("frankendata_query", { sql });
+      expect(r.data.error, sql).toBeUndefined();
+    }
+  }, 60000);
   it("returns plain values and truncates large results", async () => {
     await loadBoth();
     const r = await h.call("frankendata_query", { sql: "SELECT Monster_Name, Sedated FROM monsters ORDER BY Monster_Name LIMIT 2" });

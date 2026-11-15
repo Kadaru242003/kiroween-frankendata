@@ -12,23 +12,23 @@ Core first (thread, chart choice, reset lock, proxy and controller changes), the
   - Create `src/core/chat/thread.ts`: constants, `ThreadTurn`, `toThreadTurn`, `toThread`, `fitRequestToCap`
   - Add `SqlRequest.thread?` and `temporalColumns?` on the ok outcome in `types.ts`
   - Unit tests; Property 1 and Property 2 tests
-  - _Design: Data model, Request and budgeting; Requirements 1.1 to 1.4, 7.1, 7.2_
+  - _Design: Data model, Request and budgeting; Requirements 1.1 to 1.4, 8.1, 8.2_
 - [x] 2. Proxy thread support
   - Validate `thread` in `validateSqlRequestSchema`, include it in the prompt, update the chart and thread prompt lines
   - Unit tests (valid thread, each rejection, same codes, thread in the user prompt) and Property 5
-  - _Design: Proxy changes; Requirements 1.5, 1.6, 7.5_
+  - _Design: Proxy changes; Requirements 1.5, 1.6, 8.5, 7.2_
 - [x] 3. Chart choice and controller
   - Create `src/core/chat/chart-choice.ts`; update the controller (`ask(question, thread)`, `temporalColumns`, line choice)
   - Unit tests, controller thread tests, Property 3
-  - _Design: Chart choice, Controller; Requirements 1.3, 3.1 to 3.4, 3.7, 3.8, 7.3_
+  - _Design: Chart choice, Controller; Requirements 1.3, 3.1 to 3.4, 3.7, 3.8, 8.3_
 - [x] 4. Reset lock
   - Create `src/state/reset-lock.ts`; unit tests and Property 4
-  - _Design: Reset lock; Requirements 5, 7.4_
+  - _Design: Reset lock; Requirements 5, 8.4_
 - [x] 5. Checkpoint: `npm run build`, `npm run check:api`, the touched tests; commit
 - [x] 6. Store, line chart, thread cards
   - Extend `AskStore` (`turns`, `pushTurn`, `clearThread`); create `LineChart.tsx` and `ThreadCards.tsx` with CSS
   - Store tests, LineChart smoke test
-  - _Design: Store and UI; Requirements 1.8, 1.9, 2, 3.5, 3.6_
+  - _Design: Store and UI; Requirements 1.8, 1.9, 1.11, 2, 3.5, 3.6_
 - [x] 7. Panel, New topic, focus, Ask about this
   - Update `AskTheLabPanel` (thread, New topic, focus, line chart, prefill); wire `App.tsx` (`askPrefill`, button through `renderActions`)
   - Smoke tests for thread cards, New topic, focus, line chart, prefill
@@ -44,4 +44,5 @@ Core first (thread, chart choice, reset lock, proxy and controller changes), the
 - [x] 11. Final checks and notes
   - Full `npm test`, `npm run build`, `npm run lint`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e`
   - README features, `NOTES.md`, commit
-  - _Requirements: all_
+  - The "Follow-up questions" line of the "What leaves the browser?" disclosure (`src/core/egress-description.ts`), Requirement 7.6
+  - _Requirements: all (privacy and non-interference: 7; properties: 8)_

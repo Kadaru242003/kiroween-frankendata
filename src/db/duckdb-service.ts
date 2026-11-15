@@ -64,6 +64,7 @@ import { parseNumber, normalizeDateToIso } from "../core/coercion";
 import { isNullToken } from "../core/predicates";
 import { IntakeFailure } from "../core/intake-failure";
 import type { DuckDBBundles } from "@duckdb/duckdb-wasm";
+import { lockDownConnection } from "./duckdb-lockdown";
 
 /**
  * Minimal connection abstraction the service runs on. Both the browser async
@@ -506,6 +507,13 @@ async function createBrowserConnection(): Promise<DuckDBConnectionAdapter> {
   await db.open({ path: ":memory:" });
 
   const connection = await db.connect();
+
+  // Defense in depth: no file or network access from SQL, configuration
+  // locked. Intake uses INSERT ... VALUES, so nothing here needs a file. This
+  // also disables `COPY ... TO`, which no production path uses.
+  await lockDownConnection(async (sql) => {
+    await connection.query(sql);
+  });
 
   return {
     async run(sql: string): Promise<Record<string, unknown>[]> {

@@ -19,6 +19,7 @@ export function describeEgress(): { sent: string[]; neverSent: string } {
       `Ask the Lab: up to ${ASK_SCHEMA_MAX_SAMPLES_PER_COLUMN} short sample values per column (each cut to ${ASK_SCHEMA_MAX_SAMPLE_CHARS} characters).`,
       `Ask the Lab: the question text you type (at most ${ASK_MAX_QUESTION_CHARS} characters).`,
       `Follow-up questions: your previous questions (at most ${ASK_THREAD_MAX_TURNS} turns), the SQL that answered them, and the result column names and row counts.`,
+      "If a query fails, the error message with values removed.",
     ],
     neverSent: "Your rows are never sent, and neither are result values.",
   };

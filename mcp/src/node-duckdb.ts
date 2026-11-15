@@ -10,6 +10,7 @@ import {
   type DuckDBConnectionAdapter,
 } from "../../src/db/duckdb-service";
 import type { DuckDBService } from "../../src/core/types";
+import { lockDownConnection } from "../../src/db/duckdb-lockdown";
 
 interface ConnectionLike {
   query(text: string): { toArray(): Array<{ toJSON(): Record<string, unknown> }> };
@@ -48,6 +49,11 @@ export async function createNodeDuckDB(): Promise<NodeDuckDB> {
   await db.instantiate();
   db.open({ path: ":memory:", accessMode: duckdb.DuckDBAccessMode.READ_WRITE });
   const conn = db.connect();
+  // Defense in depth: no file or network access from SQL, configuration locked.
+  // File loading happens in JavaScript and inserts with INSERT ... VALUES.
+  await lockDownConnection(async (sql) => {
+    conn.query(sql);
+  });
   const adapter: DuckDBConnectionAdapter = {
     async run(sql: string) {
       return conn.query(sql).toArray().map((r) => r.toJSON());

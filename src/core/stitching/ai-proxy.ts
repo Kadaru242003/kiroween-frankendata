@@ -39,6 +39,7 @@ import {
 import type {
   AiRequest,
   AiResponse,
+  AiRefinement,
   AiSampleColumn,
   AiCandidateMatch,
 } from "./types.js";
@@ -463,19 +464,19 @@ export async function handleAiProxyRequest(
   try {
     // Per-client hourly limit.
     const clientKey = `rl:${clientId}:${hourBucket(nowMs)}`;
-    const clientCount = await deps.redis.incrWithTtl(clientKey, 3600);
+    const clientCount = requireCount(await deps.redis.incrWithTtl(clientKey, 3600));
     if (clientCount > AI_PROXY_PER_CLIENT_LIMIT) {
       return emit(err(429, "rate_limited"), counts, "rate_limited");
     }
 
     // Global daily cap.
     const capKey = `cap:${dayBucket(nowMs)}`;
-    const globalCount = await deps.redis.incrWithTtl(capKey, 86400);
+    const globalCount = requireCount(await deps.redis.incrWithTtl(capKey, 86400));
     if (globalCount > AI_PROXY_DAILY_REQUEST_CAP) {
       return emit(err(429, "daily_cap", true), counts, "daily_cap");
     }
   } catch {
-    // Counters unreachable → fail closed; the LLM is NOT called.
+    // Counters unreachable or not a number → fail closed; the LLM is NOT called.
     return emit(err(503, "unavailable"), counts, "unavailable");
   }
 
@@ -528,7 +529,31 @@ export function parseLlmResponse(text: string): AiResponse | null {
   if (!isPlainObject(parsed) || !Array.isArray(parsed.refinements)) {
     return null;
   }
-  return parsed as unknown as AiResponse;
+  // Return ONLY the fields the client reads. Anything else the model produced
+  // (extra keys, nested objects) never reaches the browser, and an entry with a
+  // wrong-typed field is dropped rather than passed on.
+  const refinements: AiRefinement[] = [];
+  for (const entry of parsed.refinements.slice(0, AI_PROXY_MAX_CANDIDATES)) {
+    if (!isPlainObject(entry)) continue;
+    if (typeof entry.id !== "string" || typeof entry.reason !== "string") continue;
+    if (typeof entry.confidence !== "number" || !Number.isFinite(entry.confidence)) continue;
+    refinements.push({ id: entry.id, confidence: entry.confidence, reason: entry.reason });
+  }
+  return { refinements };
+}
+
+/**
+ * Validate a counter reply from Redis. INCR returns a positive integer; any
+ * other value (NaN, a string, null, zero, a fraction) is a Redis fault and must
+ * fail closed. Throwing inside the counter `try` block turns it into the
+ * "unavailable" status without an upstream call. Without this check a
+ * non-number would compare as "not over the limit" and fail OPEN.
+ */
+export function requireCount(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    throw new Error("Redis counter reply is not a positive integer");
+  }
+  return value;
 }
 
 function stripJsonFence(text: string): string {

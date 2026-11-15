@@ -1,40 +1,42 @@
 /**
- * Client-side SQL safety validator for "Ask the Lab" (Feature 3, task 1).
+ * Client-side SQL safety validator for "Ask the Lab" (Feature 3, task 1,
+ * hardened in security-hardening commit A).
  *
- * This is the safety heart of the feature: EVERY generated query — from the LLM
- * path, a RepairCall, or a deterministic StarterChip — passes through
+ * This is the safety heart of the feature: EVERY generated query (from the LLM
+ * path, a RepairCall, or a deterministic StarterChip) passes through
  * {@link validateSql} before it reaches DuckDB (Req 5.1). The validator is
  * framework-agnostic (no React, DOM, or network) and is unit- and
  * property-tested in isolation.
  *
- * ## Approach (design: "SqlValidator algorithm")
+ * ## Approach
  *
- * A single left-to-right {@link tokenize} pass strips comments and separates
- * string literals, dollar-quoted strings, and double-quoted identifiers into
- * their OWN token kinds, so their inner text is opaque to every subsequent
- * check. All keyword and table analysis then runs on the token stream using
- * WHOLE-WORD comparisons — never a substring scan of the raw SQL. That is what
- * makes `WHERE status = 'Load'` and a column named `"set"` safe: the forbidden
- * word lives inside a `string`/`ident` token, not a `word` token (Req 5.4).
+ * 1. NUL bytes are rejected outright (they crash the DuckDB-WASM bundle).
+ * 2. A single left-to-right {@link scan} pass separates comments, string
+ *    literals, dollar-quoted strings and double-quoted identifiers. Comments are
+ *    replaced by ONE SPACE to build the stripped text. The stripped text is
+ *    then scanned AGAIN and must produce exactly the same tokens and no
+ *    comments. Everything below validates that re-scanned text, and that same
+ *    text (minus a trailing `;`, plus a LIMIT) is what is returned and
+ *    executed. A comment can therefore never glue two tokens into a different
+ *    word after validation (a comment between `read_` and `csv` leaves two
+ *    words, never `read_csv`).
+ * 3. Statement checks: no non-trailing `;`, first keyword SELECT/WITH, no
+ *    forbidden keyword as a whole word outside literals and identifiers.
+ * 4. A blocked-function check: any call (`name(`, quoted or not, any case, any
+ *    qualifier) to a file, network, introspection or SQL-executing function is
+ *    rejected wherever it appears.
+ * 5. A structural walk of every query at every depth ({@link analyzeTables}).
+ *    It parses FROM clauses (comma lists, joins with ON/USING, parenthesized
+ *    joins, subqueries, aliases with column lists, TABLESAMPLE) so that EVERY
+ *    table reference is seen. Each must be a queryable table or a CTE alias
+ *    that is in scope. A function call in a table position is rejected unless
+ *    explicitly allow-listed (the allowlist is empty). `FROM` inside
+ *    EXTRACT/SUBSTRING/TRIM/OVERLAY and `IS [NOT] DISTINCT FROM` is not a table
+ *    position. Anything the walk cannot parse is rejected (fail closed).
+ * 6. LIMIT enforcement: append ASK_DEFAULT_SQL_LIMIT when none is present
+ *    (Req 5.7).
  *
- * The checks, in order:
- *   1. single read-only statement: no non-trailing `;`, first keyword
- *      SELECT/WITH (Req 5.2, 5.3)
- *   2. forbidden keywords (whole word, outside literals/identifiers) (Req 5.4)
- *   3. file/network table functions (whole word before `(`) (Req 5.5)
- *   4. FROM/JOIN table positions: reject string/quoted-path positions, reject
- *      table-function calls not on the (empty-by-default) allowlist, reject
- *      replacement-scan refs, check EVERY comma-separated reference, reject
- *      dotted refs unless the qualifier is exactly `main`; collect referenced
- *      tables (Req 5.6)
- *   5. table allowlisting: CTE aliases declared in the same WITH are allowed;
- *      every other referenced table must be a QueryableTable (Req 5.6)
- *   6. LIMIT enforcement: append ASK_DEFAULT_SQL_LIMIT when none is present
- *      (Req 5.7)
- *
- * The accepted SQL returned is comment-stripped and trailing-`;`-trimmed with
- * the LIMIT enforced; it is what the executor wraps (ASK_MAX_FETCH_ROWS) and
- * runs.
+ * The executor additionally wraps the accepted SQL with the fetch cap.
  */
 
 import { ASK_DEFAULT_SQL_LIMIT } from "./types.js";
@@ -59,30 +61,69 @@ const FORBIDDEN_KEYWORDS: ReadonlySet<string> = new Set([
   "SET",
 ]);
 
-// ── Blocked file/network table functions (whole word before `(`) ───────────
-const BLOCKED_TABLE_FUNCTIONS: ReadonlySet<string> = new Set([
+// ── Blocked functions ────────────────────────────────────────────────────────
+// File, network, introspection and SQL-executing functions. Matched on the
+// lower-cased name of any call `name(`, quoted or unquoted. The table-position
+// rule below is the primary defense (no function call is allowed in a table
+// position); this list is defense in depth for every other position.
+
+/** Exact names (lower case). */
+const BLOCKED_FUNCTION_NAMES: ReadonlySet<string> = new Set([
+  "glob",
+  "query",
+  "query_table",
+  "checkpoint",
+  "force_checkpoint",
+  "enable_logging",
+  "disable_logging",
+  "truncate_duckdb_logs",
+  "which_secret",
   "read_csv",
   "read_csv_auto",
-  "read_parquet",
-  "parquet_scan",
-  "read_json",
-  "read_json_auto",
-  "read_json_objects",
-  "read_ndjson",
-  "read_ndjson_auto",
-  "read_ndjson_objects",
   "read_text",
   "read_blob",
-  "csv_scan",
-  "glob",
-  "iceberg_scan",
-  "delta_scan",
-  "parquet_metadata",
-  "parquet_schema",
+  "sniff_csv",
 ]);
 
-// Clause-ending keywords that terminate a FROM reference list (Req 5.6 comma
-// handling). Uppercased.
+/** Name patterns (lower case) covering readers and introspection families. */
+const BLOCKED_FUNCTION_PATTERNS: readonly RegExp[] = [
+  /^read_/, // read_csv, read_parquet, read_json, read_ndjson, read_text, ...
+  /_scan$/, // parquet_scan, iceberg_scan, delta_scan, arrow_scan, seq_scan, ...
+  /_scan_/, // arrow_scan_dumb and similar
+  /^parquet_/, // parquet_metadata, parquet_schema, parquet_file_metadata, ...
+  /^sniff_/,
+  /^iceberg_/,
+  /^delta_/,
+  /^duckdb_/, // duckdb_secrets, duckdb_settings, duckdb_extensions, ...
+  /^pragma_/,
+  /^st_read/,
+];
+
+/** Is `name` a function that must never be called from a model-written query? */
+export function isBlockedFunctionName(name: string): boolean {
+  const lower = name.toLowerCase();
+  if (BLOCKED_FUNCTION_NAMES.has(lower)) return true;
+  return BLOCKED_FUNCTION_PATTERNS.some((re) => re.test(lower));
+}
+
+// ── Grammar word sets (uppercased) ───────────────────────────────────────────
+
+/** Words that may appear before JOIN. */
+const JOIN_MODIFIERS: ReadonlySet<string> = new Set([
+  "NATURAL",
+  "INNER",
+  "LEFT",
+  "RIGHT",
+  "FULL",
+  "OUTER",
+  "CROSS",
+  "SEMI",
+  "ANTI",
+  "ASOF",
+  "POSITIONAL",
+]);
+
+/** Clause keywords that end a FROM list or a join condition. */
 const CLAUSE_ENDERS: ReadonlySet<string> = new Set([
   "WHERE",
   "GROUP",
@@ -95,28 +136,66 @@ const CLAUSE_ENDERS: ReadonlySet<string> = new Set([
   "UNION",
   "INTERSECT",
   "EXCEPT",
-  "JOIN",
-  "INNER",
-  "LEFT",
-  "RIGHT",
-  "FULL",
-  "CROSS",
-  "ON",
   "USING",
-  "NATURAL",
+  "FETCH",
+  "FOR",
+]);
+
+/** Words that may NOT be read as a table alias. */
+const ALIAS_STOP: ReadonlySet<string> = new Set([
+  ...CLAUSE_ENDERS,
+  ...JOIN_MODIFIERS,
+  "JOIN",
+  "ON",
+  "TABLESAMPLE",
+  "PIVOT",
+  "UNPIVOT",
+  "SAMPLE",
+  "LATERAL",
+]);
+
+/** Words that may legally follow a complete FROM list. */
+const FROM_FOLLOWERS: ReadonlySet<string> = CLAUSE_ENDERS;
+
+/** Functions whose argument syntax contains a FROM that is not a table position. */
+const FROM_FUNCTIONS: ReadonlySet<string> = new Set([
+  "EXTRACT",
+  "SUBSTRING",
+  "SUBSTR",
+  "TRIM",
+  "LTRIM",
+  "RTRIM",
+  "OVERLAY",
+]);
+
+/**
+ * Statement starters that DuckDB accepts inside parentheses but that name a
+ * table without a FROM keyword. Rejected in any parenthesized position.
+ */
+const STATEMENT_STARTERS: ReadonlySet<string> = new Set([
+  "PIVOT",
+  "UNPIVOT",
+  "PIVOT_WIDER",
+  "PIVOT_LONGER",
+  "SUMMARIZE",
+  "DESCRIBE",
+  "DESC",
+  "SHOW",
+  "TABLE",
+  "EXPLAIN",
 ]);
 
 /** Options for {@link validateSql}. */
 export interface SqlValidatorOptions {
   /**
    * Table-function names allowed in a FROM/JOIN position (lowercased). Empty by
-   * default — no table function is allowed. The feature never populates this;
+   * default, so no table function is allowed. The feature never populates this;
    * it exists so a future caller could opt into a vetted function.
    */
   allowedTableFunctions?: ReadonlySet<string>;
 }
 
-// ── Tokenizer ────────────────────────────────────────────────────────────────
+// ── Scanner ──────────────────────────────────────────────────────────────────
 
 type TokenKind = "word" | "ident" | "string" | "punct";
 
@@ -129,17 +208,23 @@ interface Token {
   text: string;
 }
 
+/** A comment span `[start, end)` in the scanned text. */
+type Span = readonly [number, number];
+
 const WORD_START = /[A-Za-z_]/;
 const WORD_CHAR = /[A-Za-z0-9_$]/;
+/** Sticky: matches `$tag$` (or `$$`) at `lastIndex` only. */
+const DOLLAR_TAG = /\$([A-Za-z_][A-Za-z0-9_]*)?\$/y;
 
 /**
- * Tokenize SQL into a stream that strips comments and isolates string literals,
- * dollar-quoted strings, and double-quoted identifiers as their own kinds.
- * Keyword analysis only ever looks at `word` tokens, so a forbidden word inside
- * a `string`/`ident` can never trigger a rejection.
+ * Scan SQL into tokens and comment spans. Comments produce no token. String
+ * literals, dollar-quoted strings and double-quoted identifiers are their own
+ * token kinds, so a forbidden word inside them can never trigger a rejection
+ * and never hides a real word.
  */
-export function tokenize(sql: string): Token[] {
+function scan(sql: string): { tokens: Token[]; comments: Span[] } {
   const tokens: Token[] = [];
+  const comments: Span[] = [];
   let i = 0;
   const n = sql.length;
 
@@ -152,18 +237,34 @@ export function tokenize(sql: string): Token[] {
       continue;
     }
 
-    // Line comment: -- … to end of line.
+    // Line comment: -- ... up to a line break. DuckDB ends it at "\n" OR "\r",
+    // so both end it here (the line break itself stays).
     if (c === "-" && sql[i + 1] === "-") {
+      const start = i;
       i += 2;
-      while (i < n && sql[i] !== "\n") i++;
+      while (i < n && sql[i] !== "\n" && sql[i] !== "\r") i++;
+      comments.push([start, i]);
       continue;
     }
 
-    // Block comment: /* … */ (not nested; DuckDB does not nest).
+    // Block comment: /* ... */. DuckDB nests them, so this does too. An
+    // unterminated one runs to the end of the text.
     if (c === "/" && sql[i + 1] === "*") {
+      const start = i;
+      let depth = 1;
       i += 2;
-      while (i < n && !(sql[i] === "*" && sql[i + 1] === "/")) i++;
-      i += 2; // skip the closing */ (past-end is harmless)
+      while (i < n && depth > 0) {
+        if (sql[i] === "/" && sql[i + 1] === "*") {
+          depth++;
+          i += 2;
+        } else if (sql[i] === "*" && sql[i + 1] === "/") {
+          depth--;
+          i += 2;
+        } else {
+          i++;
+        }
+      }
+      comments.push([start, Math.min(i, n)]);
       continue;
     }
 
@@ -187,9 +288,10 @@ export function tokenize(sql: string): Token[] {
       continue;
     }
 
-    // Dollar-quoted string: $tag$ … $tag$ (tag may be empty: $$ … $$).
+    // Dollar-quoted string: $tag$ ... $tag$ (tag may be empty: $$ ... $$).
     if (c === "$") {
-      const tagMatch = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/.exec(sql.slice(i));
+      DOLLAR_TAG.lastIndex = i;
+      const tagMatch = DOLLAR_TAG.exec(sql);
       if (tagMatch) {
         const delim = tagMatch[0];
         const start = i + delim.length;
@@ -199,7 +301,7 @@ export function tokenize(sql: string): Token[] {
         i = end === -1 ? n : end + delim.length;
         continue;
       }
-      // A lone `$` not opening a dollar-quote → punctuation.
+      // A lone `$` not opening a dollar-quote is punctuation.
       tokens.push({ kind: "punct", text: "$" });
       i++;
       continue;
@@ -230,6 +332,34 @@ export function tokenize(sql: string): Token[] {
       let text = c;
       i++;
       while (i < n && WORD_CHAR.test(sql[i])) text += sql[i++];
+
+      // Escape string E'...': DuckDB treats a backslash as an escape inside it,
+      // so `E'\''` is ONE string. Scanning it as a plain string would end it
+      // early and hide the following text, so it is scanned its own way.
+      if ((text === "E" || text === "e") && sql[i] === "'") {
+        i++;
+        let body = "";
+        while (i < n) {
+          if (sql[i] === "\\" && i + 1 < n) {
+            body += sql[i] + sql[i + 1];
+            i += 2;
+            continue;
+          }
+          if (sql[i] === "'") {
+            if (sql[i + 1] === "'") {
+              body += "'";
+              i += 2;
+              continue;
+            }
+            i++; // closing quote
+            break;
+          }
+          body += sql[i++];
+        }
+        tokens.push({ kind: "string", text: body });
+        continue;
+      }
+
       tokens.push({ kind: "word", text });
       continue;
     }
@@ -239,266 +369,49 @@ export function tokenize(sql: string): Token[] {
     i++;
   }
 
-  return tokens;
+  return { tokens, comments };
+}
+
+/**
+ * Tokenize SQL into a stream that omits comments and isolates string literals,
+ * dollar-quoted strings, and double-quoted identifiers as their own kinds.
+ */
+export function tokenize(sql: string): Token[] {
+  return scan(sql).tokens;
+}
+
+/** Replace each comment span with a single space (never with nothing). */
+function replaceComments(sql: string, comments: readonly Span[]): string {
+  let out = "";
+  let at = 0;
+  for (const [start, end] of comments) {
+    out += sql.slice(at, start) + " ";
+    at = end;
+  }
+  return out + sql.slice(at);
+}
+
+function sameTokens(a: readonly Token[], b: readonly Token[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let k = 0; k < a.length; k++) {
+    if (a[k].kind !== b[k].kind || a[k].text !== b[k].text) return false;
+  }
+  return true;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-function isWord(t: Token | undefined, upper: string): boolean {
-  return !!t && t.kind === "word" && t.text.toUpperCase() === upper;
-}
 
 function fail(reason: SqlRejectReason): SqlValidationResult {
   return { ok: false, reason };
 }
 
-/** Strip comments (via tokenizer) and a single trailing `;` from raw SQL. */
-function stripForOutput(sql: string): string {
-  // Re-serialize is lossy; instead strip comments textually in a second pass
-  // that mirrors the tokenizer's comment handling but preserves everything
-  // else verbatim, then trim a trailing semicolon. This keeps the executed SQL
-  // faithful to the model's intent (spacing, casing) minus comments.
-  let out = "";
-  let i = 0;
-  const n = sql.length;
-  while (i < n) {
-    const c = sql[i];
-    if (c === "-" && sql[i + 1] === "-") {
-      i += 2;
-      while (i < n && sql[i] !== "\n") i++;
-      continue;
-    }
-    if (c === "/" && sql[i + 1] === "*") {
-      i += 2;
-      while (i < n && !(sql[i] === "*" && sql[i + 1] === "/")) i++;
-      i += 2;
-      continue;
-    }
-    if (c === "'") {
-      out += c;
-      i++;
-      while (i < n) {
-        out += sql[i];
-        if (sql[i] === "'" && sql[i + 1] === "'") {
-          out += sql[i + 1];
-          i += 2;
-          continue;
-        }
-        if (sql[i] === "'") {
-          i++;
-          break;
-        }
-        i++;
-      }
-      continue;
-    }
-    if (c === '"') {
-      out += c;
-      i++;
-      while (i < n) {
-        out += sql[i];
-        if (sql[i] === '"' && sql[i + 1] === '"') {
-          out += sql[i + 1];
-          i += 2;
-          continue;
-        }
-        if (sql[i] === '"') {
-          i++;
-          break;
-        }
-        i++;
-      }
-      continue;
-    }
-    out += c;
-    i++;
+/** Internal control-flow exception carrying a rejection reason. */
+class Reject extends Error {
+  reason: SqlRejectReason;
+  constructor(reason: SqlRejectReason) {
+    super(reason);
+    this.reason = reason;
   }
-  return out.trim().replace(/;\s*$/, "").trim();
-}
-
-// ── Main validator ───────────────────────────────────────────────────────
-
-/**
- * Validate a single read-only SQL statement over the given queryable table
- * names. Returns the accepted SQL (comment-stripped, LIMIT-enforced) or a
- * rejection reason. See the module header for the full algorithm.
- *
- * @param sql The candidate SQL.
- * @param queryableTableNames The sanitized DuckDB names of the current
- *   QueryableTables (case-insensitive match).
- */
-export function validateSql(
-  sql: string,
-  queryableTableNames: Iterable<string>,
-  options: SqlValidatorOptions = {}
-): SqlValidationResult {
-  const allowedFns = options.allowedTableFunctions ?? new Set<string>();
-  const known = new Set<string>();
-  for (const name of queryableTableNames) known.add(name.toLowerCase());
-
-  const tokens = tokenize(sql);
-
-  // Drop a single trailing-`;` token for analysis (a trailing terminator is OK).
-  const analysis = [...tokens];
-  if (analysis.length > 0 && analysis[analysis.length - 1].kind === "punct" && analysis[analysis.length - 1].text === ";") {
-    analysis.pop();
-  }
-
-  if (analysis.length === 0) return fail("empty");
-
-  // 1a. No further `;` anywhere → a non-trailing semicolon means a 2nd statement.
-  for (const t of analysis) {
-    if (t.kind === "punct" && t.text === ";") return fail("multiple-statements");
-  }
-
-  // 1b. First significant word must be SELECT or WITH.
-  const firstWord = analysis.find((t) => t.kind === "word");
-  if (!firstWord) return fail("not-select");
-  const firstUpper = firstWord.text.toUpperCase();
-  if (firstUpper !== "SELECT" && firstUpper !== "WITH") return fail("not-select");
-
-  // 2. Forbidden keywords (whole word, outside literals/identifiers).
-  for (const t of analysis) {
-    if (t.kind === "word" && FORBIDDEN_KEYWORDS.has(t.text.toUpperCase())) {
-      return fail("forbidden-keyword");
-    }
-  }
-
-  // 3. File/network table functions (a blocked word immediately before `(`).
-  for (let k = 0; k < analysis.length; k++) {
-    const t = analysis[k];
-    if (t.kind !== "word") continue;
-    const next = analysis[k + 1];
-    const isCall = next && next.kind === "punct" && next.text === "(";
-    if (isCall && BLOCKED_TABLE_FUNCTIONS.has(t.text.toLowerCase())) {
-      return fail("table-function");
-    }
-  }
-
-  // 4. CTE aliases declared by WITH … AS (…) are valid references.
-  const cteAliases = collectCteAliases(analysis);
-
-  // 5. Table positions after FROM / JOIN.
-  const referenced: string[] = [];
-  for (let k = 0; k < analysis.length; k++) {
-    const t = analysis[k];
-    if (t.kind !== "word") continue;
-    const upper = t.text.toUpperCase();
-    const isFrom = upper === "FROM";
-    const isJoin = upper === "JOIN";
-    if (!isFrom && !isJoin) continue;
-
-    // Collect one reference (JOIN) or a comma-separated list (FROM).
-    let j = k + 1;
-    while (true) {
-      const refResult = readTableReference(analysis, j, allowedFns);
-      if (!refResult.ok) return fail(refResult.reason);
-      if (refResult.name !== null) referenced.push(refResult.name.toLowerCase());
-      j = refResult.next;
-
-      if (!isFrom) break; // JOIN takes exactly one reference
-
-      // In a FROM list, continue only across a top-level comma.
-      const sep = analysis[j];
-      if (sep && sep.kind === "punct" && sep.text === ",") {
-        j++;
-        continue;
-      }
-      break;
-    }
-  }
-
-  // 6. Every referenced table must be a CTE alias or a QueryableTable.
-  for (const name of referenced) {
-    if (cteAliases.has(name)) continue;
-    if (!known.has(name)) return fail("unknown-table");
-  }
-
-  // 7. Enforce LIMIT when absent (top-level LIMIT word token present?).
-  const hasLimit = analysis.some((t) => t.kind === "word" && t.text.toUpperCase() === "LIMIT");
-  const cleaned = stripForOutput(sql);
-  const out = hasLimit ? cleaned : `${cleaned} LIMIT ${ASK_DEFAULT_SQL_LIMIT}`;
-  return { ok: true, sql: out };
-}
-
-/**
- * Read a single table reference starting at index `start` (the token right
- * after FROM/JOIN). Returns the (lowercased-by-caller) referenced table name
- * plus the index just past the reference and its optional alias, or a rejection.
- *
- * Rejections (Req 5.6):
- *   - a `string` token in a table position (`FROM 'data.csv'`)
- *   - a table-FUNCTION call (word before `(`) not on the allowlist
- *   - a dotted reference whose qualifier is not exactly `main`
- *   - a subquery `(` here yields `name: null` (nothing to allowlist — its inner
- *     FROM/JOIN tokens are still visited by the outer scan)
- */
-function readTableReference(
-  tokens: Token[],
-  start: number,
-  allowedFns: ReadonlySet<string>
-):
-  | { ok: true; name: string | null; next: number }
-  | { ok: false; reason: SqlRejectReason } {
-  let j = start;
-  const t = tokens[j];
-
-  if (!t) {
-    // Nothing after FROM/JOIN — malformed; treat as a bad table position.
-    return { ok: false, reason: "bad-table-position" };
-  }
-
-  // A subquery or parenthesized join: `(` — not a table name. Skip the token;
-  // the outer scan still visits its inner FROM/JOIN words.
-  if (t.kind === "punct" && t.text === "(") {
-    return { ok: true, name: null, next: j + 1 };
-  }
-
-  // A string / dollar-quoted path in a table position is always rejected.
-  if (t.kind === "string") {
-    return { ok: false, reason: "bad-table-position" };
-  }
-
-  // A word or quoted identifier names a table (or a table function).
-  if (t.kind === "word" || t.kind === "ident") {
-    // Table-function call: word immediately followed by `(`.
-    const next = tokens[j + 1];
-    if (t.kind === "word" && next && next.kind === "punct" && next.text === "(") {
-      if (!allowedFns.has(t.text.toLowerCase())) {
-        return { ok: false, reason: "table-function" };
-      }
-      // Allowed function: skip the balanced (...) and any alias.
-      const afterCall = skipBalancedParens(tokens, j + 1);
-      return { ok: true, name: null, next: skipAlias(tokens, afterCall) };
-    }
-
-    // Dotted reference: qualifier.name — allowed only when qualifier is `main`.
-    const dot = tokens[j + 1];
-    if (dot && dot.kind === "punct" && dot.text === ".") {
-      const second = tokens[j + 2];
-      if (!second || (second.kind !== "word" && second.kind !== "ident")) {
-        return { ok: false, reason: "bad-table-position" };
-      }
-      if (t.text.toLowerCase() !== "main") {
-        return { ok: false, reason: "bad-table-position" };
-      }
-      // Guard against a 3-part name (catalog.schema.table): still require `main`.
-      const nameToken = second;
-      j = j + 3;
-      return { ok: true, name: nameToken.text, next: skipAlias(tokens, j) };
-    }
-
-    // A replacement-scan style bare reference: a name that looks like a path/URL.
-    if (looksLikePath(t.text)) {
-      return { ok: false, reason: "bad-table-position" };
-    }
-
-    // Plain table reference.
-    return { ok: true, name: t.text, next: skipAlias(tokens, j + 1) };
-  }
-
-  // Any other punctuation in a table position is malformed.
-  return { ok: false, reason: "bad-table-position" };
 }
 
 /** Does a bare identifier look like a file path / URL (replacement scan)? */
@@ -514,71 +427,394 @@ function looksLikePath(name: string): boolean {
   );
 }
 
-/** Skip an optional `AS alias` or bare `alias` after a reference. */
-function skipAlias(tokens: Token[], j: number): number {
-  const t = tokens[j];
-  if (!t) return j;
-  if (t.kind === "word" && t.text.toUpperCase() === "AS") {
-    // AS <alias>
-    return tokens[j + 1] ? j + 2 : j + 1;
-  }
-  // A bare alias (word/ident) that is not a clause-ender and not a comma/keyword.
-  if (t.kind === "ident") return j + 1;
-  if (t.kind === "word" && !CLAUSE_ENDERS.has(t.text.toUpperCase())) {
-    return j + 1;
-  }
-  return j;
-}
-
-/** Given the index of an opening `(`, return the index just past its match. */
-function skipBalancedParens(tokens: Token[], openIdx: number): number {
-  let depth = 0;
-  let j = openIdx;
-  for (; j < tokens.length; j++) {
-    const t = tokens[j];
-    if (t.kind === "punct" && t.text === "(") depth++;
-    else if (t.kind === "punct" && t.text === ")") {
-      depth--;
-      if (depth === 0) return j + 1;
-    }
-  }
-  return j;
-}
+// ── Main validator ───────────────────────────────────────────────────────
 
 /**
- * Collect CTE alias names from a leading `WITH alias AS (…) [, alias2 AS (…)]`.
- * Only the aliases at the top level of the WITH list matter; nested WITHs
- * inside a CTE body still produce referenced tables that are either their own
- * (inner) aliases or QueryableTables, which the outer allowlist check covers
- * conservatively. Returns lowercased names.
+ * Validate a single read-only SQL statement over the given queryable table
+ * names. Returns the accepted SQL (comments replaced by spaces, LIMIT
+ * enforced) or a rejection reason. See the module header for the algorithm.
+ *
+ * @param sql The candidate SQL.
+ * @param queryableTableNames The sanitized DuckDB names of the current
+ *   QueryableTables (case-insensitive match).
  */
-function collectCteAliases(tokens: Token[]): Set<string> {
-  const aliases = new Set<string>();
-  if (!isWord(tokens[0], "WITH")) return aliases;
+export function validateSql(
+  sql: string,
+  queryableTableNames: Iterable<string>,
+  options: SqlValidatorOptions = {}
+): SqlValidationResult {
+  // 0. NUL bytes crash the DuckDB-WASM bundle and have no legitimate use.
+  if (sql.includes("\u0000")) return fail("invalid-character");
 
-  let j = 1;
-  // Optional RECURSIVE.
-  if (isWord(tokens[j], "RECURSIVE")) j++;
-
-  while (j < tokens.length) {
-    const nameTok = tokens[j];
-    if (!nameTok || (nameTok.kind !== "word" && nameTok.kind !== "ident")) break;
-    // Expect: alias [ (cols...) ] AS ( body )
-    let k = j + 1;
-    if (tokens[k] && tokens[k].kind === "punct" && tokens[k].text === "(") {
-      k = skipBalancedParens(tokens, k); // column list
-    }
-    if (!isWord(tokens[k], "AS")) break;
-    k++;
-    if (!(tokens[k] && tokens[k].kind === "punct" && tokens[k].text === "(")) break;
-    aliases.add(nameTok.text.toLowerCase());
-    k = skipBalancedParens(tokens, k); // CTE body
-    // Another CTE after a comma?
-    if (tokens[k] && tokens[k].kind === "punct" && tokens[k].text === ",") {
-      j = k + 1;
-      continue;
-    }
-    break;
+  // 1. Strip comments to single spaces, then validate the STRIPPED text. The
+  //    re-scan must agree token for token and must find no comment left, so the
+  //    text that runs is exactly the text that was validated.
+  const first = scan(sql);
+  const stripped = replaceComments(sql, first.comments);
+  const second = scan(stripped);
+  if (second.comments.length > 0 || !sameTokens(first.tokens, second.tokens)) {
+    return fail("unparseable");
   }
-  return aliases;
+  const tokens = second.tokens;
+
+  // Drop a single trailing `;` token for analysis (a trailing terminator is OK).
+  const analysis = [...tokens];
+  const last = analysis[analysis.length - 1];
+  const trailingSemicolon = last !== undefined && last.kind === "punct" && last.text === ";";
+  if (trailingSemicolon) analysis.pop();
+
+  if (analysis.length === 0) return fail("empty");
+
+  // 2a. No further `;` anywhere: a non-trailing semicolon means a 2nd statement.
+  for (const t of analysis) {
+    if (t.kind === "punct" && t.text === ";") return fail("multiple-statements");
+  }
+
+  // 2b. First significant word must be SELECT or WITH.
+  const firstWord = analysis.find((t) => t.kind === "word");
+  if (!firstWord) return fail("not-select");
+  const firstUpper = firstWord.text.toUpperCase();
+  if (firstUpper !== "SELECT" && firstUpper !== "WITH") return fail("not-select");
+
+  // 3. Forbidden keywords (whole word, outside literals and identifiers).
+  for (const t of analysis) {
+    if (t.kind === "word" && FORBIDDEN_KEYWORDS.has(t.text.toUpperCase())) {
+      return fail("forbidden-keyword");
+    }
+  }
+
+  // 4. Blocked functions: any call, quoted or not, wherever it appears.
+  for (let k = 0; k + 1 < analysis.length; k++) {
+    const t = analysis[k];
+    if (t.kind !== "word" && t.kind !== "ident") continue;
+    const next = analysis[k + 1];
+    if (next.kind === "punct" && next.text === "(" && isBlockedFunctionName(t.text)) {
+      return fail("table-function");
+    }
+  }
+
+  // 5. Structural table walk.
+  const known = new Set<string>();
+  for (const name of queryableTableNames) known.add(name.toLowerCase());
+  const allowedFns = new Set<string>();
+  for (const f of options.allowedTableFunctions ?? []) allowedFns.add(f.toLowerCase());
+  try {
+    analyzeTables(analysis, known, allowedFns);
+  } catch (e) {
+    if (e instanceof Reject) return fail(e.reason);
+    // Anything unexpected (for example a stack overflow on absurd nesting)
+    // fails closed.
+    return fail("unparseable");
+  }
+
+  // 6. Enforce LIMIT when absent.
+  const hasLimit = analysis.some((t) => t.kind === "word" && t.text.toUpperCase() === "LIMIT");
+  let text = stripped.trim();
+  if (trailingSemicolon) text = text.slice(0, -1).trimEnd();
+  const out = hasLimit ? text : `${text} LIMIT ${ASK_DEFAULT_SQL_LIMIT}`;
+  return { ok: true, sql: out };
+}
+
+// ── Table analysis ───────────────────────────────────────────────────────────
+
+/**
+ * Walk every query in `tokens` and throw {@link Reject} on the first table
+ * reference that is not allowed. See the module header, step 5.
+ */
+function analyzeTables(
+  tokens: readonly Token[],
+  known: ReadonlySet<string>,
+  allowedFns: ReadonlySet<string>
+): void {
+  const n = tokens.length;
+
+  // Matching parentheses, computed once. Unbalanced parentheses are rejected.
+  const match = new Array<number>(n).fill(-1);
+  {
+    const stack: number[] = [];
+    for (let k = 0; k < n; k++) {
+      const t = tokens[k];
+      if (t.kind !== "punct") continue;
+      if (t.text === "(") stack.push(k);
+      else if (t.text === ")") {
+        const open = stack.pop();
+        if (open === undefined) throw new Reject("unparseable");
+        match[open] = k;
+      }
+    }
+    if (stack.length > 0) throw new Reject("unparseable");
+  }
+
+  const isPunct = (k: number, text: string): boolean =>
+    k >= 0 && k < n && tokens[k].kind === "punct" && tokens[k].text === text;
+
+  /** Upper-cased text when token `k` is a bare word, else null. */
+  const wordUpper = (k: number): string | null =>
+    k >= 0 && k < n && tokens[k].kind === "word" ? tokens[k].text.toUpperCase() : null;
+
+  const isNameToken = (k: number): boolean =>
+    k >= 0 && k < n && (tokens[k].kind === "word" || tokens[k].kind === "ident");
+
+  /** A leading statement-starter inside parentheses is never allowed. */
+  const rejectStatementStarter = (k: number): void => {
+    const w = wordUpper(k);
+    if (w !== null && STATEMENT_STARTERS.has(w)) throw new Reject("bad-table-position");
+  };
+
+  // Query: optional WITH list, then the body.
+  function checkQuery(s: number, e: number, ctes: ReadonlySet<string>): void {
+    let i = s;
+    rejectStatementStarter(i);
+    let visible: ReadonlySet<string> = ctes;
+    if (wordUpper(i) === "WITH") {
+      i++;
+      let recursive = false;
+      if (wordUpper(i) === "RECURSIVE") {
+        recursive = true;
+        i++;
+      }
+      for (;;) {
+        if (!isNameToken(i)) throw new Reject("bad-table-position");
+        const name = tokens[i].text.toLowerCase();
+        i++;
+        if (isPunct(i, "(")) i = match[i] + 1; // column list
+        if (wordUpper(i) !== "AS") throw new Reject("bad-table-position");
+        i++;
+        if (wordUpper(i) === "NOT") i++;
+        if (wordUpper(i) === "MATERIALIZED") i++;
+        if (!isPunct(i, "(")) throw new Reject("bad-table-position");
+        const close = match[i];
+        // A CTE body sees only EARLIER aliases (and itself when RECURSIVE).
+        const scope = new Set(visible);
+        if (recursive) scope.add(name);
+        checkQuery(i + 1, close, scope);
+        const next = new Set(visible);
+        next.add(name);
+        visible = next;
+        i = close + 1;
+        if (isPunct(i, ",")) {
+          i++;
+          continue;
+        }
+        break;
+      }
+    }
+    scanRange(i, e, visible, false);
+  }
+
+  // Scan a token range for FROM clauses and nested parenthesized ranges.
+  function scanRange(s: number, e: number, ctes: ReadonlySet<string>, fnFrom: boolean): void {
+    let i = s;
+    let fnFromUsed = false;
+    while (i < e) {
+      const t = tokens[i];
+      if (t.kind === "punct" && t.text === "(") {
+        const close = match[i];
+        rejectStatementStarter(i + 1);
+        const first = wordUpper(i + 1);
+        if (first === "SELECT" || first === "WITH" || first === "VALUES") {
+          checkQuery(i + 1, close, ctes);
+        } else {
+          const prev = i > 0 && tokens[i - 1].kind === "word" ? tokens[i - 1].text.toUpperCase() : "";
+          scanRange(i + 1, close, ctes, FROM_FUNCTIONS.has(prev));
+        }
+        i = close + 1;
+        continue;
+      }
+      if (t.kind === "word") {
+        const up = t.text.toUpperCase();
+        if (up === "FROM") {
+          const prev = wordUpper(i - 1);
+          const prev2 = wordUpper(i - 2);
+          const distinctFrom = prev === "DISTINCT" && (prev2 === "IS" || prev2 === "NOT");
+          if (distinctFrom || (fnFrom && !fnFromUsed)) {
+            if (!distinctFrom) fnFromUsed = true;
+            i++;
+            continue;
+          }
+          i = parseFromClause(i + 1, e, ctes);
+          continue;
+        }
+        if (up === "JOIN") {
+          // A JOIN is always consumed by parseFromClause. A stray one is malformed.
+          throw new Reject("bad-table-position");
+        }
+      }
+      i++;
+    }
+  }
+
+  // FROM list: table_ref (join_spec)* (',' table_ref (join_spec)*)*
+  function parseFromClause(start: number, e: number, ctes: ReadonlySet<string>): number {
+    let i = start;
+    for (;;) {
+      i = parseTableRef(i, e, ctes);
+      for (;;) {
+        const j = joinKeywordIndex(i, e);
+        if (j < 0) break;
+        i = parseTableRef(j + 1, e, ctes);
+        if (wordUpper(i) === "ON" && i < e) {
+          const end = expressionEnd(i + 1, e);
+          scanRange(i + 1, end, ctes, false);
+          i = end;
+        } else if (wordUpper(i) === "USING" && isPunct(i + 1, "(") && i < e) {
+          const close = match[i + 1];
+          scanRange(i + 2, close, ctes, false);
+          i = close + 1;
+        }
+      }
+      if (i < e && isPunct(i, ",")) {
+        i++;
+        continue;
+      }
+      break;
+    }
+    // After a complete FROM list only a clause keyword may follow.
+    if (i < e) {
+      const w = wordUpper(i);
+      if (w === null || !FROM_FOLLOWERS.has(w)) throw new Reject("bad-table-position");
+    }
+    return i;
+  }
+
+  /** Index of the JOIN word when `i` starts a join (modifiers then JOIN), else -1. */
+  function joinKeywordIndex(i: number, e: number): number {
+    let j = i;
+    let sawModifier = false;
+    while (j < e && wordUpper(j) !== null && JOIN_MODIFIERS.has(wordUpper(j) as string)) {
+      sawModifier = true;
+      j++;
+    }
+    if (j < e && wordUpper(j) === "JOIN") return j;
+    if (sawModifier) throw new Reject("bad-table-position");
+    return -1;
+  }
+
+  /** End of a join condition expression starting at `i` (exclusive). */
+  function expressionEnd(i: number, e: number): number {
+    let k = i;
+    while (k < e) {
+      const t = tokens[k];
+      if (t.kind === "punct") {
+        if (t.text === "(") {
+          k = match[k] + 1;
+          continue;
+        }
+        if (t.text === ",") return k;
+      } else if (t.kind === "word") {
+        const up = t.text.toUpperCase();
+        const isStop = up === "JOIN" || JOIN_MODIFIERS.has(up) || CLAUSE_ENDERS.has(up);
+        // LEFT( and RIGHT( are functions, not joins.
+        if (isStop && !((up === "LEFT" || up === "RIGHT") && isPunct(k + 1, "("))) return k;
+      }
+      k++;
+    }
+    return e;
+  }
+
+  // One table reference plus its alias, column list and TABLESAMPLE.
+  function parseTableRef(start: number, e: number, ctes: ReadonlySet<string>): number {
+    let i = start;
+    if (i >= e) throw new Reject("bad-table-position");
+    if (wordUpper(i) === "LATERAL") i++;
+    if (i >= e) throw new Reject("bad-table-position");
+    const t = tokens[i];
+
+    if (t.kind === "punct" && t.text === "(") {
+      const close = match[i];
+      rejectStatementStarter(i + 1);
+      const first = wordUpper(i + 1);
+      if (first === "SELECT" || first === "WITH" || first === "VALUES") {
+        checkQuery(i + 1, close, ctes);
+      } else if (first === "FROM") {
+        scanRange(i + 1, close, ctes, false);
+      } else {
+        // A parenthesized join: it must be consumed exactly.
+        const end = parseFromClause(i + 1, close, ctes);
+        if (end !== close) throw new Reject("bad-table-position");
+      }
+      return skipTableSample(skipAlias(close + 1, e, ctes), e);
+    }
+
+    if (t.kind === "string" || (t.kind !== "word" && t.kind !== "ident")) {
+      throw new Reject("bad-table-position");
+    }
+
+    // Dotted name: a(.b)*
+    const parts: Token[] = [t];
+    let k = i + 1;
+    while (isPunct(k, ".") && isNameToken(k + 1)) {
+      parts.push(tokens[k + 1]);
+      k += 2;
+    }
+    if (isPunct(k, ".")) throw new Reject("bad-table-position");
+
+    // A call in a table position is a table function: rejected unless allow-listed.
+    if (isPunct(k, "(")) {
+      const fn = parts[parts.length - 1].text.toLowerCase();
+      if (parts.length !== 1 || !allowedFns.has(fn)) throw new Reject("table-function");
+      return skipTableSample(skipAlias(match[k] + 1, e, ctes), e);
+    }
+
+    if (parts.length === 1) {
+      const name = parts[0].text;
+      if (looksLikePath(name)) throw new Reject("bad-table-position");
+      const lower = name.toLowerCase();
+      if (!ctes.has(lower) && !known.has(lower)) throw new Reject("unknown-table");
+    } else if (parts.length === 2) {
+      if (parts[0].text.toLowerCase() !== "main") throw new Reject("bad-table-position");
+      if (!known.has(parts[1].text.toLowerCase())) throw new Reject("unknown-table");
+    } else {
+      throw new Reject("bad-table-position");
+    }
+    return skipTableSample(skipAlias(k, e, ctes), e);
+  }
+
+  // Optional `[AS] alias [(col, ...)]`. A parenthesized tail is scanned so a
+  // subquery hidden there is still checked.
+  function skipAlias(start: number, e: number, ctes: ReadonlySet<string>): number {
+    let k = start;
+    let hasAlias = false;
+    if (k < e && wordUpper(k) === "AS") {
+      k++;
+      if (k >= e || !isNameToken(k)) throw new Reject("bad-table-position");
+      k++;
+      hasAlias = true;
+    } else if (k < e && isNameToken(k)) {
+      const up = wordUpper(k);
+      if (up === null || !ALIAS_STOP.has(up)) {
+        k++;
+        hasAlias = true;
+      }
+    }
+    if (hasAlias && k < e && isPunct(k, "(")) {
+      const close = match[k];
+      scanRange(k + 1, close, ctes, false);
+      k = close + 1;
+    }
+    return k;
+  }
+
+  // Optional TABLESAMPLE clause: skip to the next comma, join, clause keyword
+  // or the end. Parenthesized arguments are skipped as a unit.
+  function skipTableSample(start: number, e: number): number {
+    if (start >= e || wordUpper(start) !== "TABLESAMPLE") return start;
+    let k = start + 1;
+    while (k < e) {
+      const t = tokens[k];
+      if (t.kind === "punct" && t.text === ",") break;
+      if (t.kind === "punct" && t.text === "(") {
+        k = match[k] + 1;
+        continue;
+      }
+      if (t.kind === "word") {
+        const up = t.text.toUpperCase();
+        if (up === "JOIN" || JOIN_MODIFIERS.has(up) || CLAUSE_ENDERS.has(up)) break;
+      }
+      k++;
+    }
+    return k;
+  }
+
+  checkQuery(0, n, new Set());
 }
