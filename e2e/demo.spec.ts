@@ -360,3 +360,81 @@ test('Frank effects never intercept a click: Stitch tables works while the wake 
   await page.getByRole('button', { name: 'Stitch tables' }).click({ timeout: 5000 })
   await expect(page.getByRole('button', { name: 'Approve all suggestions' })).toBeVisible()
 })
+
+test.describe('lab shelf at 1600px', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  test('jars follow the tables, the stitched jar scrolls to its card, reset drains them', async ({ page }) => {
+    await page.goto('/')
+    const shelf = page.getByTestId('lab-shelf')
+    await expect(shelf).toBeVisible()
+    const jars = page.locator('.lab-shelf button.shelf-jar')
+    await expect(jars).toHaveCount(0)
+
+    // The wake strike: the coil arcs with it.
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.locator('.shelf-arc--big')).toBeAttached()
+
+    // Two jars with the right labels.
+    await expect(jars).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Go to table crm_customers, 22 rows' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Go to table billing_invoices, 48 rows' })).toBeVisible()
+    await expect(page.locator('.shelf-jar__rows').first()).toHaveText('22 rows')
+
+    // The shelf is in the gutter: it never overlaps the main column and never shifts it.
+    const column = (await page.locator('#root').boundingBox())!
+    const box = (await shelf.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(column.x + column.width)
+    expect(box.x + box.width).toBeLessThanOrEqual(1600)
+
+    // Stitch: a third jar, the stitched result.
+    await stitchEverything(page)
+    await expect(jars).toHaveCount(3)
+    const stitchedJar = page.getByRole('button', { name: 'Go to table stitch_1_result, 48 rows' })
+    await expect(stitchedJar).toBeVisible()
+    await expect(page.locator('.shelf-jar--stitched .shelf-jar__stitch')).toHaveCount(1)
+
+    // Clicking it scrolls the result's card into view.
+    const card = page.getByRole('region', { name: 'Preview of stitch_1_result', exact: true })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await expect(card).not.toBeInViewport()
+    await stitchedJar.click()
+    await expect(card).toBeInViewport()
+
+    // Keyboard: Enter on a jar scrolls to its card too.
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const crm = page.getByRole('button', { name: 'Go to table crm_customers, 22 rows' })
+    await crm.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeInViewport()
+
+    // Reset lab drains the jars, then they are gone.
+    await page.getByRole('button', { name: 'Reset lab' }).click()
+    await expect(jars).toHaveCount(0)
+    await expect(page.locator('.lab-shelf .shelf-jar')).toHaveCount(0, { timeout: 5000 })
+  })
+
+  test('Calm Frank or reduced motion: static jars, no bubbles and no arcs', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.locator('.lab-shelf button.shelf-jar')).toHaveCount(2)
+    await expect(page.locator('.shelf-jar__bubble')).toHaveCount(0)
+    await expect(page.locator('.shelf-arc')).toHaveCount(0)
+    const running = await page.evaluate(() =>
+      document.getAnimations().filter((a) => a.playState === 'running' && 'animationName' in a && String((a as CSSAnimation).animationName).startsWith('shelf-')).length,
+    )
+    expect(running).toBe(0)
+  })
+})
+
+test('lab shelf: not rendered at 1280px', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.locator('.specimen--awake')).toHaveCount(1)
+  await expect(page.locator('.lab-shelf')).toHaveCount(0)
+  // And it appears when the window grows.
+  await page.setViewportSize({ width: 1600, height: 800 })
+  await expect(page.locator('.lab-shelf button.shelf-jar')).toHaveCount(2)
+})

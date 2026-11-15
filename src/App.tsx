@@ -38,6 +38,7 @@ import { DropZone } from './components/DropZone'
 import { DemoDataControl } from './components/DemoDataControl'
 import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
 import { FrankRegion } from './components/frank/FrankRegion'
+import { LabShelf } from './components/shelf/LabShelf'
 import { frankBus } from './state/frank-bus'
 import { CaseFilePanel } from './components/autopsy/CaseFilePanel'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
@@ -1119,6 +1120,8 @@ function App() {
             resetting={resetting}
             quietResetRef={quietResetRef}
           />
+          {/* The decorative lab shelf (right gutter, 1440px and up). Read-only. */}
+          <LabShelf tables={tables} stitchStore={status.stack.stitchStore} />
         </>
       ) : null}
     </main>
