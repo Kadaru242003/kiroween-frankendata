@@ -1,77 +1,108 @@
 /*
- * "Ask Little Frank" panel: a speech bubble above Frank at the bottom-left. It
- * scrolls inside itself and never moves the page. No animation. The tail points
- * down at him.
+ * "Ask Little Frank": a comic speech bubble above Frank at the bottom-left, with
+ * a tail pointing at his head. At most 360px wide; when space is tight it
+ * scrolls inside itself. It never moves the page. The only motion is the short
+ * typewriter reveal, done in script and skipped under reduced motion or Calm.
  */
 .frank-guide {
   position: absolute;
   left: 0;
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 14px);
   box-sizing: border-box;
-  width: min(340px, calc(100vw - 24px));
-  max-height: min(60vh, calc(100vh - 190px));
-  overflow-y: auto;
-  padding: 12px 14px 12px;
-  border: 1px solid var(--lab-green);
-  border-radius: 14px;
+  width: min(360px, calc(100vw - 24px));
+  max-width: 360px;
+  border: 2px solid var(--lab-green);
+  border-radius: 22px;
   background: var(--surface-raised);
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.45;
   text-align: left;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  box-shadow: 5px 5px 0 rgba(57, 255, 20, 0.2), 0 8px 26px rgba(0, 0, 0, 0.55);
 }
 
-/* The speech-bubble tail, pointing down at his head. */
+/* The content scrolls inside the bubble; the tail stays outside the scroller. */
+.frank-guide__scroll {
+  position: relative;
+  max-height: min(70vh, calc(100vh - 190px));
+  overflow-y: auto;
+  padding: 14px 16px 10px;
+  border-radius: 20px;
+}
+
+/* The speech-bubble tail, pointing down at his head. It sits on the bubble
+   corner so the scrolling content never hides it. */
 .frank-guide::after {
   content: "";
   position: absolute;
-  left: 38px;
-  bottom: -8px;
-  width: 14px;
-  height: 14px;
+  left: 34px;
+  bottom: -12px;
+  width: 18px;
+  height: 18px;
   background: var(--surface-raised);
-  border-right: 1px solid var(--lab-green);
-  border-bottom: 1px solid var(--lab-green);
-  transform: rotate(45deg);
-}
-
-.frank-guide__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.frank-guide__title {
-  margin: 0;
-  font-size: 15px;
-  color: var(--lab-green);
+  border-right: 2px solid var(--lab-green);
+  border-bottom: 2px solid var(--lab-green);
+  transform: rotate(45deg) skew(8deg, 8deg);
 }
 
 .frank-guide__close {
-  min-width: 28px;
-  height: 28px;
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 50%;
   background: var(--surface);
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  font-size: 12px;
   cursor: pointer;
 }
 
 .frank-guide__tip {
-  margin: 8px 0;
-  padding: 6px 8px;
+  margin: 0 28px 8px 0;
+  padding: 3px 8px;
   border-left: 3px solid var(--amber-accent);
   background: rgba(255, 179, 0, 0.08);
   color: var(--text-primary);
+  font-size: 12px;
 }
 
+/* Frank's answer: large, in his voice. */
+.frank-guide__answer {
+  margin: 0 0 10px;
+  min-height: 3em;
+  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.frank-guide__answer p {
+  margin: 0 0 8px;
+}
+.frank-guide__answer p:last-child {
+  margin-bottom: 0;
+}
+.frank-guide__typed {
+  position: relative;
+}
+/* The part not yet typed keeps its room but cannot be seen. */
+.frank-guide__rest {
+  visibility: hidden;
+}
+/* Read once by screen readers; invisible to the eye. */
+.frank-guide__sr,
 .frank-guide__label {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--text-secondary);
-  font-size: 12px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .frank-guide__row {
@@ -82,19 +113,18 @@
 .frank-guide__input {
   flex: 1;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--surface);
   color: var(--text-primary);
   font: inherit;
 }
 
-.frank-guide__ask,
-.frank-guide__poke {
-  padding: 6px 12px;
+.frank-guide__ask {
+  padding: 6px 14px;
   border: 1px solid var(--accent-border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--accent-bg);
   color: var(--text-primary);
   font: inherit;
@@ -123,27 +153,16 @@
 
 .frank-guide__chip:hover,
 .frank-guide__ask:hover,
-.frank-guide__poke:hover,
 .frank-guide__close:hover {
   border-color: var(--accent);
-}
-
-.frank-guide__answer {
-  margin-top: 10px;
-  min-height: 1.4em;
-}
-
-.frank-guide__answer p {
-  margin: 0 0 6px;
 }
 
 .frank-guide__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
-  padding-top: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--border);
 }
 
@@ -152,7 +171,7 @@
   align-items: center;
   gap: 6px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
 }
 

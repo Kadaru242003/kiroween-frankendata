@@ -15,11 +15,12 @@ import {
 const ev = (e: FrankEvent) => reactionFor(e);
 
 describe("reactionFor: each event maps to its reaction", () => {
-  it("wake: lightning, flash and sparks, with the IT'S ALIVE! bubble", () => {
-    expect(ev({ type: "wake" })).toEqual({ id: "wake", bubble: "IT'S ALIVE!", durationMs: 1400 });
+  it("wake: lightning, flash and sparks, with the It's alive! bubble", () => {
+    expect(ev({ type: "wake" })).toEqual({ id: "wake", bubble: "It's alive!", durationMs: 1400 });
   });
   it("files loaded after waking: catch, with the slab count", () => {
-    expect(ev({ type: "files-loaded", tableCount: 3 })).toMatchObject({ id: "catch", bubble: "3 tables on the slab." });
+    expect(ev({ type: "files-loaded", tableCount: 3 })).toMatchObject({ id: "catch" });
+    expect(ev({ type: "files-loaded", tableCount: 3 })?.bubble).toMatch(/^3 tables on the slab\./);
     expect(slabText(1)).toBe("1 table on the slab.");
     expect(slabText(0)).toBe("1 table on the slab.");
     expect(slabText(2.7)).toBe("2 tables on the slab.");
@@ -32,7 +33,10 @@ describe("reactionFor: each event maps to its reaction", () => {
     expect(ev({ type: "confirm-stitch" })?.id).toBe("sew");
     expect(ev({ type: "stitch-applied" })?.id).toBe("bandage");
     expect(ev({ type: "undo-stitch" })?.id).toBe("unravel");
-    expect(ev({ type: "fan-out" })).toMatchObject({ id: "head-grab", bubble: "More rows than you started with!" });
+    expect(ev({ type: "fan-out" })).toMatchObject({ id: "head-grab" });
+    expect(ev({ type: "fan-out" })?.bubble).toMatch(/^More rows than you started with!/);
+    expect(ev({ type: "stitch-applied" })?.bubble).toBe("Now neither of them is alone.");
+    expect(ev({ type: "stitch-open" })?.bubble).toMatch(/^I was stitched from mismatched parts too\. Let's make your tables whole\./);
   });
   it("autopsy by score: 85 or above happy, below 60 faints, otherwise neutral", () => {
     expect(ev({ type: "autopsy", score: 100 })?.id).toBe("autopsy-happy");
@@ -42,14 +46,22 @@ describe("reactionFor: each event maps to its reaction", () => {
     expect(ev({ type: "autopsy", score: 59 })?.id).toBe("autopsy-faint");
     expect(ev({ type: "autopsy", score: 0 })?.id).toBe("autopsy-faint");
     expect(ev({ type: "autopsy-fix-all" })?.id).toBe("surgeon");
+    expect(ev({ type: "autopsy-open" })).toMatchObject({ id: "examine", bubble: "Let me examine the patient." });
   });
   it("recipes, ask, export, AI and reset", () => {
     expect(ev({ type: "save-recipe" })?.id).toBe("write-scroll");
     expect(ev({ type: "apply-recipe" })?.id).toBe("stamp");
     expect(ev({ type: "ask-error" })?.id).toBe("smoke");
     expect(ev({ type: "export" })?.id).toBe("wave-file");
-    expect(ev({ type: "ai-off" })).toMatchObject({ id: "unplug", bubble: "Fully local." });
+    expect(ev({ type: "ai-off" })).toMatchObject({ id: "unplug" });
+    expect(ev({ type: "ai-off" })?.bubble).toMatch(/^Fully local\./);
+    expect(ev({ type: "save-recipe" })?.bubble).toBe("Even I keep notes in a journal.");
     expect(ev({ type: "reset" })?.id).toBe("reset");
+  });
+  it("quips: reading, nibbling an acorn, looking at his stitches", () => {
+    expect(ev({ type: "quip", kind: "read" })).toMatchObject({ id: "quip-read" });
+    expect(ev({ type: "quip", kind: "acorn" })).toMatchObject({ id: "quip-acorn" });
+    expect(ev({ type: "quip", kind: "stitches" })).toMatchObject({ id: "quip-stitches" });
   });
   it("is deterministic", () => {
     expect(ev({ type: "autopsy", score: 70 })).toEqual(ev({ type: "autopsy", score: 70 }));

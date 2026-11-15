@@ -19,3 +19,15 @@ export const FRANK_POKE_RESET_MS = 6000;
 export const FRANK_CALM_STORAGE_KEY = "frankendata.calmFrank";
 /** The fewest Intents the guide table holds. */
 export const GUIDE_MIN_INTENTS = 15;
+/** How long the bolt flickers (on, off, on, off, on). */
+export const FRANK_BOLT_FLICKER_MS = 350;
+/** How long the bolt fades after the flicker. */
+export const FRANK_BOLT_FADE_MS = 250;
+/** How long the white screen flash lasts. */
+export const FRANK_FLASH_MS = 80;
+/** How long the page shakes on impact. */
+export const FRANK_SHAKE_MS = 150;
+/** The least time between two idle quips. */
+export const FRANK_QUIP_GAP_MS = 120000;
+/** How long the user must have been still before a quip may play. */
+export const FRANK_QUIP_QUIET_MS = 15000;

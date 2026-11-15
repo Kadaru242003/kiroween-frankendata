@@ -35,6 +35,44 @@
   outline-offset: 3px;
 }
 
+/* The small round "?" speech-bubble button by his head: opens the guide. */
+.frank-ask {
+  position: absolute;
+  left: 68px;
+  top: 4px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1.5px solid var(--lab-green);
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--lab-green);
+  font: 700 14px/1 var(--sans, system-ui);
+  cursor: pointer;
+  z-index: 5;
+}
+/* The little tail of the speech bubble, pointing at his head. */
+.frank-ask::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  background: var(--surface-raised);
+  border-left: 1.5px solid var(--lab-green);
+  border-bottom: 1.5px solid var(--lab-green);
+  transform: rotate(45deg);
+}
+.frank-ask:hover,
+.frank-ask[aria-expanded="true"] {
+  background: var(--accent-bg);
+}
+.frank-ask:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .specimen {
   position: relative;
   display: block;
@@ -49,16 +87,105 @@
 }
 
 /* ── Cells, grid, head, slab ─────────────────────────────────────────────── */
-.specimen__grid line,
-.specimen__grid-frame,
-.specimen__head {
-  stroke: var(--lab-green);
-  stroke-width: 1.6;
+/* The patchwork: four mismatched greens and grays (like mismatched columns),
+   with lighter stitched seams. Local colors for the art only. */
+.specimen {
+  --patch-1: #2f6a3d;
+  --patch-2: #4d8a58;
+  --patch-3: #66786d;
+  --patch-4: #8c9b93;
+  --seam: #c9efc1;
+  --coat: #3b3354;
 }
+.pc {
+  stroke: none;
+}
+.pc--1 { fill: var(--patch-1); }
+.pc--2 { fill: var(--patch-2); }
+.pc--3 { fill: var(--patch-3); }
+.pc--4 { fill: var(--patch-4); }
 
-.specimen__grid-frame,
+.specimen__grid-frame {
+  fill: none;
+  stroke: var(--lab-green-deep);
+  stroke-width: 1.5;
+}
 .specimen__head {
-  fill: var(--surface-raised);
+  stroke: var(--lab-green-deep);
+  stroke-width: 1.5;
+}
+.specimen__seam {
+  fill: none;
+  stroke: var(--seam);
+  stroke-width: 0.9;
+  stroke-dasharray: 2 1.5;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+.specimen__nub {
+  fill: var(--patch-4);
+  stroke: var(--lab-green-deep);
+  stroke-width: 0.8;
+}
+.specimen__mouth {
+  stroke: var(--text-primary);
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+.specimen__sleeve {
+  fill: var(--coat);
+  stroke: var(--lab-purple);
+  stroke-width: 1;
+}
+.specimen__cuff {
+  stroke: var(--seam);
+  stroke-width: 0.9;
+  stroke-dasharray: 1.6 1.2;
+  opacity: 0.8;
+}
+.specimen__hand {
+  fill: #b8c7bd;
+  stroke: var(--lab-green-deep);
+  stroke-width: 0.8;
+}
+.specimen__strap {
+  stroke: #8a6a3a;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.specimen__satchel {
+  fill: #7a5a32;
+  stroke: #4d371c;
+  stroke-width: 1;
+}
+.specimen__satchel-flap {
+  stroke: #4d371c;
+  stroke-width: 0.9;
+}
+.specimen__book {
+  fill: #a8483a;
+  stroke: #5d2118;
+  stroke-width: 0.7;
+}
+.specimen__book-page {
+  stroke: #f1e6c9;
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+.specimen__newseam-line {
+  stroke: var(--lab-green);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 2px rgba(57, 255, 20, 0.8));
+  animation: frank-draw 700ms ease-out both;
+}
+.specimen__newseam-ticks line {
+  stroke: var(--lab-green);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  animation: frank-fade-in 300ms ease-out 450ms both;
 }
 
 .specimen__slab {
@@ -73,20 +200,15 @@
 }
 
 .specimen__stitches line {
-  stroke: var(--lab-green);
+  stroke: var(--seam);
   stroke-width: 1.5;
   stroke-linecap: round;
 }
 
 .specimen__leg,
-.specimen__arm {
-  fill: var(--surface);
+.specimen__limb {
   stroke: var(--lab-green-deep);
-  stroke-width: 1.4;
-}
-
-.specimen__arm--right {
-  fill: var(--lab-purple);
+  stroke-width: 1.2;
 }
 
 .specimen__eye {
@@ -407,49 +529,91 @@
   position: fixed;
   pointer-events: none;
 }
+/* A white flash of about 25% opacity for 80ms, synced with the first flicker. */
 .frank-flash {
   inset: 0;
   z-index: 1;
-  background: rgba(210, 255, 205, 0.6);
+  background: #ffffff;
   opacity: 0;
-  animation: frank-flash 260ms ease-out 300ms both;
+  animation: frank-flash 80ms linear both;
 }
 .frank-lightning {
-  /* Over his head (the layer is 12px from the left, the head 59px across). */
-  left: 39px;
-  top: 0;
-  width: 40px;
-  height: calc(100vh - 140px);
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: visible;
   z-index: 1;
 }
+.frank-lightning * {
+  pointer-events: none;
+}
 .frank-lightning path {
-  stroke-dasharray: 1;
+  fill: none;
   stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-  animation: frank-bolt-draw 800ms ease-out both;
+  stroke-linejoin: miter;
 }
-.frank-lightning__bolt {
-  stroke: #eaffe5;
-  stroke-width: 2.4;
-  filter: drop-shadow(0 0 5px rgba(57, 255, 20, 0.95));
+/* The bolt appears instantly, flickers on/off/on/off/on over 350ms, then fades over 250ms. */
+.frank-bolt {
+  animation: frank-bolt-flicker 600ms linear both;
 }
-.frank-lightning__glow {
-  stroke: rgba(57, 255, 20, 0.45);
-  stroke-width: 8;
+.frank-bolt__glow path {
+  stroke: rgba(80, 255, 214, 0.95);
+}
+.frank-bolt__core path {
+  stroke: #ffffff;
+}
+.frank-impact__ring {
+  fill: none;
+  stroke: rgba(125, 249, 255, 0.95);
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(80, 255, 214, 0.9));
+  animation: frank-ring 450ms ease-out both;
+}
+.frank-impact__spark {
+  fill: #ffffff;
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(80, 255, 214, 0.95));
+  animation: frank-bolt-spark 500ms ease-out both;
+}
+
+/* A short page shake on impact. It skips his own layer: a transform on an
+   ancestor of a fixed element would re-anchor it. */
+#lab.frank-shaking > :not(.specimen-layer) {
+  animation: frank-page-shake 150ms linear both;
 }
 
 /* ── Reactions (poses fade; motion is below and switched off when still) ── */
 
-/* wake: neck bolts light up, he jolts upright after the strike. */
+/* wake: the strike lands at once; he stays gray with closed eyes for a beat,
+   then the color comes back, his eyes open and he jolts upright; the bubble
+   waits for the jolt. */
+.specimen--react-wake {
+  animation: frank-wake-color 400ms linear both;
+}
 .specimen--react-wake .specimen__neckbolt {
   fill: var(--amber-accent);
   filter: drop-shadow(0 0 3px rgba(255, 179, 0, 0.9));
 }
+.specimen--react-wake .specimen__eye {
+  animation: frank-eyes-open 400ms linear both;
+}
+.specimen--react-wake .specimen__lid {
+  animation: frank-lids-open 400ms linear both;
+}
 .specimen--react-wake .specimen__body {
   transform-origin: 50% 90%;
-  animation: frank-jolt-up 900ms ease-out 380ms both;
+  animation: frank-jolt-up 900ms ease-out 150ms both;
+}
+.specimen--react-wake .specimen__bubble {
+  animation: frank-fade-in 200ms ease-out 350ms both;
+}
+/* Reduced motion and Calm Frank: no bolt, shake or flash, only a soft glow. */
+.specimen--still.specimen--react-wake {
+  filter: drop-shadow(0 0 10px rgba(125, 249, 255, 0.85));
+  transition: filter 150ms;
 }
 
 /* catch: arms come up to catch the file. */
@@ -594,6 +758,23 @@
   animation: frank-flop 800ms ease-in 600ms both;
 }
 
+/* quips: reading a tiny book, nibbling an acorn, looking at his stitches. */
+.specimen--react-quip-read .specimen__arm--right {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: frank-arm-small 1400ms ease-in-out both;
+}
+.specimen--react-quip-read .specimen__headg,
+.specimen--react-quip-stitches .specimen__headg {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: frank-head-down 1400ms ease-in-out both;
+}
+.specimen--react-quip-stitches .specimen__seam {
+  stroke: #ffffff;
+  animation: frank-seam-glint 1400ms ease-in-out both;
+}
+
 /* ── Effect drawings ─────────────────────────────────────────────────────── */
 .fx-sparks polyline {
   fill: none;
@@ -607,7 +788,43 @@
   opacity: 0;
   animation: frank-spark 500ms ease-out both;
 }
-.fx-wake-delay { animation-delay: 380ms; }
+.fx-wake-delay { animation-delay: 150ms; }
+
+.fx-book {
+  animation: frank-fade-in 250ms ease-out both;
+}
+.fx-book__cover {
+  fill: #a8483a;
+  stroke: #5d2118;
+  stroke-width: 0.7;
+}
+.fx-book__spine {
+  stroke: #5d2118;
+  stroke-width: 0.8;
+}
+.fx-book__line {
+  stroke: #f1e6c9;
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+.fx-acorn {
+  animation: frank-nibble 700ms ease-in-out 2 both;
+}
+.fx-acorn__nut {
+  fill: #b57a3c;
+  stroke: #6a4318;
+  stroke-width: 0.7;
+}
+.fx-acorn__cap {
+  fill: #6a4318;
+  stroke: #4a2d0f;
+  stroke-width: 0.6;
+}
+.fx-acorn__stem {
+  stroke: #4a2d0f;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
 
 .fx-file__paper {
   fill: #e9efe9;
@@ -805,14 +1022,57 @@
   100% { transform: translateY(-9px); opacity: 0; }
 }
 @keyframes frank-flash {
-  0% { opacity: 0; }
-  30% { opacity: 0.12; }
+  0% { opacity: 0.25; }
   100% { opacity: 0; }
 }
-@keyframes frank-bolt-draw {
-  0% { stroke-dashoffset: 1; opacity: 1; }
-  50% { stroke-dashoffset: 0; opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0; }
+/* On, off, on, off, on (70ms each = 350ms), then a 250ms fade, hard stops. */
+@keyframes frank-bolt-flicker {
+  0%, 11.6% { opacity: 1; }
+  11.7%, 23.2% { opacity: 0; }
+  23.3%, 34.9% { opacity: 1; }
+  35%, 46.5% { opacity: 0; }
+  46.6%, 58.3% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes frank-ring {
+  0% { transform: scale(0.2); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes frank-bolt-spark {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; }
+}
+@keyframes frank-page-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 1px); }
+  40% { transform: translate(3px, -2px); }
+  60% { transform: translate(-2px, 2px); }
+  80% { transform: translate(2px, -1px); }
+}
+@keyframes frank-wake-color {
+  0%, 35% { filter: grayscale(1) brightness(0.85); }
+  100% { filter: grayscale(0) brightness(1); }
+}
+@keyframes frank-eyes-open {
+  0%, 35% { opacity: 0; }
+  36%, 100% { opacity: 1; }
+}
+@keyframes frank-lids-open {
+  0%, 35% { opacity: 1; }
+  36%, 100% { opacity: 0; }
+}
+@keyframes frank-nibble {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%, 75% { transform: translate(-1px, 0) scale(0.92); }
+  50% { transform: translate(0, 0) scale(1); }
+}
+@keyframes frank-head-down {
+  0%, 100% { transform: rotate(0deg); }
+  30%, 70% { transform: rotate(6deg) translateY(1px); }
+}
+@keyframes frank-seam-glint {
+  0%, 100% { opacity: 0.85; }
+  40%, 70% { opacity: 1; }
 }
 @keyframes frank-spark {
   0% { opacity: 0; transform: scale(0.5); }
@@ -1010,7 +1270,8 @@
   .specimen *,
   .frank-flash,
   .frank-lightning,
-  .frank-lightning * {
+  .frank-lightning *,
+  #lab.frank-shaking > * {
     animation: none !important;
   }
   .frank-flash,

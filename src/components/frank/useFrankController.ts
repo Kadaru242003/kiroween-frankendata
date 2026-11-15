@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readCalm, writeCalm } from "../../core/frank/calm";
 import { FRANK_BUBBLE_MS, FRANK_IDLE_MS } from "../../core/frank/constants";
+import { pickQuip, quipDue, type QuipKind } from "../../core/frank/quips";
 import {
   EMPTY_QUEUE,
   NO_POKES,
@@ -41,15 +42,32 @@ export interface FrankController extends FrankView {
 export interface FrankControllerOptions {
   /** Idle time before he sleeps (tests shorten it). */
   idleMs?: number;
+  /** He may make idle quips (awake, tables loaded). Default false. */
+  quipsEnabled?: boolean;
+  /** How often the quip scheduler is asked (tests shorten it). Default 10s. */
+  quipCheckMs?: number;
+  /** The dice for quips (tests fix it). Default Math.random. */
+  random?: () => number;
 }
+
+const QUIP_ODDS = 0.4;
 
 export function useFrankController(options: FrankControllerOptions = {}): FrankController {
   const idleMs = options.idleMs ?? FRANK_IDLE_MS;
+  const quipsEnabled = options.quipsEnabled ?? false;
+  const quipCheckMs = options.quipCheckMs ?? 10000;
+  const randomRef = useRef(options.random ?? Math.random);
+  randomRef.current = options.random ?? Math.random;
   const [view, setView] = useState<FrankView>({ reaction: null, reactionSeq: 0, bubble: null });
   const [idle, setIdle] = useState(false);
   const [calm, setCalmState] = useState<boolean>(() => readCalm());
 
   const queueRef = useRef<QueueState>(EMPTY_QUEUE);
+  const idleRef = useRef(false);
+  idleRef.current = idle;
+  const lastActivityRef = useRef(Date.now());
+  const lastQuipRef = useRef(Date.now());
+  const lastQuipKindRef = useRef<QuipKind | null>(null);
   const pokeRef = useRef<PokeState>(NO_POKES);
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -135,6 +153,7 @@ export function useFrankController(options: FrankControllerOptions = {}): FrankC
     };
     const onActivity = () => {
       last = Date.now();
+      lastActivityRef.current = last;
       if (sleeping) {
         sleeping = false;
         setIdle(false);
@@ -150,6 +169,29 @@ export function useFrankController(options: FrankControllerOptions = {}): FrankC
       if (timer !== null) clearTimeout(timer);
     };
   }, [idleMs]);
+
+  // Rare idle quips: a coarse timer asks the pure scheduler; it never plays
+  // during a Reaction, while he sleeps, or less than the gap after the last one.
+  useEffect(() => {
+    if (!quipsEnabled) return;
+    lastQuipRef.current = Math.max(lastQuipRef.current, Date.now());
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const due = quipDue({
+        now,
+        lastQuipAt: lastQuipRef.current,
+        lastActivityAt: lastActivityRef.current,
+        busy: queueRef.current.current !== null || queueRef.current.pending !== null,
+        awake: !idleRef.current,
+      });
+      if (!due || randomRef.current() >= QUIP_ODDS) return;
+      const kind = pickQuip(randomRef.current(), lastQuipKindRef.current);
+      lastQuipKindRef.current = kind;
+      lastQuipRef.current = now;
+      emit({ type: "quip", kind });
+    }, quipCheckMs);
+    return () => clearInterval(timer);
+  }, [quipsEnabled, quipCheckMs, emit]);
 
   useEffect(
     () => () => {

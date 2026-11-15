@@ -2,10 +2,10 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { describeEgress } from "../../core/egress-description";
-import { FALLBACK_TEXT, GUIDE_CHIPS } from "../../core/frank/guide";
+import { FALLBACK_TEXT, GREETING, GUIDE_CHIPS } from "../../core/frank/guide";
 import { FrankGuide } from "./FrankGuide";
 
-function Harness(props: { onClose?: () => void; onPoke?: () => void; onCalmChange?: (on: boolean) => void; tip?: string; open?: boolean }) {
+function Harness(props: { onClose?: () => void; instant?: boolean; onCalmChange?: (on: boolean) => void; tip?: string; open?: boolean }) {
   const toggleRef = createRef<HTMLButtonElement>();
   const [calm, setCalm] = useState(false);
   return (
@@ -16,7 +16,7 @@ function Harness(props: { onClose?: () => void; onPoke?: () => void; onCalmChang
         open={props.open ?? true}
         onClose={props.onClose ?? (() => {})}
         tip={props.tip ?? "Click Stitch tables."}
-        onPoke={props.onPoke ?? (() => {})}
+        instant={props.instant ?? true}
         calm={calm}
         onCalmChange={(on) => {
           setCalm(on);
@@ -31,6 +31,59 @@ function Harness(props: { onClose?: () => void; onPoke?: () => void; onCalmChang
 const dialog = () => screen.getByRole("dialog", { name: "Ask Little Frank" });
 
 describe("FrankGuide", () => {
+  it("shows the tip, then the answer, then the input, then the chips, in that order", () => {
+    render(<Harness />);
+    const d = dialog();
+    const tip = within(d).getByTestId("frank-tip");
+    const answer = within(d).getByTestId("frank-answer");
+    const input = within(d).getByLabelText("Your question");
+    const chips = within(d).getByRole("list", { name: "Suggested questions" });
+    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(tip, answer)).toBe(true);
+    expect(before(answer, input)).toBe(true);
+    expect(before(input, chips)).toBe(true);
+  });
+
+  it("does not close when Frank himself is pressed, and answers 'what do you eat' with acorns", () => {
+    const onClose = vi.fn();
+    render(
+      <div>
+        <button type="button" className="specimen-button">frank</button>
+        <Harness onClose={onClose} />
+      </div>
+    );
+    fireEvent.pointerDown(screen.getByRole("button", { name: "frank" }));
+    expect(onClose).not.toHaveBeenCalled();
+    const input = screen.getByLabelText("Your question");
+    fireEvent.change(input, { target: { value: "what do you eat" } });
+    fireEvent.submit(input.closest("form")!);
+    expect(screen.getByTestId("frank-answer")).toHaveTextContent(/acorns and berries/);
+  });
+
+  it("types the answer out when motion is allowed, and gives screen readers the whole text at once", () => {
+    vi.useFakeTimers();
+    try {
+      render(<Harness instant={false} />);
+      const answer = screen.getByTestId("frank-answer");
+      const typed = answer.querySelector(".frank-guide__typed")!;
+      expect(typed).toHaveAttribute("aria-hidden", "true");
+      expect(typed.querySelector("p span")!.textContent).toBe("");
+      // The whole greeting is already there for assistive technology.
+      expect(answer.querySelector(".frank-guide__sr")).toHaveTextContent(GREETING);
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+      expect(typed.querySelector("p span")!.textContent).toBe(GREETING);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the answer instantly when instant (reduced motion or Calm)", () => {
+    render(<Harness instant />);
+    expect(screen.getByTestId("frank-answer").querySelector(".frank-guide__typed p span")!.textContent).toBe(GREETING);
+  });
+
   it("is a labelled dialog with the tip, the input, the eight chips and focus on the input", () => {
     render(<Harness tip="Click Stitch tables." />);
     const d = dialog();
@@ -39,7 +92,7 @@ describe("FrankGuide", () => {
     expect(within(d).getByLabelText("Your question")).toHaveFocus();
     const chips = within(d).getByRole("list", { name: "Suggested questions" });
     expect(within(chips).getAllByRole("button").map((b) => b.textContent)).toEqual(GUIDE_CHIPS);
-    expect(within(d).getByRole("button", { name: "Poke Frank" })).toBeInTheDocument();
+    expect(within(d).queryByRole("button", { name: /poke/i })).toBeNull();
     expect(within(d).getByRole("checkbox", { name: "Calm Frank" })).not.toBeChecked();
   });
 
@@ -77,13 +130,14 @@ describe("FrankGuide", () => {
     render(<Harness />);
     const input = screen.getByLabelText("Your question");
     fireEvent.submit(input.closest("form")!);
-    expect(screen.getByTestId("frank-answer")).toBeEmptyDOMElement();
+    // Still the greeting.
+    expect(screen.getByTestId("frank-answer")).toHaveTextContent(GREETING);
   });
 
   it("closes on Esc and on a press outside, but not on a press inside or on his button", () => {
     const onClose = vi.fn();
     render(<Harness onClose={onClose} />);
-    fireEvent.pointerDown(within(dialog()).getByText("Ask Little Frank"));
+    fireEvent.pointerDown(within(dialog()).getByTestId("frank-tip"));
     fireEvent.pointerDown(screen.getByRole("button", { name: "toggle" }));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.pointerDown(screen.getByRole("button", { name: "outside" }));
@@ -106,12 +160,9 @@ describe("FrankGuide", () => {
     expect(last).toHaveFocus();
   });
 
-  it("pokes, and toggles Calm Frank", () => {
-    const onPoke = vi.fn();
+  it("toggles Calm Frank", () => {
     const onCalmChange = vi.fn();
-    render(<Harness onPoke={onPoke} onCalmChange={onCalmChange} />);
-    fireEvent.click(screen.getByRole("button", { name: "Poke Frank" }));
-    expect(onPoke).toHaveBeenCalledTimes(1);
+    render(<Harness onCalmChange={onCalmChange} />);
     fireEvent.click(screen.getByRole("checkbox", { name: "Calm Frank" }));
     expect(onCalmChange).toHaveBeenCalledWith(true);
     expect(screen.getByRole("checkbox", { name: "Calm Frank" })).toBeChecked();

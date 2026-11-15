@@ -27,12 +27,15 @@ function renderSpecimen(overrides: Partial<SpecimenProps> = {}) {
 }
 
 describe("Specimen (Little Frank)", () => {
-  it("renders an 'Ask Little Frank' button with aria-hidden body art", () => {
+  it("renders a 'Poke Little Frank' button and a separate '?' button, with aria-hidden body art", () => {
     const { getByRole, container } = renderSpecimen();
-    const button = getByRole("button", { name: "Ask Little Frank" });
-    expect(button).toHaveAttribute("aria-haspopup", "dialog");
-    expect(button).toHaveAttribute("aria-expanded", "false");
-    expect(button).toBeInTheDocument();
+    expect(getByRole("button", { name: "Poke Little Frank" })).toBeInTheDocument();
+    const ask = getByRole("button", { name: "Ask Little Frank" });
+    expect(ask).toHaveAttribute("aria-haspopup", "dialog");
+    expect(ask).toHaveAttribute("aria-expanded", "false");
+    expect(ask).toHaveTextContent("?");
+    // Buttons do not nest.
+    expect(ask.closest(".specimen-button")).toBeNull();
     // The creature art itself is hidden from assistive tech.
     expect(container.querySelector(".specimen")).toHaveAttribute(
       "aria-hidden",
@@ -113,11 +116,16 @@ describe("Specimen (Little Frank)", () => {
     expect(container.querySelector(".specimen__clipboard polyline")).toBeNull();
   });
 
-  it("asks the owner to toggle the guide when clicked, and reports it open", () => {
+  it("pokes when Frank is clicked, and toggles the guide only from the '?' button", () => {
+    const onPoke = vi.fn();
     const onToggleGuide = vi.fn();
-    const { getByRole, rerender } = renderSpecimen({ tableCount: 2, onToggleGuide });
+    const { getByRole, rerender } = renderSpecimen({ tableCount: 2, onPoke, onToggleGuide });
+    fireEvent.click(getByRole("button", { name: "Poke Little Frank" }));
+    expect(onPoke).toHaveBeenCalledTimes(1);
+    expect(onToggleGuide).not.toHaveBeenCalled();
     fireEvent.click(getByRole("button", { name: "Ask Little Frank" }));
     expect(onToggleGuide).toHaveBeenCalledTimes(1);
+    expect(onPoke).toHaveBeenCalledTimes(1);
     rerender(<Specimen {...base} tableCount={2} guideOpen onToggleGuide={onToggleGuide} />);
     expect(getByRole("button", { name: "Ask Little Frank" })).toHaveAttribute("aria-expanded", "true");
   });
@@ -135,9 +143,33 @@ describe("Specimen (Little Frank)", () => {
     expect(container.querySelector(".specimen__zzz")).not.toBeNull();
   });
 
-  it("has neck bolts", () => {
+  it("has neck bolts and temple nubs", () => {
     const { container } = renderSpecimen({ tableCount: 2 });
     expect(container.querySelectorAll(".specimen__neckbolt")).toHaveLength(2);
+    expect(container.querySelectorAll(".specimen__nub")).toHaveLength(2);
+  });
+
+  it("is a patchwork: 3 to 4 patch colors, seams, one bigger eye, a satchel with a book, a long sleeve", () => {
+    const { container } = renderSpecimen({ tableCount: 2 });
+    const classes = new Set(Array.from(container.querySelectorAll(".pc")).map((e) => Array.from(e.classList).find((c) => /^pc--\d$/.test(c))));
+    expect(classes.size).toBeGreaterThanOrEqual(3);
+    expect(classes.size).toBeLessThanOrEqual(4);
+    expect(container.querySelectorAll(".specimen__seam").length).toBeGreaterThanOrEqual(4);
+    const left = Number(container.querySelector(".specimen__eye--l")!.getAttribute("r"));
+    const right = Number(container.querySelector(".specimen__eye--r")!.getAttribute("r"));
+    expect(left).toBeGreaterThan(right);
+    expect(container.querySelector(".specimen__satchel")).not.toBeNull();
+    expect(container.querySelector(".specimen__book")).not.toBeNull();
+    expect(container.querySelector(".specimen__sleeve")).not.toBeNull();
+  });
+
+  it("draws a new seam when stitched, and none before", () => {
+    const before = renderSpecimen({ tableCount: 2 });
+    expect(before.container.querySelector(".specimen__newseam")).toBeNull();
+    before.unmount();
+    const after = renderSpecimen({ tableCount: 2, stitched: true });
+    expect(after.container.querySelector(".specimen__newseam-line")).not.toBeNull();
+    expect(after.container.querySelectorAll(".specimen__newseam-ticks line").length).toBeGreaterThanOrEqual(4);
   });
 });
 
@@ -172,14 +204,14 @@ describe("isAskResultShown", () => {
 });
 
 describe("reactions are drawn from props", () => {
-  const wake = { id: "wake" as const, bubble: "IT'S ALIVE!", durationMs: 1400 };
+  const wake = { id: "wake" as const, bubble: "It's alive!", durationMs: 1400 };
 
   it("the wake draws the lightning and the flash, shows the bubble, and sets the reaction class", () => {
     const { container, getByTestId } = renderSpecimen({ tableCount: 2, reaction: wake, reactionSeq: 1, bubble: wake.bubble, reducedMotion: false });
     expect(getByTestId("frank-lightning")).toBeInTheDocument();
     expect(getByTestId("frank-flash")).toBeInTheDocument();
     expect(container.querySelector(".specimen--react-wake")).not.toBeNull();
-    expect(container.querySelector(".specimen__bubble")?.textContent).toBe("IT'S ALIVE!");
+    expect(container.querySelector(".specimen__bubble")?.textContent).toBe("It's alive!");
     expect(container.querySelector(".specimen__fx")).not.toBeNull();
   });
 
@@ -190,7 +222,7 @@ describe("reactions are drawn from props", () => {
     expect(container.querySelector(".specimen__fx")).toBeNull();
     expect(container.querySelector(".specimen--still")).not.toBeNull();
     expect(container.querySelector(".specimen--react-wake")).not.toBeNull();
-    expect(container.querySelector(".specimen__bubble")?.textContent).toBe("IT'S ALIVE!");
+    expect(container.querySelector(".specimen__bubble")?.textContent).toBe("It's alive!");
   });
 
   it("Calm Frank does the same as reduced motion", () => {

@@ -2,11 +2,13 @@
  * Specimen (shown to users as "Little Frank"): a presentational lab mascot fixed
  * in the bottom-left corner.
  *
- * He is a tiny creature built from spreadsheet cells on a simple SVG operating
- * slab: cells, stitches, an electrode, two little neck bolts and the occasional
- * spark. The whole creature is a real `<button aria-label="Ask Little Frank">`
- * (keyboard reachable, visible focus ring) that opens the guide panel; the art
- * is aria-hidden.
+ * He is the creature of Mary Shelley's novel, drawn as a patchwork of
+ * mismatched table cells on a simple SVG operating slab: patches in greens and
+ * grays, lighter stitched seams, one eye bigger than the other, small electrode
+ * nubs, a satchel with a book, and a coat sleeve a little too long. The whole
+ * creature is a real `<button aria-label="Poke Little Frank">` (tapping or
+ * Enter or Space pokes him); a small "?" button by his head
+ * (`aria-label="Ask Little Frank"`) opens the guide. The art is aria-hidden.
  *
  * He draws what he is told and decides nothing:
  *  - held Poses come from state props (asleep, awake, bandaged, chart sign,
@@ -66,9 +68,11 @@ export interface SpecimenProps {
   reducedMotion?: boolean;
   /** The guide panel is open (his button reports it; the bubble steps aside). */
   guideOpen?: boolean;
-  /** Clicking him asks the owner to toggle the guide. */
+  /** Tapping or clicking him pokes him. */
+  onPoke?: () => void;
+  /** The "?" button asks the owner to toggle the guide. */
   onToggleGuide?: () => void;
-  /** The button, so the guide can return focus to it. */
+  /** The "?" button, so the guide can return focus to it. */
   buttonRef?: Ref<HTMLButtonElement>;
   /** The guide panel, rendered inside his layer. */
   children?: ReactNode;
@@ -111,6 +115,7 @@ export function Specimen(props: SpecimenProps): JSX.Element {
     idle = false,
     calm = false,
     guideOpen = false,
+    onPoke,
     onToggleGuide,
     buttonRef,
     children,
@@ -210,15 +215,12 @@ export function Specimen(props: SpecimenProps): JSX.Element {
 
   return (
     <div className={`specimen-layer${guideOpen ? " specimen-layer--open" : ""}`}>
-      {effectsOn ? <FrankViewportFx id={reactionId} seq={reactionSeq} /> : null}
+      {effectsOn ? <FrankViewportFx id={reactionId} seq={reactionSeq} anchor={rootRef} /> : null}
       <button
         type="button"
-        ref={buttonRef}
         className="specimen-button"
-        aria-label="Ask Little Frank"
-        aria-haspopup="dialog"
-        aria-expanded={guideOpen}
-        onClick={onToggleGuide}
+        aria-label="Poke Little Frank"
+        onClick={onPoke}
       >
         <span
           ref={rootRef}
@@ -239,31 +241,51 @@ export function Specimen(props: SpecimenProps): JSX.Element {
             <line className="specimen__slab-leg" x1="10" y1="93" x2="10" y2="96" />
             <line className="specimen__slab-leg" x1="54" y1="93" x2="54" y2="96" />
 
-            {/* Arms (one a different color), joined by cross-stitches. */}
-            <rect className="specimen__arm specimen__arm--left" x="4" y="52" width="12" height="6" rx="3" />
-            <rect className="specimen__arm specimen__arm--right" x="48" y="52" width="12" height="6" rx="3" />
-            {/* Legs run from under the body (y 64) down onto the slab (y 84)
-                so there is no gap between the grid and the feet. */}
-            <rect className="specimen__leg specimen__leg--left" x="22" y="64" width="7" height="22" rx="3" />
-            <rect className="specimen__leg specimen__leg--right" x="35" y="64" width="7" height="22" rx="3" />
+            {/* Legs run from under the body (y 64) down onto the slab (y 84).
+                Each is two mismatched patches with a seam between them. */}
+            <rect className="specimen__leg specimen__leg--left pc pc--2" x="22" y="64" width="7" height="22" rx="3" />
+            <rect className="pc pc--4" x="22.7" y="76" width="5.6" height="9.3" rx="2" />
+            <line className="specimen__seam" x1="22.7" y1="76" x2="28.3" y2="76" />
+            <rect className="specimen__leg specimen__leg--right pc pc--3" x="35" y="64" width="7" height="22" rx="3" />
+            <rect className="pc pc--1" x="35.7" y="72" width="5.6" height="13.3" rx="2" />
+            <line className="specimen__seam" x1="35.7" y1="72" x2="41.3" y2="72" />
 
-            {/* Neck bolts. */}
+            {/* Left arm: two patches and a hand. */}
+            <g className="specimen__arm specimen__arm--left">
+              <rect className="specimen__limb pc pc--3" x="4" y="52" width="13" height="6" rx="3" />
+              <rect className="pc pc--1" x="10.5" y="52.6" width="5.6" height="4.8" rx="2" />
+              <line className="specimen__seam" x1="10.5" y1="52.6" x2="10.5" y2="57.4" />
+              <circle className="specimen__hand" cx="4.6" cy="55" r="2.3" />
+            </g>
+            {/* Right arm: a coat sleeve a little too long, the fingertips just showing. */}
+            <g className="specimen__arm specimen__arm--right">
+              <rect className="specimen__sleeve" x="47" y="51" width="14" height="8" rx="3.5" />
+              <line className="specimen__cuff" x1="57.4" y1="51.6" x2="57.4" y2="58.4" />
+              <rect className="specimen__hand" x="60.4" y="54" width="3" height="3.4" rx="1.2" />
+            </g>
+
+            {/* Neck bolts (small electrode nubs). */}
             <circle className="specimen__neckbolt" cx="17.5" cy="28" r="1.8" />
             <circle className="specimen__neckbolt" cx="46.5" cy="28" r="1.8" />
 
-            {/* Electrode on top of the head (sparks when awake). */}
-            <line className="specimen__electrode" x1="32" y1="6" x2="32" y2="1" />
-            <circle className="specimen__electrode-tip" cx="32" cy="1" r="1.6" />
-            <polyline className="specimen__electrode-spark" points="32,1 38,4 34,7 42,9" fill="none" />
+            {/* Electrode nubs at the temples and a short one on top (sparks when awake). */}
+            <rect className="specimen__nub" x="19.4" y="14.2" width="3.4" height="5" rx="1.6" />
+            <rect className="specimen__nub" x="41.2" y="14.2" width="3.4" height="5" rx="1.6" />
+            <line className="specimen__electrode" x1="32" y1="8" x2="32" y2="3.2" />
+            <circle className="specimen__electrode-tip" cx="32" cy="3" r="1.5" />
+            <polyline className="specimen__electrode-spark" points="32,3 38,5 34,8 42,10" fill="none" />
 
-            {/* Head group: a single cell with two mismatched eyes. */}
+            {/* Head group: a patchwork head, one eye bigger than the other. */}
             <g className="specimen__headg">
-              <rect className="specimen__head" x="22" y="8" width="20" height="18" rx="2" />
-              <circle className="specimen__eye specimen__eye--l" cx="29" cy="17" r="2.6" />
-              <rect className="specimen__eye specimen__eye--r" x="35" y="14.5" width="5" height="5" rx="1.2" />
+              <rect className="specimen__head pc pc--2" x="22" y="8" width="20" height="18" rx="3" />
+              <rect className="pc pc--3" x="33" y="8.8" width="8.4" height="10" rx="2" />
+              <path className="specimen__seam" d="M33 8.8 V18.8 H41.4" fill="none" />
+              <circle className="specimen__eye specimen__eye--l" cx="28.5" cy="17" r="3.3" />
+              <circle className="specimen__eye specimen__eye--r" cx="37.2" cy="17.8" r="2.2" />
               {/* Closed lids (asleep, fainted) and X eyes (reset). */}
-              <line className="specimen__lid specimen__lid--l" x1="26" y1="17" x2="32" y2="17" />
-              <line className="specimen__lid specimen__lid--r" x1="35" y1="17" x2="40" y2="17" />
+              <line className="specimen__lid specimen__lid--l" x1="25" y1="17" x2="32" y2="17" />
+              <line className="specimen__lid specimen__lid--r" x1="34.6" y1="17.8" x2="39.8" y2="17.8" />
+              <path className="specimen__mouth" d="M30 22.6 Q33.5 23.8 37 22.4" fill="none" />
               {/* Static poses shown by a reaction class: smile, surgeon mask, pumpkin. */}
               <path className="specimen__smile" d="M27.5 21.5 Q32 26.5 36.5 21.5" fill="none" />
               <g className="specimen__mask">
@@ -279,14 +301,24 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               </g>
             </g>
 
-            {/* Body: a 3x3 grid of table cells. */}
+            {/* Body: mismatched patches (like mismatched columns) with stitched seams. */}
             <g className="specimen__grid">
-              <rect x="18" y="26" width="28" height="42" rx="2" className="specimen__grid-frame" />
-              <line x1="27.3" y1="26" x2="27.3" y2="68" />
-              <line x1="36.6" y1="26" x2="36.6" y2="68" />
-              <line x1="18" y1="40" x2="46" y2="40" />
-              <line x1="18" y1="54" x2="46" y2="54" />
+              <rect className="pc pc--1" x="18" y="26" width="16" height="14" />
+              <rect className="pc pc--3" x="34" y="26" width="12" height="20" />
+              <rect className="pc pc--2" x="18" y="40" width="16" height="28" />
+              <rect className="pc pc--4" x="34" y="46" width="12" height="22" />
+              <line className="specimen__seam" x1="34" y1="26" x2="34" y2="68" />
+              <line className="specimen__seam" x1="18" y1="40" x2="34" y2="40" />
+              <line className="specimen__seam" x1="34" y1="46" x2="46" y2="46" />
+              <rect className="specimen__grid-frame" x="18" y="26" width="28" height="42" rx="2" />
             </g>
+
+            {/* Satchel on a strap, with a book peeking out; the strap crosses his chest. */}
+            <path className="specimen__strap" d="M41 27.5 Q31 47 19 63" fill="none" />
+            <rect className="specimen__book" x="12" y="58.4" width="7" height="5.4" rx="0.8" />
+            <line className="specimen__book-page" x1="13.2" y1="60" x2="17.8" y2="60" />
+            <rect className="specimen__satchel" x="10" y="62" width="12" height="9" rx="2" />
+            <path className="specimen__satchel-flap" d="M10.4 64.4 H21.6" fill="none" />
 
             {/* Cross-stitches joining the limbs to the body. */}
             <g className="specimen__stitches">
@@ -300,6 +332,20 @@ export function Specimen(props: SpecimenProps): JSX.Element {
               <line x1="35" y1="68" x2="42" y2="72" />
               <line x1="42" y1="68" x2="35" y2="72" />
             </g>
+
+            {/* A new seam, drawn in when the stitch is applied, then held. */}
+            {stitched ? (
+              <g className="specimen__newseam">
+                <path className="specimen__newseam-line" pathLength={1} d="M18 55 Q32 52.5 46 55" fill="none" />
+                <g className="specimen__newseam-ticks">
+                  <line x1="22" y1="52.4" x2="22" y2="56.4" />
+                  <line x1="27" y1="52" x2="27" y2="56" />
+                  <line x1="32" y1="51.8" x2="32" y2="55.8" />
+                  <line x1="37" y1="52" x2="37" y2="56" />
+                  <line x1="42" y1="52.4" x2="42" y2="56.4" />
+                </g>
+              </g>
+            ) : null}
 
             {/* Goggles (proposals showing). */}
             {wearGoggles ? (
@@ -392,6 +438,18 @@ export function Specimen(props: SpecimenProps): JSX.Element {
             </svg>
           ) : null}
         </span>
+      </button>
+      {/* The "?" speech-bubble button by his head opens the guide. */}
+      <button
+        type="button"
+        ref={buttonRef}
+        className="frank-ask"
+        aria-label="Ask Little Frank"
+        aria-haspopup="dialog"
+        aria-expanded={guideOpen}
+        onClick={onToggleGuide}
+      >
+        <span aria-hidden="true">?</span>
       </button>
       {children}
     </div>

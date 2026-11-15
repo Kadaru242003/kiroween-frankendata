@@ -8,7 +8,7 @@ import { FRANK_REACTION_MAX_MS } from "./constants";
 import { reactionFor, type FrankEvent } from "./reactions";
 
 const simple = [
-  "wake", "stitch-open", "approve", "approve-all", "reject", "confirm-stitch", "stitch-applied",
+  "wake", "autopsy-open", "stitch-open", "approve", "approve-all", "reject", "confirm-stitch", "stitch-applied",
   "undo-stitch", "fan-out", "autopsy-fix-all", "save-recipe", "apply-recipe", "ask-error", "export", "ai-off", "reset",
 ] as const;
 
@@ -16,7 +16,8 @@ const event: fc.Arbitrary<FrankEvent> = fc.oneof(
   fc.constantFrom(...simple).map((type) => ({ type }) as FrankEvent),
   fc.integer({ min: -5, max: 500 }).map((tableCount) => ({ type: "files-loaded", tableCount }) as FrankEvent),
   fc.integer({ min: -50, max: 150 }).map((score) => ({ type: "autopsy", score }) as FrankEvent),
-  fc.integer({ min: 0, max: 40 }).map((count) => ({ type: "poke", count }) as FrankEvent)
+  fc.integer({ min: 0, max: 40 }).map((count) => ({ type: "poke", count }) as FrankEvent),
+  fc.constantFrom("read", "acorn", "stitches").map((kind) => ({ type: "quip", kind }) as FrankEvent)
 );
 
 describe("Feature: frankendata-little-frank, Property 2: reaction bounds", () => {

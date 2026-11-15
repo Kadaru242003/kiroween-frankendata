@@ -22,6 +22,8 @@ export interface FrankEventSources {
   aiOn: boolean;
   /** The stitch approval screen is open. */
   stitchOpen: boolean;
+  /** An Autopsy case file is open (it just opened: he examines the patient). */
+  autopsyOpen?: boolean;
   /** Reset lab is running (store changes during it are not user events). */
   resetting: boolean;
   /** True while a demo replaces the tables (he does not die, he is reloaded). */
@@ -80,6 +82,15 @@ export function useFrankEvents(sources: FrankEventSources): void {
     prevOpen.current = stitchOpen;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stitchOpen]);
+
+  // 2b. An Autopsy case file opening.
+  const autopsyOpen = sources.autopsyOpen ?? false;
+  const prevAutopsy = useRef(autopsyOpen);
+  useEffect(() => {
+    if (!prevAutopsy.current && autopsyOpen) emit({ type: "autopsy-open" });
+    prevAutopsy.current = autopsyOpen;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autopsyOpen]);
 
   // 3. The AI switch turned off.
   const prevAi = useRef(aiOn);

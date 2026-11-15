@@ -51,7 +51,7 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
   const stitch = useStitchStore(stitchStore);
   const ask = useAskStore(askStore);
   const reduced = useReducedMotion();
-  const frank = useFrankController(props.controller);
+  const frank = useFrankController({ quipsEnabled: tableCount > 0, ...props.controller });
   const [guideOpen, setGuideOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -62,6 +62,7 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
     askStore,
     aiOn: props.aiOn,
     stitchOpen: props.stitchOpen,
+    autopsyOpen: props.autopsyOpen,
     resetting: props.resetting,
     quietResetRef: props.quietResetRef,
   });
@@ -103,6 +104,7 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
       calm={frank.calm}
       reducedMotion={reduced}
       guideOpen={guideOpen}
+      onPoke={frank.poke}
       onToggleGuide={toggleGuide}
       buttonRef={buttonRef}
     >
@@ -110,9 +112,9 @@ export function FrankRegion(props: FrankRegionProps): JSX.Element {
         open={guideOpen}
         onClose={closeGuide}
         tip={tip}
-        onPoke={frank.poke}
         calm={frank.calm}
         onCalmChange={frank.setCalm}
+        instant={reduced || frank.calm}
         toggleRef={buttonRef}
       />
     </Specimen>

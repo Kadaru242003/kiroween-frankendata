@@ -13,6 +13,7 @@ import {
   FRANK_POKE_EGG_COUNT,
   FRANK_POKE_RESET_MS,
 } from "./constants.js";
+import type { QuipKind } from "./quips.js";
 
 /** Something that happened in the app. */
 export type FrankEvent =
@@ -26,6 +27,7 @@ export type FrankEvent =
   | { type: "stitch-applied" }
   | { type: "undo-stitch" }
   | { type: "fan-out" }
+  | { type: "autopsy-open" }
   | { type: "autopsy"; score: number }
   | { type: "autopsy-fix-all" }
   | { type: "save-recipe" }
@@ -34,6 +36,7 @@ export type FrankEvent =
   | { type: "export" }
   | { type: "ai-off" }
   | { type: "reset" }
+  | { type: "quip"; kind: QuipKind }
   | { type: "poke"; count: number };
 
 export type ReactionId =
@@ -47,6 +50,7 @@ export type ReactionId =
   | "bandage"
   | "unravel"
   | "head-grab"
+  | "examine"
   | "autopsy-happy"
   | "autopsy-neutral"
   | "autopsy-faint"
@@ -57,6 +61,9 @@ export type ReactionId =
   | "wave-file"
   | "unplug"
   | "reset"
+  | "quip-read"
+  | "quip-acorn"
+  | "quip-stitches"
   | "poke-1"
   | "poke-2"
   | "poke-3"
@@ -94,11 +101,11 @@ export function slabText(tableCount: number): string {
 export function reactionFor(event: FrankEvent): Reaction | null {
   switch (event.type) {
     case "wake":
-      return r("wake", "IT'S ALIVE!", 1400);
+      return r("wake", "It's alive!", 1400);
     case "files-loaded":
-      return r("catch", slabText(event.tableCount), 1100);
+      return r("catch", `${slabText(event.tableCount)} What curious company.`, 1100);
     case "stitch-open":
-      return r("peer", null, 1200);
+      return r("peer", "I was stitched from mismatched parts too. Let's make your tables whole.", 1200);
     case "approve":
       return r("nod", null, 600);
     case "approve-all":
@@ -108,31 +115,47 @@ export function reactionFor(event: FrankEvent): Reaction | null {
     case "confirm-stitch":
       return r("sew", null, 1400);
     case "stitch-applied":
-      return r("bandage", "Stitched!", 1000);
+      return r("bandage", "Now neither of them is alone.", 1000);
     case "undo-stitch":
-      return r("unravel", null, 1200);
+      return r("unravel", "Unmade, gently. We may try again.", 1200);
     case "fan-out":
-      return r("head-grab", "More rows than you started with!", 1300);
+      return r("head-grab", "More rows than you started with! I am rather alarmed.", 1300);
+    case "autopsy-open":
+      return r("examine", "Let me examine the patient.", 1000);
+    case "quip":
+      return quipReaction(event.kind);
     case "autopsy":
-      if (event.score >= AUTOPSY_HAPPY_SCORE) return r("autopsy-happy", "Clean bill of health!", 1100);
-      if (event.score < AUTOPSY_FAINT_SCORE) return r("autopsy-faint", "Oh no...", 1500);
-      return r("autopsy-neutral", "Hmm, let me see.", 800);
+      if (event.score >= AUTOPSY_HAPPY_SCORE) return r("autopsy-happy", "A clean bill of health. How splendid!", 1100);
+      if (event.score < AUTOPSY_FAINT_SCORE) return r("autopsy-faint", "Alas, I feel faint.", 1500);
+      return r("autopsy-neutral", "Hmm. A few troubles remain.", 800);
     case "autopsy-fix-all":
-      return r("surgeon", "Scalpel, please.", 1400);
+      return r("surgeon", "Scalpel, please. Gently now.", 1400);
     case "save-recipe":
-      return r("write-scroll", null, 1300);
+      return r("write-scroll", "Even I keep notes in a journal.", 1300);
     case "apply-recipe":
-      return r("stamp", "Recipe stamped.", 1100);
+      return r("stamp", "Your notes, read again. Recipe stamped.", 1100);
     case "ask-error":
-      return r("smoke", null, 1200);
+      return r("smoke", "Alas, the experiment failed.", 1200);
     case "export":
-      return r("wave-file", "Bye, little file!", 1400);
+      return r("wave-file", "Farewell, little file!", 1400);
     case "ai-off":
-      return r("unplug", "Fully local.", 1300);
+      return r("unplug", "Fully local. Only I watch.", 1300);
     case "reset":
       return r("reset", null, 1400);
     case "poke":
       return pokeReaction(event.count);
+  }
+}
+
+/** The small remark and drawing of an idle quip. */
+function quipReaction(kind: QuipKind): Reaction {
+  switch (kind) {
+    case "read":
+      return r("quip-read", "I am reading a very small book.", 1400);
+    case "acorn":
+      return r("quip-acorn", "Mm. A fine acorn.", 1400);
+    case "stitches":
+      return r("quip-stitches", "I do admire my stitches.", 1400);
   }
 }
 
@@ -196,15 +219,15 @@ export function pokeLevel(count: number): 1 | 2 | 3 | 4 | 5 | 6 {
 export function pokeReaction(count: number): Reaction {
   switch (pokeLevel(count)) {
     case 1:
-      return r("poke-1", "Hi!", 900);
+      return r("poke-1", "Oh! Good day to you.", 900);
     case 2:
-      return r("poke-2", "Hehe", 900);
+      return r("poke-2", "You are curious, as am I.", 900);
     case 3:
-      return r("poke-3", "Hey!", 700);
+      return r("poke-3", "Please, a little gentler.", 700);
     case 4:
-      return r("poke-4", "Stop poking me!", 1000);
+      return r("poke-4", "Must you? I am rather delicate.", 1000);
     case 5:
-      return r("poke-5", "I mean it!", 1200);
+      return r("poke-5", "I beg you, stop!", 1200);
     case 6:
       return r("poke-egg", "Happy Halloween!", 1400);
   }

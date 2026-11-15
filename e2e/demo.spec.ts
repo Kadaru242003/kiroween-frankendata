@@ -257,7 +257,51 @@ test('Little Frank wakes with lightning and "IT\'S ALIVE!" when the business dem
   await page.goto('/')
   await page.getByRole('button', { name: 'Load business demo' }).click()
   await expect(page.getByTestId('frank-lightning')).toBeAttached()
-  await expect(page.locator('.specimen__bubble')).toHaveText("IT'S ALIVE!")
+  // A forked bolt: the main path plus 2 to 3 branches, with the impact sparks and a flash.
+  const core = await page.locator('.frank-bolt__core path').count()
+  expect(core).toBeGreaterThanOrEqual(3)
+  expect(core).toBeLessThanOrEqual(4)
+  expect(await page.locator('.frank-impact__spark').count()).toBeGreaterThanOrEqual(8)
+  expect(await page.locator('.frank-impact__spark').count()).toBeLessThanOrEqual(12)
+  await expect(page.getByTestId('frank-flash')).toBeAttached()
+  await expect(page.locator('.specimen__bubble')).toHaveText("It's alive!")
+})
+
+test('tapping Frank pokes him (and Enter pokes from the keyboard); the guide stays closed', async ({ page }) => {
+  await page.goto('/')
+  const frank = page.getByRole('button', { name: 'Poke Little Frank' })
+  await frank.click()
+  await expect(page.locator('.specimen__bubble')).toHaveText('Oh! Good day to you.')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.waitForTimeout(1000)
+  await frank.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.specimen__bubble')).toHaveText('You are curious, as am I.')
+})
+
+test('the "?" opens the speech bubble; "what do you eat" answers about acorns, above the chips', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Ask Little Frank' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ask Little Frank' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('textbox', { name: 'Your question' }).fill('what do you eat')
+  await dialog.getByRole('button', { name: 'Ask', exact: true }).click()
+  await expect(page.getByTestId('frank-answer')).toContainText('acorns and berries')
+  // The answer sits above the chips, the bubble is at most 360px wide and clear of Frank.
+  const answer = (await page.getByTestId('frank-answer').boundingBox())!
+  const chips = (await dialog.getByRole('list', { name: 'Suggested questions' }).boundingBox())!
+  const input = (await dialog.getByRole('textbox', { name: 'Your question' }).boundingBox())!
+  expect(answer.y + answer.height).toBeLessThanOrEqual(input.y)
+  expect(input.y + input.height).toBeLessThanOrEqual(chips.y)
+  const box = (await dialog.boundingBox())!
+  expect(box.width).toBeLessThanOrEqual(360)
+  const frank = (await page.getByRole('button', { name: 'Poke Little Frank' }).boundingBox())!
+  expect(box.y + box.height).toBeLessThanOrEqual(frank.y + 2)
+  // Poking Frank with the bubble open keeps it open.
+  await page.getByRole('button', { name: 'Poke Little Frank' }).click()
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })
 
 test('Ask Little Frank: the privacy answer shows, and Esc closes the guide', async ({ page }) => {
@@ -276,8 +320,10 @@ test('reduced motion: no lightning element and no running Frank animation', asyn
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
   await page.getByRole('button', { name: 'Load business demo' }).click()
-  await expect(page.locator('.specimen__bubble')).toHaveText("IT'S ALIVE!")
+  await expect(page.locator('.specimen__bubble')).toHaveText("It's alive!")
   await expect(page.getByTestId('frank-lightning')).toHaveCount(0)
+  await expect(page.locator('.frank-bolt')).toHaveCount(0)
+  await expect(page.getByTestId('frank-flash')).toHaveCount(0)
   const running = await page.evaluate(() =>
     document
       .getAnimations()

@@ -4,16 +4,19 @@
  * Two layers, both with `pointer-events: none`:
  *  - {@link FrankFx}: a small SVG laid over the body (same 64 x 96 viewBox) with
  *    the needle and thread, sparks, smoke, file, cable, scroll and so on;
- *  - {@link FrankViewportFx}: the two full-viewport Effects of the wake (the
- *    lightning path and the screen flash). They are `position: fixed`, outside
- *    the page flow, and cover no control.
+ *  - {@link FrankViewportFx}: the full-viewport Effects of the wake (a forked
+ *    lightning strike from a seeded generator, the screen flash, the impact
+ *    sparks and ring, and a short page shake). They are `position: fixed`,
+ *    outside the page flow, and cover no control.
  *
  * Both are keyed by the reaction sequence number so the same reaction twice in
  * a row restarts its animation. They are not rendered at all under reduced
  * motion or Calm Frank (the Specimen decides), so no animation can run then.
  */
 
-import type { JSX } from "react";
+import { useEffect, useState, type CSSProperties, type JSX, type RefObject } from "react";
+import { FRANK_SHAKE_MS } from "../../core/frank/constants";
+import { generateBolt, pointsToPath, type Bolt } from "../../core/frank/lightning";
 import type { ReactionId } from "../../core/frank/reactions";
 
 /** Small sparks around a point: three short strokes, staggered. */
@@ -58,8 +61,8 @@ function body(id: ReactionId): JSX.Element | null {
     case "wake":
       return (
         <>
-          <Sparks cx={17} cy={28} delay={380} />
-          <Sparks cx={47} cy={28} delay={470} />
+          <Sparks cx={17} cy={28} delay={150} />
+          <Sparks cx={47} cy={28} delay={230} />
         </>
       );
     case "catch":
@@ -179,6 +182,23 @@ function body(id: ReactionId): JSX.Element | null {
           <Sparks cx={59} cy={70} delay={500} />
         </g>
       );
+    case "quip-read":
+      return (
+        <g className="fx fx-book">
+          <rect x="48" y="49" width="11" height="8" rx="1" className="fx-book__cover" />
+          <line x1="53.5" y1="49" x2="53.5" y2="57" className="fx-book__spine" />
+          <line x1="50" y1="52" x2="52" y2="52" className="fx-book__line" />
+          <line x1="55" y1="52" x2="57" y2="52" className="fx-book__line" />
+        </g>
+      );
+    case "quip-acorn":
+      return (
+        <g className="fx fx-acorn">
+          <ellipse cx="44" cy="25.5" rx="2.6" ry="3.2" className="fx-acorn__nut" />
+          <path d="M41 24 Q44 20.5 47 24 Z" className="fx-acorn__cap" />
+          <line x1="44" y1="21" x2="44" y2="19.5" className="fx-acorn__stem" />
+        </g>
+      );
     case "poke-3":
       return (
         <g className="fx fx-brows">
@@ -218,34 +238,111 @@ export function FrankFx({ id, seq }: { id: ReactionId | null; seq: number }): JS
   );
 }
 
-/**
- * The full-viewport Effects of the wake: the screen flash and the lightning
- * path from the top of the viewport down onto Frank. Fixed, non-interactive.
- */
-export function FrankViewportFx({ id, seq }: { id: ReactionId | null; seq: number }): JSX.Element | null {
-  if (id !== "wake") return null;
+/** Everything the strike needs, measured once when it starts. */
+interface Strike {
+  width: number;
+  height: number;
+  targetX: number;
+  targetY: number;
+  bolt: Bolt;
+}
+
+function buildStrike(seq: number, anchor: Element | null): Strike {
+  const width = Math.max(320, typeof window === "undefined" ? 1280 : window.innerWidth);
+  const height = Math.max(320, typeof window === "undefined" ? 800 : window.innerHeight);
+  const box = anchor?.getBoundingClientRect();
+  const measured = box !== undefined && box.width > 0;
+  // His electrode tip: the middle of his box, just under its top edge.
+  const targetX = measured ? box.left + box.width * 0.5 : 59;
+  const targetY = measured ? box.top + 4 : height - 136;
+  // A new seed per strike (the clock and the reaction number) so strikes differ.
+  const seed = (Date.now() ^ Math.imul(seq + 1, 2654435761)) >>> 0;
+  return { width, height, targetX, targetY, bolt: generateBolt({ seed, targetX, targetY, width }) };
+}
+
+/** The strike: flicker, flash, impact and a short page shake. Not rendered under reduced motion or Calm. */
+function WakeStrike({ seq, anchor }: { seq: number; anchor: RefObject<HTMLElement | null> }): JSX.Element {
+  const [strike] = useState(() => buildStrike(seq, anchor.current));
+  const { bolt, width, height, targetX, targetY } = strike;
+
+  // The shake goes on the page content, never on an ancestor of Frank (a
+  // transform would re-anchor his fixed position): the CSS skips his layer.
+  useEffect(() => {
+    const page = document.getElementById("lab");
+    if (page === null) return;
+    page.classList.add("frank-shaking");
+    const timer = setTimeout(() => page.classList.remove("frank-shaking"), FRANK_SHAKE_MS + 30);
+    return () => {
+      clearTimeout(timer);
+      page.classList.remove("frank-shaking");
+    };
+  }, []);
+
+  const paths = [
+    { d: pointsToPath(bolt.main), main: true },
+    ...bolt.branches.map((b) => ({ d: pointsToPath(b), main: false })),
+  ];
+
   return (
-    <div key={`wake-${seq}`} aria-hidden="true">
+    <div aria-hidden="true">
       <div className="frank-flash" data-testid="frank-flash" />
       <svg
         className="frank-lightning"
         data-testid="frank-lightning"
-        viewBox="0 0 40 100"
+        viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
       >
-        <path
-          className="frank-lightning__glow"
-          pathLength={1}
-          d="M20 0 L11 18 L27 36 L9 58 L26 76 L20 100"
-          fill="none"
-        />
-        <path
-          className="frank-lightning__bolt"
-          pathLength={1}
-          d="M20 0 L11 18 L27 36 L9 58 L26 76 L20 100"
-          fill="none"
-        />
+        <defs>
+          <filter id="frank-bolt-glow" filterUnits="userSpaceOnUse" x="0" y="0" width={width} height={height}>
+            <feGaussianBlur stdDeviation="4" />
+          </filter>
+        </defs>
+        <g className="frank-bolt">
+          <g className="frank-bolt__glow" filter="url(#frank-bolt-glow)">
+            {paths.map((p, i) => (
+              <path key={i} d={p.d} strokeWidth={p.main ? 10 : 6} />
+            ))}
+          </g>
+          <g className="frank-bolt__core">
+            {paths.map((p, i) => (
+              <path key={i} d={p.d} strokeWidth={p.main ? 2 : 1.5} />
+            ))}
+          </g>
+        </g>
+        <g className="frank-impact" transform={`translate(${targetX} ${targetY})`}>
+          <circle className="frank-impact__ring" r="16" />
+          {bolt.sparks.map((spark, i) => (
+            <circle
+              key={i}
+              className="frank-impact__spark"
+              r="2"
+              style={
+                {
+                  "--dx": `${(Math.cos(spark.angle) * spark.distance).toFixed(1)}px`,
+                  "--dy": `${(Math.sin(spark.angle) * spark.distance).toFixed(1)}px`,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </g>
       </svg>
     </div>
   );
+}
+
+/**
+ * The full-viewport Effects of the wake. Fixed and non-interactive. `anchor` is
+ * Frank's box, measured once when the strike starts.
+ */
+export function FrankViewportFx({
+  id,
+  seq,
+  anchor,
+}: {
+  id: ReactionId | null;
+  seq: number;
+  anchor: RefObject<HTMLElement | null>;
+}): JSX.Element | null {
+  if (id !== "wake") return null;
+  return <WakeStrike key={`wake-${seq}`} seq={seq} anchor={anchor} />;
 }

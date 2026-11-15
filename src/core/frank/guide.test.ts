@@ -20,7 +20,7 @@ describe("intent table", () => {
     for (const i of INTENTS) {
       expect(i.keywords.length).toBeGreaterThan(0);
       expect(i.examples.length).toBeGreaterThanOrEqual(2);
-      expect(i.answer().length).toBeGreaterThan(0);
+      expect(i.answer(new Date()).length).toBeGreaterThan(0);
       for (const k of i.keywords) expect(k).toBe(normalizeQuestion(k));
     }
   });
@@ -38,8 +38,56 @@ describe("intent table", () => {
     for (const chip of GUIDE_CHIPS) expect(matchIntent(chip).kind).toBe("intent");
   });
   it("uses no em dash or en dash in any answer, chip or the fallback", () => {
-    const all = [FALLBACK_TEXT, ...GUIDE_CHIPS, ...INTENTS.flatMap((i) => [...i.examples, ...i.answer()])];
+    const all = [FALLBACK_TEXT, ...GUIDE_CHIPS, ...INTENTS.flatMap((i) => [...i.examples, ...i.answer(new Date())])];
     for (const s of all) expect(s).not.toMatch(/[\u2013\u2014]/);
+  });
+});
+
+describe("Frank's voice and lore (the 1818 novel)", () => {
+  const nov = new Date(2026, 10, 15);
+  const jun = new Date(2026, 5, 15);
+  const body = (q: string, now = jun) => answerFor(q, now).paragraphs.join(" ");
+  const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).filter(Boolean).length;
+
+  it("keeps every answer to 1 to 3 sentences, except the privacy answer", () => {
+    for (const i of INTENTS) {
+      if (i.id === "privacy") continue;
+      const n = sentences(i.answer(nov).join(" "));
+      expect(n, i.id).toBeGreaterThanOrEqual(1);
+      expect(n, i.id).toBeLessThanOrEqual(3);
+    }
+  });
+  it("ties the lore to the features", () => {
+    expect(body("is my data safe")).toContain(
+      "I learned everything by watching quietly through a crack in the wall. I watch your data the same way. I never carry it off."
+    );
+    expect(body("what does stitching do")).toContain("I was stitched from mismatched parts too. Let's make your tables whole.");
+    expect(body("what is an autopsy")).toContain("Let me examine the patient.");
+    expect(body("how do recipes work")).toContain("Even I keep notes in a journal.");
+  });
+  it("answers who, eat, read and Frankenstein from the novel", () => {
+    expect(body("who are you")).toMatch(/Little Frank/);
+    expect(body("what do you eat")).toMatch(/acorns and berries/);
+    expect(body("what do you eat")).toMatch(/never meat/);
+    const read = body("what do you read");
+    for (const book of ["Paradise Lost", "Plutarch's Lives", "The Sorrows of Young Werther"]) expect(read).toContain(book);
+    expect(read).toMatch(/chink in a cottage wall/);
+    const fr = body("are you frankenstein");
+    expect(fr).toMatch(/Frankenstein was my maker, Victor/);
+    expect(fr).toMatch(/Little Frank/);
+  });
+  it("says the novel's dreary November, and 'That's this month!' only in November", () => {
+    expect(body("when were you made")).toMatch(/a dreary night of November/);
+    expect(body("when were you made", jun)).not.toMatch(/this month/);
+    expect(body("when were you made", nov)).toMatch(/That's this month!/);
+    expect(answerFor("when were you made", nov).intentId).toBe("born");
+  });
+  it("keeps quotes from the novel short and mentions no film", () => {
+    for (const i of INTENTS) {
+      const text = i.answer(nov).join(" ");
+      for (const quoted of text.match(/"[^"]+"/g) ?? []) expect(quoted.split(/\s+/).length).toBeLessThan(15);
+      expect(text.toLowerCase()).not.toMatch(/1931|karloff|igor|boris/);
+    }
   });
 });
 
