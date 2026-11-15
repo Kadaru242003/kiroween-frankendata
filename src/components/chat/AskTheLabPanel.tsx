@@ -55,6 +55,8 @@ export interface AskTheLabPanelProps {
    * is prefilled with `text`, brought into view, and focused.
    */
   prefill?: { text: string; nonce: number } | null;
+  /** Called once after a prefill was applied, so the owner can drop the request. */
+  onPrefillHandled?: () => void;
 }
 
 export const ASK_SUBMIT_LABEL = "Ask";
@@ -70,6 +72,7 @@ export function AskTheLabPanel({
   chips,
   aiAvailable,
   prefill = null,
+  onPrefillHandled,
 }: AskTheLabPanelProps) {
   const { history, outcome, loading, turns, epoch } = useAskStore(store);
   const [question, setQuestion] = useState("");
@@ -108,6 +111,8 @@ export function AskTheLabPanel({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     panelRef.current?.scrollIntoView?.({ behavior: reduce ? "auto" : "smooth", block: "start" });
     inputRef.current?.focus({ preventScroll: true });
+    // One-shot: the request is consumed so a remount or reset never re-applies it.
+    onPrefillHandled?.();
     // Only a new request (nonce) should prefill.
   }, [prefillNonce]); // eslint-disable-line react-hooks/exhaustive-deps
   // Starter-chip overflow: show at most ASK_VISIBLE_CHIPS_LIMIT until expanded.

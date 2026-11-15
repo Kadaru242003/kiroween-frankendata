@@ -461,6 +461,8 @@ function App() {
     setRecipeErrors(null)
     setRecipeOverrides(null)
     setRecipeBase(null)
+    // A pending "Ask about this" request must not survive the reset.
+    setAskPrefill(null)
     queryableTableNamesHolder = []
     queryableSchemaSourceHolder = []
     })
@@ -936,6 +938,7 @@ function App() {
             askStore={status.stack.askStore}
             stitchStore={status.stack.stitchStore}
             prefill={askPrefill}
+            onPrefillHandled={() => setAskPrefill(null)}
           />
 
           {/*
@@ -1104,6 +1107,7 @@ interface AskPanelRegionProps {
   askStore: AskStore
   stitchStore: StitchStore
   prefill: { text: string; nonce: number } | null
+  onPrefillHandled: () => void
 }
 
 /**
@@ -1122,6 +1126,7 @@ function AskPanelRegion({
   askStore,
   stitchStore,
   prefill,
+  onPrefillHandled,
 }: AskPanelRegionProps) {
   const [queryable, setQueryable] = useState<QueryableTable[]>([])
   const [chips, setChips] = useState<StarterChip[]>([])
@@ -1188,6 +1193,7 @@ function AskPanelRegion({
         chips={chips}
         aiAvailable={ASK_AI_AVAILABLE}
         prefill={prefill}
+        onPrefillHandled={onPrefillHandled}
       />
     </section>
   )
