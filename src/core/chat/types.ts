@@ -174,7 +174,9 @@ export type SqlRejectReason =
   | "forbidden-keyword" // a forbidden keyword outside literals/identifiers
   | "table-function" // a file/network table function reference
   | "bad-table-position" // string/quoted-path/dotted-non-main in a table position
-  | "unknown-table"; // a referenced table is not a QueryableTable or CTE alias
+  | "unknown-table" // a referenced table is not a QueryableTable or CTE alias
+  | "invalid-character" // a NUL byte (crashes the DuckDB-WASM bundle)
+  | "unparseable"; // the validator could not analyze it consistently (fail closed)
 
 // ── Ask outcome (controller result; built in a later task) ──────────────────
 
