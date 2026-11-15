@@ -18,6 +18,7 @@ function setup() {
       default: defaultFiles,
       mismatched: mismatchedFiles,
       nextMonth: async () => [],
+      business: async () => [],
     },
     intake,
   });
@@ -65,6 +66,7 @@ describe("createDemoLoader", () => {
         default: async () => [new File(["a"], "monsters.csv")],
         mismatched: async () => [],
         nextMonth: async () => [],
+        business: async () => [],
       },
       intake,
     });

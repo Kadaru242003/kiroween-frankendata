@@ -23,6 +23,8 @@
  * runner, so all DuckDB wiring lives here in the Vite entry component.
  */
 
+import { loadBusinessFiles } from './core/business-demo'
+import { generateBusinessChips } from './core/chat/business-chips'
 import { loadNextMonthFiles } from './core/recipes/next-month-demo'
 import { revealProposalCard } from './components/autopsy/reveal-proposal'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
@@ -122,6 +124,7 @@ const ASK_AI_AVAILABLE = import.meta.env.VITE_AI_ENABLED === 'true'
 const PREVIEW_ROW_LIMIT = 20
 
 /** Idle label for the second demo action: the mismatched stitching dataset (Req 8.4). */
+const LOAD_BUSINESS_DEMO_LABEL = 'Load business demo'
 const LOAD_MISMATCHED_DEMO_LABEL = 'Load mismatched demo'
 /** Idle label for the third demo action: next month's files (Recipes demo). */
 const LOAD_NEXT_MONTH_DEMO_LABEL = "Load next month's files"
@@ -254,6 +257,7 @@ function getLabStack(): Promise<LabStack> {
           default: () => demoDataLoader.load(),
           mismatched: () => demoDataLoader.loadMismatched(),
           nextMonth: () => loadNextMonthFiles(),
+          business: () => loadBusinessFiles(),
         },
         intake: (files) => controller.intake(files),
       })
@@ -416,6 +420,10 @@ function App() {
   const handleLoadDemo = useCallback(() => loadDemo('default'), [loadDemo])
   // The second, mismatched dataset (Req 8.1–8.4) routes through the SAME intake
   // pipeline; its two files make the stitching stage reachable (Req 8.4).
+  const handleLoadBusinessDemo = useCallback(
+    () => loadDemo('business'),
+    [loadDemo],
+  )
   const handleLoadMismatchedDemo = useCallback(
     () => loadDemo('mismatched'),
     [loadDemo],
@@ -794,6 +802,18 @@ function App() {
           <section className="lab-intake" aria-label="File intake">
             <DropZone onFiles={handleFiles} disabled={resetting} />
             <div className="lab-intake__demos">
+              {/*
+                Primary path: a realistic CRM export and billing export that
+                never agree.
+              */}
+              <DemoDataControl
+                onLoadDemo={handleLoadBusinessDemo}
+                label={LOAD_BUSINESS_DEMO_LABEL}
+                caption="A CRM export and a billing export that never agree"
+                alreadyLoaded={loadedDemos.has('business')}
+                disabled={resetting}
+                tag="Start here"
+              />
               <DemoDataControl
                 onLoadDemo={handleLoadDemo}
                 caption="Three messy lab files, typed automatically"
@@ -811,7 +831,6 @@ function App() {
                 caption="Two files with different headers, ready to stitch"
                 alreadyLoaded={loadedDemos.has('mismatched')}
                 disabled={resetting}
-                tag="Start here"
               />
               {/*
                 Third demo action: next month's files (Recipes demo). Same
@@ -1165,7 +1184,7 @@ function AskPanelRegion({
         queryableTableNamesHolder = tables.map((t) => t.tableName)
         queryableSchemaSourceHolder = schemaSources
         setQueryable(tables)
-        setChips(generated)
+        setChips([...generateBusinessChips(tables), ...generated])
       } catch {
         // A refresh failure must not break the lab; keep the prior view.
       }
