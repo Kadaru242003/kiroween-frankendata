@@ -8,7 +8,7 @@ import { FRANK_REACTION_MAX_MS } from "./constants";
 import { reactionFor, type FrankEvent } from "./reactions";
 
 const simple = [
-  "wake", "autopsy-open", "stitch-open", "approve", "approve-all", "reject", "confirm-stitch", "stitch-applied",
+  "wake", "whole", "autopsy-open", "stitch-open", "approve", "approve-all", "reject", "confirm-stitch", "stitch-applied",
   "undo-stitch", "fan-out", "autopsy-fix-all", "save-recipe", "apply-recipe", "ask-error", "export", "ai-off", "reset",
 ] as const;
 

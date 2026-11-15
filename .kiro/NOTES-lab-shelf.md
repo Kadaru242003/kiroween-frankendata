@@ -48,4 +48,30 @@ The shelf began as a decorative row of per-table jars. It is now page navigation
 
 - Unit: `shelf-model.test.ts` (jar visibility and order, the progress rules, the Tables tooltip text, the active-section pick, the crackle gap, the static arcs), `frank-feed.test.ts`, `LabShelf.smoke.test.tsx` (jars, tooltips, navigation and focus, `aria-current`, pinned jar, progress, drain, arcs, static, Calm and reduced motion), `shelf-css.test.ts` (centring, 12px text, tooltip on the left, 1440px rule, motion off).
 - e2e at 1600px: landing shows only the Intake jar, centred in the gutter and the window; loading the business demo shows Intake, Tables and Ask (and the wake arc), names at 12px or more and not clipped, the Tables tooltip to the left of the jar; stitching adds Stitching, Result and Recipes with Result and Stitching full and Recipes empty; clicking the Ask jar scrolls Ask the Lab into view, focuses its heading, and the jar is `aria-current` after the scroll settles, until a manual scroll; Enter on the Result jar goes to the result card; Save recipe fills the Recipes jar; a 500px-tall window scales the shelf (70% or more) inside the window; Reset lab leaves only Intake. Reduced motion: no bubbles, arcs or static arcs and no running shelf animation. The static dances only while Frank is alive. At 1280px the shelf is not rendered.
-- Full gate: `npm test` 202 files and 1318 tests, `npm run build`, `npm run check:api`, `npm run mcp:build` and `npm run test:e2e` (20 tests) all pass; lint shows warnings only. No em dash or en dash in any shelf text, code string or in this note.
+- Full gate at the navigation rework: `npm test` 202 files and 1318 tests, `npm run build`, `npm run check:api`, `npm run mcp:build` and `npm run test:e2e` (20 tests) all pass; lint shows warnings only. No em dash or en dash in any shelf text, code string or in this note.
+
+## Jar specimens and the "whole" moment (branch `jar-parts`)
+
+Each jar now holds a floating cartoon specimen, drawn in the jar's SVG as simple soft line art in the lab palette (pale mint line, a little soft fill, amber stitches): soft shapes only, nothing gory. The jar sizes, labels, tooltips and navigation are unchanged, and the specimens are inside the jar's `aria-hidden` art.
+
+| Jar | Specimen | Hover or focus reaction (one, under 600ms) |
+|---|---|---|
+| Intake | a hand | waves |
+| Tables | a few bones (two crossed, one small) | rattle |
+| Stitching | a bent arm with visible cross-stitches | flexes |
+| Result | a heart | double beat (it also beats about every 1.2s while the Result jar is full) |
+| Recipes | a brain | sparks (three small amber ticks flash) |
+| Ask | an ear | twitches |
+| Autopsy | an eye that slowly looks around | blinks and looks at the cursor (the jar's pointer handler sets a clamped offset) |
+
+- **Bobbing**: each specimen drifts up and down about 2.5px every 5 seconds, with a phase offset by the jar's place on the shelf, so the jars do not move together.
+- **Brightness**: opacity follows the liquid, `0.3 + 0.7 * fill` (dim when empty, 1 when full), and eases over 700ms as the liquid rises.
+- **Motion rules**: bobbing, the heartbeat, the eye's looking around and every hover reaction are CSS animations that `lab-shelf--still` and `prefers-reduced-motion` switch off, so under Calm Frank or reduced motion the specimens are static. The heart also does not get its beating class when still.
+- **The whole moment** (`stepWhole` in `shelf-model.ts`): when at least 5 jars are visible and every one is full, it fires once per lab session. The specimens glow together for 1.5 seconds, the coil throws one small arc, and Frank says "I feel... whole." (a new `whole` event and reaction; `FrankEvent` and `ReactionId` gained `whole`, and he smiles). It is re-armed when the lab has no tables (Reset lab, or a demo replacing the tables). It only fires while the shelf is shown (1440px and up). Under Calm Frank or reduced motion it is a static glow plus Frank's bubble (no arc). The shelf exposes the count as `data-whole-moments` on the nav, which the e2e test reads.
+- **When it fires in practice**: every visible jar must be full, so the Recipes jar needs a saved or applied recipe, the Ask jar an answer, and an open Autopsy a score. In the business flow (stitch, save recipe, ask a starter question) it fires when the answer arrives. If an Autopsy is open at that moment with no score yet, it waits for the score. Opening an Autopsy afterwards does not repeat it.
+- **Limit**: the specimen is about 22px tall in a 56px jar, so details (the stitches, the ear's inner curl) are small. They read at normal size and are decorative.
+
+Tests: `shelf-model.test.ts` (the specimen for each section, brightness, the heart rule, `wholeReady` and `stepWhole`: at least 5 visible full jars, fires once, re-arms on reset, waits for an Autopsy score), `LabShelf.smoke.test.tsx` (a specimen in each jar and aria-hidden, dim to bright, the heart only when full, the whole moment: once, glow for 1.5s, one arc, Frank's event, not with fewer than 5 jars, re-armed by reset, static under Calm Frank), `shelf-css.test.ts` (every hover reaction is one animation under 600ms, all seven are covered, the bob and the 1.2s beat), and e2e at 1600px (specimens per jar, bobbing, dim and bright; a hover reaction under 600ms; the full business flow with a starter question shows "I feel... whole." once, still once after the Autopsy, and again after Reset lab; reduced motion has static specimens, the bubble and no arc).
+
+
+Gate on this branch: `npm test` (202 files, 1335 tests), `npm run build`, `npm run check:api`, `npm run mcp:build` and `npm run test:e2e` (24 tests) pass; lint shows warnings only. One e2e assertion of mine was wrong and flaky (it used `not.toHaveText` on a bubble that has usually disappeared by then, which fails when no element exists); it now checks that no bubble with the whole text is on screen.

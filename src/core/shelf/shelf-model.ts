@@ -51,6 +51,25 @@ export const SECTION_NAME: Record<SectionId, string> = {
 /** A section that sits inside another one on the page (the result is inside the stitching table). */
 export const SECTION_PARENT: Partial<Record<SectionId, SectionId>> = { result: "stitching" };
 
+/** The cartoon specimen floating in each jar. */
+export const SPECIMEN_IDS = ["hand", "bones", "arm", "heart", "brain", "ear", "eye"] as const;
+export type SpecimenId = (typeof SPECIMEN_IDS)[number];
+export const SECTION_SPECIMEN: Record<SectionId, SpecimenId> = {
+  intake: "hand",
+  tables: "bones",
+  stitching: "arm",
+  result: "heart",
+  recipes: "brain",
+  ask: "ear",
+  autopsy: "eye",
+};
+/** An empty jar shows its specimen this dim; it brightens to 1 as the liquid rises. */
+export const SPECIMEN_MIN_BRIGHTNESS = 0.3;
+/** The whole moment needs at least this many visible jars, all full. */
+export const WHOLE_MIN_JARS = 5;
+/** How long the specimens glow together in the whole moment. */
+export const WHOLE_GLOW_MS = 1500;
+
 export type Progress = "empty" | "half" | "full";
 /** How full the liquid is for each progress (fraction of the jar's inside height). */
 export const PROGRESS_FILL: Record<Progress, number> = { empty: 0, half: 0.5, full: 1 };
@@ -86,6 +105,10 @@ export interface SectionJar {
   progress: Progress;
   /** 0, 0.5 or 1. */
   fill: number;
+  /** The specimen floating in the jar. */
+  specimen: SpecimenId;
+  /** Specimen brightness, SPECIMEN_MIN_BRIGHTNESS (empty) to 1 (full). */
+  brightness: number;
   /** The tooltip: the section name and a one-line status. */
   status: string;
 }
@@ -149,6 +172,36 @@ export function tablesTooltip(tables: readonly ShelfTable[]): string {
   return `Tables: ${named.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}`;
 }
 
+/** How bright a jar's specimen is for a liquid level (0 to 1): dim when empty, bright when full. */
+export function specimenBrightness(fill: number): number {
+  const f = Number.isFinite(fill) ? Math.min(1, Math.max(0, fill)) : 0;
+  return Math.round((SPECIMEN_MIN_BRIGHTNESS + (1 - SPECIMEN_MIN_BRIGHTNESS) * f) * 1000) / 1000;
+}
+
+/** The heart only beats once its (Result) jar is full. */
+export function heartBeats(progress: Progress): boolean {
+  return progress === "full";
+}
+
+/** The whole moment is ready: at least WHOLE_MIN_JARS jars are visible and every one is full. */
+export function wholeReady(jars: readonly { progress: Progress }[]): boolean {
+  return jars.length >= WHOLE_MIN_JARS && jars.every((j) => j.progress === "full");
+}
+
+/**
+ * One step of the "whole" moment. It fires once per lab session when the jars
+ * are ready, then stays quiet until the lab is reset (no tables), which re-arms it.
+ */
+export function stepWhole(
+  armed: boolean,
+  jars: readonly { progress: Progress }[],
+  tableCount: number
+): { armed: boolean; fire: boolean } {
+  if (tableCount === 0) return { armed: true, fire: false };
+  if (armed && wholeReady(jars)) return { armed: false, fire: true };
+  return { armed, fire: false };
+}
+
 /** The one-line tooltip status for a section. */
 export function sectionStatus(id: SectionId, input: ShelfInput): string {
   const n = input.tables.length;
@@ -188,6 +241,8 @@ export function buildSectionJars(input: ShelfInput): SectionJar[] {
       ariaLabel: `Go to ${SECTION_NAME[id]}`,
       progress,
       fill: PROGRESS_FILL[progress],
+      specimen: SECTION_SPECIMEN[id],
+      brightness: specimenBrightness(PROGRESS_FILL[progress]),
       status: sectionStatus(id, input),
     };
   });

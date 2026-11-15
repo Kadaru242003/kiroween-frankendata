@@ -37,6 +37,7 @@ export type FrankEvent =
   | { type: "export" }
   | { type: "ai-off" }
   | { type: "reset" }
+  | { type: "whole" }
   | { type: "quip"; kind: QuipKind }
   | { type: "poke"; count: number };
 
@@ -61,6 +62,7 @@ export type ReactionId =
   | "smoke"
   | "wave-file"
   | "unplug"
+  | "whole"
   | "reset"
   | "quip-read"
   | "quip-acorn"
@@ -140,6 +142,8 @@ export function reactionFor(event: FrankEvent): Reaction | null {
       return r("smoke", "Alas, the experiment failed.", 1200);
     case "export":
       return r("wave-file", "Farewell, little file!", 1400);
+    case "whole":
+      return r("whole", "I feel... whole.", 1300);
     case "ai-off":
       return r("unplug", "Fully local. Only I watch.", 1300);
     case "reset":

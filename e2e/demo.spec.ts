@@ -508,6 +508,110 @@ test.describe('lab shelf at 1600px', () => {
   })
 })
 
+test.describe('lab shelf specimens and the whole moment at 1600px', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  /** Stitch, save the recipe, ask a STARTER question (no AI needed), then open an Autopsy. */
+  async function fullBusinessFlow(page: Page, afterAnswer?: () => Promise<void>) {
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+    await stitchEverything(page)
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Save recipe' }).click()
+    await download
+    await page.getByRole('button', { name: 'What is the monthly revenue by region in crm_customers?' }).click()
+    await expect(page.getByRole('region', { name: 'Ask the Lab' }).getByRole('row', { name: /North America\s+34/ })).toBeVisible()
+    if (afterAnswer) await afterAnswer()
+    await page.getByRole('button', { name: 'Autopsy of crm_customers' }).click()
+    await expect(page.getByLabel('Health score 79 out of 100')).toBeVisible()
+  }
+  const moments = (page: Page) => page.getByTestId('lab-shelf').getAttribute('data-whole-moments')
+
+  test('every jar holds its specimen, bobbing, brighter as the liquid rises', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.locator('.lab-shelf button.shelf-jar')).toHaveCount(3)
+    const kinds = await page
+      .locator('.lab-shelf button.shelf-jar')
+      .evaluateAll((els) => els.map((e) => [e.getAttribute('data-section'), e.querySelector('.shelf-spec')?.getAttribute('data-specimen')]))
+    expect(kinds).toEqual([['intake', 'hand'], ['ask', 'ear'], ['tables', 'bones']])
+    // Specimens are hidden from assistive technology; the jar keeps its name and label.
+    await expect(page.getByRole('button', { name: 'Go to Ask the Lab' })).toBeVisible()
+    await expect(page.locator('.lab-shelf .shelf-jar__text')).toHaveText(['Intake', 'Ask', 'Tables'])
+    // Empty Ask jar: dim. Full Tables jar: bright.
+    const bright = (id: string) =>
+      page.locator(`button[data-section="${id}"] .shelf-spec`).evaluate((el) => parseFloat(getComputedStyle(el).opacity))
+    await expect.poll(() => bright('tables')).toBeGreaterThan(0.95)
+    expect(await bright('ask')).toBeLessThan(0.45)
+    // They bob.
+    const bobbing = await page.evaluate(() =>
+      document.getAnimations().some((a) => 'animationName' in a && (a as CSSAnimation).animationName === 'shelf-bob' && a.playState === 'running'),
+    )
+    expect(bobbing).toBe(true)
+  })
+
+  test('hovering a jar plays one short reaction', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.locator('.lab-shelf button.shelf-jar')).toHaveCount(3)
+    await page.getByRole('button', { name: 'Go to Intake' }).hover()
+    const wave = await page.waitForFunction(() =>
+      document.getAnimations().find((a) => 'animationName' in a && (a as CSSAnimation).animationName === 'shelf-wave')?.effect?.getComputedTiming().duration,
+    )
+    expect(Number(await wave.jsonValue())).toBeLessThan(600)
+    await page.getByRole('button', { name: 'Go to Ask the Lab' }).hover()
+    await page.waitForFunction(() =>
+      document.getAnimations().some((a) => 'animationName' in a && (a as CSSAnimation).animationName === 'shelf-twitch'),
+    )
+  })
+
+  test('"I feel... whole." once per session, and again after Reset lab', async ({ page }) => {
+    await page.goto('/')
+    const bubble = page.locator('.specimen__bubble')
+    // The Autopsy is opened last, so the moment fires when the question is answered.
+    await fullBusinessFlow(page, async () => {
+      await expect(bubble).toHaveText('I feel... whole.')
+      expect(await moments(page)).toBe('1')
+    })
+    // Opening the Autopsy (a new jar, then a full one) does not repeat it.
+    await page.waitForTimeout(3500)
+    expect(await moments(page)).toBe('1')
+    await expect(page.locator('.specimen__bubble', { hasText: 'I feel... whole.' })).toHaveCount(0)
+
+    // Reset lab re-arms it.
+    await page.getByRole('button', { name: 'Reset lab' }).click()
+    await expect(page.getByRole('region', { name: /^Preview of/ })).toHaveCount(0)
+    await expect.poll(() => page.locator('.lab-shelf button.shelf-jar').count()).toBe(1)
+    await fullBusinessFlow(page, async () => {
+      await expect(bubble).toHaveText('I feel... whole.')
+      expect(await moments(page)).toBe('2')
+    })
+    await page.waitForTimeout(1000)
+    expect(await moments(page)).toBe('2')
+  })
+
+  test('reduced motion: static specimens, and the whole moment is just a glow and the bubble', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await fullBusinessFlow(page, async () => {
+      await expect(page.locator('.specimen__bubble')).toHaveText('I feel... whole.')
+    })
+    expect(await moments(page)).toBe('1')
+    await expect(page.locator('.shelf-arc')).toHaveCount(0)
+    await expect(page.locator('.shelf-spec--beating')).toHaveCount(0)
+    const running = await page.evaluate(() =>
+      document.getAnimations().filter((a) => a.playState === 'running' && 'animationName' in a && String((a as CSSAnimation).animationName).startsWith('shelf-')).length,
+    )
+    expect(running).toBe(0)
+    // Hovering plays nothing.
+    await page.getByRole('button', { name: 'Go to Intake' }).hover()
+    const waving = await page.evaluate(() =>
+      document.getAnimations().some((a) => 'animationName' in a && (a as CSSAnimation).animationName === 'shelf-wave'),
+    )
+    expect(waving).toBe(false)
+  })
+})
+
 test('lab shelf: not rendered at 1280px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/')

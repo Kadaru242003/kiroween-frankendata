@@ -58,6 +58,9 @@ describe("reactionFor: each event maps to its reaction", () => {
     expect(ev({ type: "save-recipe" })?.bubble).toBe("Even I keep notes in a journal.");
     expect(ev({ type: "reset" })?.id).toBe("reset");
   });
+  it("the whole moment: Frank says I feel... whole.", () => {
+    expect(ev({ type: "whole" })).toMatchObject({ id: "whole", bubble: "I feel... whole." });
+  });
   it("quips: reading, nibbling an acorn, looking at his stitches", () => {
     expect(ev({ type: "quip", kind: "read" })).toMatchObject({ id: "quip-read" });
     expect(ev({ type: "quip", kind: "acorn" })).toMatchObject({ id: "quip-acorn" });

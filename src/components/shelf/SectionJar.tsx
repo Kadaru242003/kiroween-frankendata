@@ -6,15 +6,16 @@
  * draining (its section went away) is decorative, aria-hidden and ignores the
  * pointer.
  */
-import { useId, type CSSProperties, type JSX } from "react";
-import type { SectionJar as SectionJarModel } from "../../core/shelf/shelf-model";
+import { useId, type CSSProperties, type JSX, type PointerEvent } from "react";
+import { heartBeats, type SectionJar as SectionJarModel } from "../../core/shelf/shelf-model";
+import { JarSpecimen } from "./JarSpecimen";
 
 const BODY = "M12 8 H44 V11 Q48 12.5 48 17 V43 Q48 48 43 48 H13 Q8 48 8 43 V17 Q8 12.5 12 11 Z";
 const INNER_TOP = 12;
 const INNER_BOTTOM = 47;
 const BUBBLE_XS = [19, 28, 37];
 
-function Art({ jar, still }: { jar: SectionJarModel; still: boolean }): JSX.Element {
+function Art({ jar, still, phase }: { jar: SectionJarModel; still: boolean; phase: number }): JSX.Element {
   const clipId = `jar-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const inner = INNER_BOTTOM - INNER_TOP;
   return (
@@ -52,6 +53,12 @@ function Art({ jar, still }: { jar: SectionJarModel; still: boolean }): JSX.Elem
               />
             ))}
       </g>
+      <JarSpecimen
+        kind={jar.specimen}
+        brightness={jar.brightness}
+        phase={phase}
+        beating={jar.id === "result" && heartBeats(jar.progress) && !still}
+      />
       <path className="shelf-jar__glass" d={BODY} />
       <rect className="shelf-jar__lid" x="13" y="2" width="30" height="6" rx="2" />
       <path className="shelf-jar__shine" d="M13 20 V40" />
@@ -65,18 +72,29 @@ export interface SectionJarProps {
   active: boolean;
   /** The jar is draining: its liquid falls, then it fades. Not interactive. */
   leaving: boolean;
-  /** Reduced motion or Calm Frank: static art (no bubbles). */
+  /** The jar's place on the shelf (offsets the specimen's bob). */
+  phase: number;
+  /** Reduced motion or Calm Frank: static art (no bubbles, no motion). */
   still: boolean;
   onGo: (id: SectionJarModel["id"]) => void;
 }
 
-export function SectionJar({ jar, active, leaving, still, onGo }: SectionJarProps): JSX.Element {
+export function SectionJar({ jar, active, leaving, phase, still, onGo }: SectionJarProps): JSX.Element {
   const tipId = `shelf-tip-${jar.id}`;
+  // The eye follows the cursor while it is over the jar (a small, clamped offset).
+  const look = (e: PointerEvent<HTMLButtonElement>) => {
+    if (still) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const dx = (e.clientX - (box.left + box.width / 2)) / 12;
+    const dy = (e.clientY - (box.top + box.height * 0.4)) / 12;
+    e.currentTarget.style.setProperty("--look-x", `${Math.max(-3, Math.min(3, dx)).toFixed(1)}px`);
+    e.currentTarget.style.setProperty("--look-y", `${Math.max(-2, Math.min(2, dy)).toFixed(1)}px`);
+  };
   if (leaving) {
     return (
       <li className="shelf-item shelf-item--leaving" aria-hidden="true">
         <div className="shelf-jar" data-progress={jar.progress}>
-          <Art jar={jar} still={still} />
+          <Art jar={jar} still={still} phase={phase} />
           <span className="shelf-jar__text">{jar.label}</span>
         </div>
       </li>
@@ -93,8 +111,9 @@ export function SectionJar({ jar, active, leaving, still, onGo }: SectionJarProp
         data-section={jar.id}
         data-progress={jar.progress}
         onClick={() => onGo(jar.id)}
+        onPointerMove={look}
       >
-        <Art jar={jar} still={still} />
+        <Art jar={jar} still={still} phase={phase} />
         <span className="shelf-jar__text">{jar.label}</span>
       </button>
       <span role="tooltip" id={tipId} className="shelf-tip">

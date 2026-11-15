@@ -40,4 +40,26 @@ describe("LabShelf.css", () => {
       }
     }
   });
+  it("every specimen hover reaction is one short animation under 600ms", () => {
+    const rules = [...css.matchAll(/([^{}]*:(?:hover|focus-visible)[^{}]*shelf-(?:spec|eye|heart|bone|brain)[^{}]*)\{([^}]*)\}/g)];
+    expect(rules.length).toBeGreaterThanOrEqual(8);
+    let animated = 0;
+    for (const [, selector, body] of rules) {
+      const m = /animation:\s*([^;]+);/.exec(body);
+      if (!m || /none/.test(m[1])) continue;
+      animated += 1;
+      expect(m[1], selector).not.toMatch(/infinite/);
+      const times = [...m[1].matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)].map((x) => parseFloat(x[1]) * (x[2] === "s" ? 1000 : 1));
+      const count = /\s(\d+)(?:\s|$)/.exec(m[1].replace(/\d+(?:\.\d+)?m?s/g, " "))?.[1];
+      expect(times[0] * (count ? parseInt(count, 10) : 1), selector).toBeLessThan(600);
+    }
+    expect(animated).toBeGreaterThanOrEqual(7);
+  });
+  it("covers all seven specimens with a hover reaction, and a bob and a beat", () => {
+    for (const id of ["hand", "bones", "arm", "heart", "brain", "ear", "eye"]) {
+      expect(css, id).toMatch(new RegExp(`button\\.shelf-jar:hover \\.shelf-spec--${id}`));
+    }
+    expect(css).toMatch(/\.shelf-spec\s*\{[^}]*animation:\s*shelf-bob/);
+    expect(css).toMatch(/\.shelf-spec--beating \.shelf-heart\s*\{[^}]*shelf-beat 1200ms/);
+  });
 });

@@ -29,9 +29,11 @@ import {
 import {
   SHELF_MIN_SCALE,
   SHELF_MIN_WIDTH_PX,
+  WHOLE_GLOW_MS,
   buildSectionJars,
   nextCrackleDelayMs,
   pickActiveSection,
+  stepWhole,
   type SectionId,
   type SectionJar as SectionJarModel,
   type ShelfInput,
@@ -318,6 +320,32 @@ export function LabShelf({
     return () => window.removeEventListener("resize", fit);
   }, [wide, rendered.length]);
 
+  // The whole moment: once per lab session, when every visible jar is full (at
+  // least 5 of them), the specimens glow together, the coil throws one small arc
+  // and Frank says so. Reset lab re-arms it.
+  const armedRef = useRef(true);
+  const [wholeSeq, setWholeSeq] = useState(0);
+  const [glowing, setGlowing] = useState(false);
+  const glowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (tables.length === 0) armedRef.current = true;
+    if (!wide) return;
+    const step = stepWhole(armedRef.current, jars, tables.length);
+    armedRef.current = step.armed;
+    if (!step.fire) return;
+    setWholeSeq((n) => n + 1);
+    setGlowing(true);
+    if (glowTimer.current !== null) clearTimeout(glowTimer.current);
+    glowTimer.current = setTimeout(() => setGlowing(false), WHOLE_GLOW_MS);
+    frankBus.emit({ type: "whole" });
+  }, [jars, tables.length, wide]);
+  useEffect(
+    () => () => {
+      if (glowTimer.current !== null) clearTimeout(glowTimer.current);
+    },
+    []
+  );
+
   // Idle crackle: faint, and never more often than every 20 seconds.
   const [crackleSeq, setCrackleSeq] = useState(0);
   useEffect(() => {
@@ -352,7 +380,8 @@ export function LabShelf({
 
   return (
     <nav
-      className={`lab-shelf${still ? " lab-shelf--still" : ""}`}
+      className={`lab-shelf${still ? " lab-shelf--still" : ""}${glowing ? " lab-shelf--whole" : ""}`}
+      data-whole-moments={wholeSeq}
       aria-label="Lab sections"
       data-testid="lab-shelf"
       style={{ "--shelf-scale": scale } as CSSProperties}
@@ -365,10 +394,19 @@ export function LabShelf({
           crackleSeq={crackleSeq}
           wakeSeq={wakeSeq}
           sparkSeq={sparkSeq}
+          wholeSeq={wholeSeq}
         />
         <ul className="lab-shelf__list">
-          {rendered.map(({ jar, leaving }) => (
-            <SectionJar key={jar.id} jar={jar} active={active === jar.id} leaving={leaving} still={still} onGo={goTo} />
+          {rendered.map(({ jar, leaving }, index) => (
+            <SectionJar
+              key={jar.id}
+              jar={jar}
+              active={active === jar.id}
+              leaving={leaving}
+              phase={index}
+              still={still}
+              onGo={goTo}
+            />
           ))}
         </ul>
       </div>
