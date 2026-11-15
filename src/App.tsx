@@ -109,6 +109,9 @@ import {
 } from './components/recipes/RecipePanel'
 import { scrollToStitchScreen } from './components/recipes/review'
 import { ResetLock, useResetLock } from './state/reset-lock'
+import { AiSwitch, useAiSwitch } from './state/ai-switch'
+import { gateAiProvider, gateSqlProvider } from './core/ai-gate'
+import { AiToggle } from './components/AiToggle'
 import './App.css'
 
 /**
@@ -119,6 +122,8 @@ import './App.css'
  * note is accurate once the provider lands.
  */
 const ASK_AI_AVAILABLE = import.meta.env.VITE_AI_ENABLED === 'true'
+/** Session-only "AI: On / Off (fully local)" choice. Off blocks every AI request. */
+const aiSwitch = new AiSwitch()
 
 /** The number of rows fetched per table for the preview (Req 7.2). */
 const PREVIEW_ROW_LIMIT = 20
@@ -219,7 +224,7 @@ function getLabStack(): Promise<LabStack> {
         db: duckDBService,
         getTables,
         store: stitchStore,
-        aiProvider: createProxyAiProvider(),
+        aiProvider: gateAiProvider(createProxyAiProvider(), aiSwitch),
         aiEnabledFlag: import.meta.env.VITE_AI_ENABLED,
         // Only the CHECKED tables participate (item 1). The filter reads the
         // module-level selection the App keeps in sync with its React state.
@@ -244,7 +249,9 @@ function getLabStack(): Promise<LabStack> {
         getQueryableTableNames: () => [...queryableTableNamesHolder],
         runQuery,
         aiEnabled: ASK_AI_AVAILABLE,
-        provider: ASK_AI_AVAILABLE ? createProxySqlProvider() : undefined,
+        provider: ASK_AI_AVAILABLE
+          ? gateSqlProvider(createProxySqlProvider(), aiSwitch)
+          : undefined,
         buildSchema: ASK_AI_AVAILABLE
           ? () => buildSchemaSummary(sampleReader, [...queryableSchemaSourceHolder])
           : undefined,
@@ -329,6 +336,7 @@ function App() {
   } | null>(null)
   // Reset lock (Smarter Ask): while Reset lab runs, every load control is
   // disabled and the load handlers ignore requests.
+  const aiOn = useAiSwitch(aiSwitch)
   const [resetLock] = useState(() => new ResetLock())
   const { busy: resetting } = useResetLock(resetLock)
   // "Ask about this" request from a table card: text prefilled in the Ask input.
@@ -769,6 +777,11 @@ function App() {
     <main id="lab">
       <header className="lab-header">
         <LabIntro />
+        <AiToggle
+          buildEnabled={ASK_AI_AVAILABLE}
+          on={aiOn}
+          onChange={(next) => aiSwitch.set(next)}
+        />
         <div className="lab-title-row">
           <TeslaNode side="left" />
           <h1 className="lab-title">
@@ -956,6 +969,7 @@ function App() {
             askController={status.stack.askController}
             askStore={status.stack.askStore}
             stitchStore={status.stack.stitchStore}
+            aiOn={aiOn}
             prefill={askPrefill}
             onPrefillHandled={() => setAskPrefill(null)}
           />
@@ -1127,6 +1141,7 @@ interface AskPanelRegionProps {
   stitchStore: StitchStore
   prefill: { text: string; nonce: number } | null
   onPrefillHandled: () => void
+  aiOn: boolean
 }
 
 /**
@@ -1146,6 +1161,7 @@ function AskPanelRegion({
   stitchStore,
   prefill,
   onPrefillHandled,
+  aiOn,
 }: AskPanelRegionProps) {
   const [queryable, setQueryable] = useState<QueryableTable[]>([])
   const [chips, setChips] = useState<StarterChip[]>([])
@@ -1210,7 +1226,8 @@ function AskPanelRegion({
         controller={askController}
         store={askStore}
         chips={chips}
-        aiAvailable={ASK_AI_AVAILABLE}
+        aiAvailable={ASK_AI_AVAILABLE && aiOn}
+        aiUserOff={ASK_AI_AVAILABLE && !aiOn}
         prefill={prefill}
         onPrefillHandled={onPrefillHandled}
       />

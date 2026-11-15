@@ -140,3 +140,21 @@ describe("Ask thread view", () => {
   });
 });
 
+
+describe("AI switched off by the user", () => {
+  it("shows the fully local note and keeps starter chips working", async () => {
+    const c = controller([ok(1)]);
+    render(
+      <AskTheLabPanel
+        controller={c}
+        store={new AskStore()}
+        chips={[{ tableName: "t", question: "How many rows are in t?", sql: "SELECT 1", kind: "row-count" }]}
+        aiAvailable={false}
+        aiUserOff
+      />
+    );
+    expect(screen.getByText("AI is off. Starter questions still work.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "How many rows are in t?" }));
+    await waitFor(() => expect(screen.getByLabelText("Latest answer")).toBeInTheDocument());
+  });
+});

@@ -50,6 +50,8 @@ export interface AskTheLabPanelProps {
    * questions resolve to the "AI unavailable" message with no network call.
    */
   aiAvailable: boolean;
+  /** True when the user switched AI off (fully local) on a build that allows AI. */
+  aiUserOff?: boolean;
   /**
    * "Ask about this" request from a table card: when `nonce` changes the input
    * is prefilled with `text`, brought into view, and focused.
@@ -71,6 +73,7 @@ export function AskTheLabPanel({
   store,
   chips,
   aiAvailable,
+  aiUserOff = false,
   prefill = null,
   onPrefillHandled,
 }: AskTheLabPanelProps) {
@@ -246,7 +249,9 @@ export function AskTheLabPanel({
 
       {!aiAvailable ? (
         <p className="ask-panel__ai-note">
-          AI is off, starter questions still work.
+          {aiUserOff
+            ? "AI is off. Starter questions still work."
+            : "AI is off, starter questions still work."}
         </p>
       ) : null}
 
