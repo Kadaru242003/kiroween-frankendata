@@ -71,7 +71,7 @@ export function AskTheLabPanel({
   aiAvailable,
   prefill = null,
 }: AskTheLabPanelProps) {
-  const { history, outcome, loading, turns } = useAskStore(store);
+  const { history, outcome, loading, turns, epoch } = useAskStore(store);
   const [question, setQuestion] = useState("");
   const [topicNote, setTopicNote] = useState("");
   const panelRef = useRef<HTMLElement>(null);
@@ -92,6 +92,12 @@ export function AskTheLabPanel({
   useEffect(() => {
     if (turns.length > 0) setTopicNote("");
   }, [turns.length]);
+
+  // Reset lab clears the whole Ask state: also empty the input text.
+  useEffect(() => {
+    setQuestion("");
+    setTopicNote("");
+  }, [epoch]);
 
   const prefillNonce = prefill?.nonce;
   useEffect(() => {
@@ -186,7 +192,9 @@ export function AskTheLabPanel({
             className="ask-panel__new-topic"
             onClick={() => {
               store.clearThread();
+              setQuestion("");
               setTopicNote("Started a new topic");
+              inputRef.current?.focus({ preventScroll: true });
             }}
           >
             New topic

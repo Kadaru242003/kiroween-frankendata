@@ -105,4 +105,38 @@ describe("Ask thread view", () => {
     expect(c.ask).not.toHaveBeenCalled();
     void act;
   });
+
+  it("New topic also clears the input and focuses it", async () => {
+    const c = controller([ok(1)]);
+    render(<AskTheLabPanel controller={c} store={new AskStore()} chips={[]} aiAvailable />);
+    await submit("q1");
+    await waitFor(() => expect(screen.getByRole("button", { name: "New topic" })).toBeInTheDocument());
+    const input = screen.getByRole("textbox", { name: "Question" }) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "half typed" } });
+    fireEvent.click(screen.getByRole("button", { name: "New topic" }));
+    expect(input.value).toBe("");
+    expect(input).toHaveFocus();
+  });
+
+  it("a store reset (Reset lab) clears input, thread, outcome and recent questions", async () => {
+    const c = controller([ok(1)]);
+    const store = new AskStore();
+    render(<AskTheLabPanel controller={c} store={store} chips={[]} aiAvailable />);
+    await submit("q1");
+    await waitFor(() => expect(screen.getByLabelText("Latest answer")).toBeInTheDocument());
+    fireEvent.change(screen.getByRole("textbox", { name: "Question" }), { target: { value: "leftover" } });
+    expect(screen.getByLabelText("Recent questions")).toBeInTheDocument();
+    act(() => store.reset());
+    expect((screen.getByRole("textbox", { name: "Question" }) as HTMLInputElement).value).toBe("");
+    expect(screen.queryByLabelText("Latest answer")).toBeNull();
+    expect(screen.queryByLabelText("Recent questions")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New topic" })).toBeNull();
+    expect(store.getState().turns).toHaveLength(0);
+    expect(store.getState().history).toHaveLength(0);
+    // Resetting an already empty store still bumps the epoch.
+    const e = store.getState().epoch;
+    store.reset();
+    expect(store.getState().epoch).toBe(e + 1);
+  });
 });
+

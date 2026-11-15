@@ -32,6 +32,8 @@ export interface AskState {
    * names and counts, the follow-up thread.
    */
   readonly turns: readonly AskTurn[];
+  /** Bumped by reset() so the panel can clear its own input text. */
+  readonly epoch: number;
 }
 
 type Listener = () => void;
@@ -41,6 +43,7 @@ const EMPTY_STATE: AskState = Object.freeze({
   outcome: null,
   loading: false,
   turns: Object.freeze([]) as readonly AskTurn[],
+  epoch: 0,
 });
 
 /** A session-only, in-memory observable store for the Ask the Lab panel. */
@@ -127,8 +130,8 @@ export class AskStore {
 
   /** Reset to the empty initial state (fresh session). */
   reset(): void {
-    if (this.state === EMPTY_STATE) return;
-    this.state = EMPTY_STATE;
+    // Always bump the epoch so a panel that outlives the reset clears its input.
+    this.state = Object.freeze({ ...EMPTY_STATE, epoch: this.state.epoch + 1 });
     this.emit();
   }
 
