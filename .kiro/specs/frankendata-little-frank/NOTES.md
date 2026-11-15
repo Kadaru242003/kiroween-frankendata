@@ -21,7 +21,7 @@ Branch `little-frank`, cut from `main`. Not merged.
 - The Frank button is now labelled "Ask Little Frank" (was "Poke Little Frank"). Poke lives inside the panel.
 - A files-loaded reaction arriving while `wake` is current or pending is dropped, since it belongs to the same load. A quiet demo replace (tables already loaded) emits files-loaded, not wake.
 - `stitch-open` is driven by the `stitchOpen` prop, because applying a recipe also sets proposals.
-- `join-key` is not merged into `main`, so the guide's join and anchor text only says "I suggest a default".
+- `join-key` is now merged into `main`. The guide still keeps join and anchor wording general ("I suggest a default").
 - Viewport effects (flash, lightning) are siblings of `.specimen`, because `filter` on the Frank body would make `position: fixed` relative to him.
 - Calm Frank and reduced motion both set `specimen--still`: no animation, no effect elements (so no lightning element exists), static poses and 150ms fades. Bubble text always shows.
 - A real bug found by the eye-follow test: the rAF scheduling flag could be overwritten when the callback ran synchronously. Fixed with a `pending` flag.
