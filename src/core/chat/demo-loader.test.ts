@@ -19,6 +19,7 @@ function setup() {
       mismatched: mismatchedFiles,
       nextMonth: async () => [],
       business: async () => [],
+      businessNextMonth: async () => [],
     },
     intake,
   });
@@ -67,6 +68,7 @@ describe("createDemoLoader", () => {
         mismatched: async () => [],
         nextMonth: async () => [],
         business: async () => [],
+        businessNextMonth: async () => [],
       },
       intake,
     });

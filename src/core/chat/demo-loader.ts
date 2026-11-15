@@ -14,7 +14,12 @@
  */
 
 /** The bundled demos, by stable id. */
-export type DemoId = "default" | "mismatched" | "nextMonth" | "business";
+export type DemoId =
+  | "default"
+  | "mismatched"
+  | "nextMonth"
+  | "business"
+  | "businessNextMonth";
 
 /** Produces the `File` objects for one demo (bundled; no network). */
 export type DemoFilesProvider = () => Promise<File[]>;

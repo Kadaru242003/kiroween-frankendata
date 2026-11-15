@@ -18,21 +18,27 @@
  *     {@link ApprovalDecision.edit}; the override is merged over the base
  *     proposal so an edited match re-pairs to a different column (Req 3.6) and
  *     an edited category proposal uses the changed canonical value (Req 3.7).
- *   - The anchor table defaults to the loaded table with the most rows (Req
- *     7.2); task 14 lets the user override it, so an explicit `anchorTableName`
- *     override is honored when supplied.
- *   - The per-pair join key defaults to the highest-confidence approved match
- *     for each unordered table pair (Req 7.4); task 14's JoinControls can pick a
- *     different approved match, so explicit `joinKeysByPair` entries are honored.
+ *   - The per-pair join key defaults to the most key-like approved match for
+ *     each unordered table pair (see key-stats.ts: a key that is unique on a
+ *     side beats a low-cardinality column of higher confidence). Without column
+ *     stats it is the highest-confidence match (Req 7.4). JoinControls can pick
+ *     a different approved match, so explicit `joinKeysByPair` entries are honored.
+ *   - The anchor table defaults to the "many" side of the chosen key (the table
+ *     where the key repeats while it is unique on the other side), so the join
+ *     is many-to-one and the result has the anchor's row count. When no chosen
+ *     key tells the sides apart it is the loaded table with the most rows (Req
+ *     7.2). An explicit `anchorTableName` override is honored when supplied.
  *
  * None of this applies anything to DuckDB — it only produces the plan object.
  * Apply happens later, only on confirm, via the controller/applier.
  */
 
+import { chooseDefaultMatch, manySideOf } from "./key-stats";
 import { HIGH_CONFIDENCE_THRESHOLD } from "./types";
 import type {
   ApprovalDecision,
   CleaningProposal,
+  ColumnKeyStats,
   MatchProposal,
   ProposalSet,
   StitchPlan,
@@ -147,30 +153,52 @@ export function defaultAnchorTableName(
 
 /**
  * Build the default per-pair join-key map: for each unordered table pair that
- * has at least one approved/edited match, pick the highest-confidence such match
- * (ties break on `id` ascending for determinism) and map the pair key to that
- * match's `id` (Req 7.4).
+ * has at least one approved/edited match, pick the most key-like such match
+ * (see {@link chooseDefaultMatch}) and map the pair key to that match's `id`
+ * (Req 7.4). With no `stats` this is the highest-confidence match, ties on
+ * `id` ascending.
  */
 export function defaultJoinKeysByPair(
-  approvedMatches: readonly MatchProposal[]
+  approvedMatches: readonly MatchProposal[],
+  stats?: Readonly<Record<string, ColumnKeyStats>>
 ): Record<string, string> {
-  const bestByPair = new Map<string, MatchProposal>();
+  const byPair = new Map<string, MatchProposal[]>();
   for (const m of approvedMatches) {
     const key = pairKey(m.left.tableName, m.right.tableName);
-    const current = bestByPair.get(key);
-    if (
-      current === undefined ||
-      m.confidence > current.confidence ||
-      (m.confidence === current.confidence && m.id < current.id)
-    ) {
-      bestByPair.set(key, m);
-    }
+    const bucket = byPair.get(key);
+    if (bucket) bucket.push(m);
+    else byPair.set(key, [m]);
   }
   const result: Record<string, string> = {};
-  for (const [key, m] of bestByPair) {
-    result[key] = m.id;
+  for (const [key, matches] of byPair) {
+    const chosen = chooseDefaultMatch(matches, stats);
+    if (chosen) result[key] = chosen.id;
   }
   return result;
+}
+
+/**
+ * The default anchor given the chosen join keys: the table that most keys
+ * identify as the "many" side (key repeats there, unique on the other side).
+ * Ties, and the case with no such key, fall back to
+ * {@link defaultAnchorTableName} among the tied (or all) tables.
+ */
+export function defaultAnchorForKeys(
+  tables: readonly LoadedTableLike[],
+  chosenMatches: readonly MatchProposal[],
+  stats: Readonly<Record<string, ColumnKeyStats>> | undefined
+): string | undefined {
+  const votes = new Map<string, number>();
+  for (const m of chosenMatches) {
+    const many = manySideOf(m, stats);
+    if (many !== undefined) votes.set(many, (votes.get(many) ?? 0) + 1);
+  }
+  const loaded = tables.filter((t) => votes.has(t.tableName));
+  if (loaded.length === 0) return defaultAnchorTableName(tables);
+  const top = Math.max(...loaded.map((t) => votes.get(t.tableName) ?? 0));
+  return defaultAnchorTableName(
+    loaded.filter((t) => (votes.get(t.tableName) ?? 0) === top)
+  );
 }
 
 /** Overrides the UI may supply when assembling the plan (task 14 wiring). */
@@ -216,13 +244,20 @@ export function assembleStitchPlan(
     }
   }
 
-  const anchorTableName =
-    options.anchorTableName ?? defaultAnchorTableName(tables) ?? "";
-
+  const stats = proposals.columnStats;
   const joinKeysByPair = {
-    ...defaultJoinKeysByPair(approvedMatches),
+    ...defaultJoinKeysByPair(approvedMatches, stats),
     ...(options.joinKeysByPair ?? {}),
   };
+
+  // The anchor follows the keys actually in the plan (defaults plus overrides).
+  const chosenMatches = approvedMatches.filter((m) =>
+    Object.values(joinKeysByPair).includes(m.id)
+  );
+  const anchorTableName =
+    options.anchorTableName ??
+    defaultAnchorForKeys(tables, chosenMatches, stats) ??
+    "";
 
   return {
     anchorTableName,

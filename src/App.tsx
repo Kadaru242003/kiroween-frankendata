@@ -26,6 +26,7 @@
 import { loadBusinessFiles } from './core/business-demo'
 import { generateBusinessChips } from './core/chat/business-chips'
 import { loadNextMonthFiles } from './core/recipes/next-month-demo'
+import { loadBusinessNextMonthFiles } from './core/recipes/business-next-month-demo'
 import { revealProposalCard } from './components/autopsy/reveal-proposal'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createDuckDBService } from './db/duckdb-service'
@@ -133,7 +134,9 @@ const PREVIEW_ROW_LIMIT = 20
 const LOAD_BUSINESS_DEMO_LABEL = 'Load business demo'
 const LOAD_MISMATCHED_DEMO_LABEL = 'Load mismatched demo'
 /** Idle label for the third demo action: next month's files (Recipes demo). */
-const LOAD_NEXT_MONTH_DEMO_LABEL = "Load next month's files"
+const LOAD_NEXT_MONTH_DEMO_LABEL = 'Lab: next month'
+/** Idle label for the business month-two demo (Recipes on the business data). */
+const LOAD_BUSINESS_NEXT_MONTH_DEMO_LABEL = 'Business: next month'
 
 /**
  * The lab stack: the single DuckDB service plus the controller wired to it and
@@ -266,6 +269,7 @@ function getLabStack(): Promise<LabStack> {
           mismatched: () => demoDataLoader.loadMismatched(),
           nextMonth: () => loadNextMonthFiles(),
           business: () => loadBusinessFiles(),
+          businessNextMonth: () => loadBusinessNextMonthFiles(),
         },
         intake: (files) => controller.intake(files),
       })
@@ -343,6 +347,10 @@ function App() {
   const aiOn = useAiSwitch(aiSwitch)
   const [resetLock] = useState(() => new ResetLock())
   const { busy: resetting } = useResetLock(resetLock)
+  // What the lock is doing, for its status text, and whether a demo is replacing
+  // the tables (Little Frank skips the reset animation then).
+  const [busyNote, setBusyNote] = useState<'reset' | 'load'>('reset')
+  const quietResetRef = useRef(false)
   // "Ask about this" request from a table card: text prefilled in the Ask input.
   const [askPrefill, setAskPrefill] = useState<{
     text: string
@@ -432,51 +440,16 @@ function App() {
     }
   }, [handleFiles])
   const addFilesInputRef = useRef<HTMLInputElement>(null)
-  // Load a demo ONCE by id (idempotent). A repeated click is a no-op; the
-  // button reflects "Already loaded" via `loadedDemos`. Loading the other demo
-  // is always allowed. Reset re-enables both (see handleResetLab).
-  const loadDemo = useCallback(
-    async (id: DemoId) => {
-      if (stack === null || resetLock.isBusy()) {
-        return
-      }
-      const didLoad = await stack.demoLoader.load(id)
-      if (didLoad) {
-        setLoadedDemos((prev) => {
-          const next = new Set(prev)
-          next.add(id)
-          return next
-        })
-      }
-    },
-    [stack, resetLock],
-  )
-
-  const handleLoadDemo = useCallback(() => loadDemo('default'), [loadDemo])
-  // The second, mismatched dataset (Req 8.1–8.4) routes through the SAME intake
-  // pipeline; its two files make the stitching stage reachable (Req 8.4).
-  const handleLoadBusinessDemo = useCallback(
-    () => loadDemo('business'),
-    [loadDemo],
-  )
-  const handleLoadMismatchedDemo = useCallback(
-    () => loadDemo('mismatched'),
-    [loadDemo],
-  )
-
-  const handleLoadNextMonthDemo = useCallback(
-    () => loadDemo('nextMonth'),
-    [loadDemo],
-  )
   // Reset the whole lab: drop every DuckDB table (originals, cleaned copies,
   // stitch results), clear the intake store, stitch state + undo, the Ask the
   // Lab history/outcome, and re-enable the demo buttons. Never throws, even if
   // DuckDB is mid-operation or a drop fails. No confirm dialog.
-  const handleResetLab = useCallback(async () => {
+  // The reset itself, shared by "Reset lab" and by a demo that replaces the
+  // loaded tables. Never throws.
+  const clearLab = useCallback(async () => {
     if (stack === null) {
       return
     }
-    await resetLock.run(async () => {
     // Best-effort undo of any applied stitch (drops its created tables), then a
     // belt-and-braces drop of every remaining base table.
     try {
@@ -508,8 +481,64 @@ function App() {
     setAskPrefill(null)
     queryableTableNamesHolder = []
     queryableSchemaSourceHolder = []
-    })
-  }, [stack, resetLock])
+  }, [stack])
+
+  const handleResetLab = useCallback(async () => {
+    if (stack === null) {
+      return
+    }
+    setBusyNote('reset')
+    await resetLock.run(clearLab)
+  }, [stack, resetLock, clearLab])
+
+  // Load a demo ONCE by id (idempotent). A repeated click is a no-op; the
+  // button reflects "Already loaded" via `loadedDemos`. Loading the other demo
+  // is always allowed. Reset re-enables both (see handleResetLab).
+  // Loading a demo REPLACES the loaded tables (same effect as Reset lab, but
+  // quiet: Little Frank does not play the reset animation). Files added with
+  // "Add files" still add on top.
+  const loadDemo = useCallback(
+    async (id: DemoId) => {
+      if (stack === null || resetLock.isBusy()) {
+        return
+      }
+      setBusyNote('load')
+      await resetLock.run(async () => {
+        quietResetRef.current = true
+        try {
+          await clearLab()
+          const didLoad = await stack.demoLoader.load(id)
+          if (didLoad) {
+            setLoadedDemos(new Set<DemoId>([id]))
+          }
+        } finally {
+          quietResetRef.current = false
+        }
+      })
+    },
+    [stack, resetLock, clearLab],
+  )
+
+  const handleLoadDemo = useCallback(() => loadDemo('default'), [loadDemo])
+  // The second, mismatched dataset (Req 8.1–8.4) routes through the SAME intake
+  // pipeline; its two files make the stitching stage reachable (Req 8.4).
+  const handleLoadBusinessDemo = useCallback(
+    () => loadDemo('business'),
+    [loadDemo],
+  )
+  const handleLoadMismatchedDemo = useCallback(
+    () => loadDemo('mismatched'),
+    [loadDemo],
+  )
+
+  const handleLoadNextMonthDemo = useCallback(
+    () => loadDemo('nextMonth'),
+    [loadDemo],
+  )
+  const handleLoadBusinessNextMonthDemo = useCallback(
+    () => loadDemo('businessNextMonth'),
+    [loadDemo],
+  )
 
   const canStitch = shouldShowStitchEntry(tables.length)
   // The subset of loaded tables CHECKED for stitching: loaded minus the
@@ -857,6 +886,17 @@ function App() {
                 tag="Start here"
                 primary
               />
+              {/*
+                Second demo action: next month's business files (Recipes on the
+                business data): the same CRM plus the April 2026 billing export.
+              */}
+              <DemoDataControl
+                onLoadDemo={handleLoadBusinessNextMonthDemo}
+                label={LOAD_BUSINESS_NEXT_MONTH_DEMO_LABEL}
+                caption="April invoices: apply the March recipe"
+                alreadyLoaded={loadedDemos.has('businessNextMonth')}
+                disabled={resetting}
+              />
               <DemoDataControl
                 onLoadDemo={handleLoadDemo}
                 caption="Three messy lab files, typed automatically"
@@ -882,13 +922,13 @@ function App() {
               <DemoDataControl
                 onLoadDemo={handleLoadNextMonthDemo}
                 label={LOAD_NEXT_MONTH_DEMO_LABEL}
-                caption="Same messy patterns, new rows: try applying a recipe"
+                caption="New lab rows: apply a lab recipe"
                 alreadyLoaded={loadedDemos.has('nextMonth')}
                 disabled={resetting}
               />
             </div>
             <p className="lab-reset__status" role="status" aria-live="polite">
-              {resetting ? 'Resetting the lab...' : ''}
+              {resetting ? (busyNote === 'load' ? 'Loading the demo...' : 'Resetting the lab...') : ''}
             </p>
           </section>
           ) : (
@@ -918,9 +958,10 @@ function App() {
               disabled={resetting}
               items={[
                 { id: 'business', label: 'Business', loaded: loadedDemos.has('business') },
+                { id: 'businessNextMonth', label: 'Business: next month', loaded: loadedDemos.has('businessNextMonth') },
                 { id: 'default', label: 'Lab', loaded: loadedDemos.has('default') },
                 { id: 'mismatched', label: 'Mismatched', loaded: loadedDemos.has('mismatched') },
-                { id: 'nextMonth', label: "Next month's files", loaded: loadedDemos.has('nextMonth') },
+                { id: 'nextMonth', label: 'Lab: next month', loaded: loadedDemos.has('nextMonth') },
               ]}
               onSelect={(id) => void loadDemo(id as DemoId)}
             />
@@ -949,7 +990,7 @@ function App() {
               Reset lab
             </button>
             <p className="lab-reset__status" role="status" aria-live="polite">
-              {resetting ? 'Resetting the lab...' : ''}
+              {resetting ? (busyNote === 'load' ? 'Loading the demo...' : 'Resetting the lab...') : ''}
             </p>
           </section>
           )}
@@ -1072,6 +1113,7 @@ function App() {
             intakeError={errors.length > 0}
             stitchStore={status.stack.stitchStore}
             askStore={status.stack.askStore}
+            quietResetRef={quietResetRef}
           />
         </>
       ) : null}
@@ -1167,6 +1209,7 @@ interface SpecimenRegionProps {
   intakeError: boolean
   stitchStore: StitchStore
   askStore: AskStore
+  quietResetRef: { current: boolean }
 }
 
 /**
@@ -1182,6 +1225,7 @@ function SpecimenRegion({
   intakeError,
   stitchStore,
   askStore,
+  quietResetRef,
 }: SpecimenRegionProps) {
   const stitch = useStitchStore(stitchStore)
   const { outcome, loading } = useAskStore(askStore)
@@ -1211,6 +1255,7 @@ function SpecimenRegion({
       askPending={loading}
       askResult={isAskResultShown(outcome, loading)}
       intakeError={intakeError}
+      quietResetRef={quietResetRef}
     />
   )
 }

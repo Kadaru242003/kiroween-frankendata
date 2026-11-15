@@ -115,12 +115,32 @@ function nonNullSamples(samples: SampleValue[]): NonNullSample[] {
 }
 
 /**
- * Case-shape rank used only to break frequency ties: 0 = Title Case (every word
- * is an uppercase letter followed by lowercase letters, like "Northwind
- * Analytics"), 1 = other mixed case (like "NORTHWIND Analytics"), 2 = ALL CAPS,
- * all lowercase, or no letters. Lower is preferred.
+ * Does this value look like an email, a URL or an identifier rather than a
+ * name? True for text containing `@` or `://`, and for text with no spaces
+ * that has a dot, an underscore or a digit ("order_id_42", "acme.corp"). Name
+ * text (a space, or plain letters like "Swamp" or "Jean-Luc") is not.
+ */
+export function looksLikeIdentifier(value: string): boolean {
+  if (value.includes("@") || value.includes("://")) return true;
+  if (/\s/u.test(value)) return false;
+  return /[._\d]/u.test(value);
+}
+
+/**
+ * Case-shape rank used only to break frequency ties. Lower is preferred.
+ *
+ * Name-like text: 0 = Title Case (every word is an uppercase letter followed by
+ * lowercase letters, like "Northwind Analytics"), 1 = other mixed case (like
+ * "NORTHWIND Analytics"), 2 = ALL CAPS, all lowercase, or no letters.
+ *
+ * Emails, URLs and identifiers (see {@link looksLikeIdentifier}) are the other
+ * way round: the all-lowercase variant is 0 and every other casing is 2, so
+ * "Jane.Doe@X.Example" never beats "jane.doe@x.example" on a tie.
  */
 export function caseShapeRank(value: string): 0 | 1 | 2 {
+  if (looksLikeIdentifier(value) && /\p{L}/u.test(value)) {
+    return value === value.toLowerCase() ? 0 : 2;
+  }
   const words = value.split(/[^\p{L}]+/u).filter((w) => w.length > 0);
   if (words.length === 0) {
     return 2;
@@ -421,7 +441,9 @@ function buildCategoryProposal(
 
 /**
  * A DuckDB expression that normalizes a cell for duplicate detection: text
- * columns are trimmed + whitespace-collapsed (matching {@link normalizeWhitespace});
+ * columns are trimmed, whitespace-collapsed (matching {@link normalizeWhitespace})
+ * and lower-cased, so rows that differ only by case ("Acme" and "ACME") count as
+ * duplicates, as they will after the case cleanups;
  * non-text columns are compared as-is (cast to VARCHAR for a stable, null-safe
  * key). NULLs are coalesced to a sentinel so two NULLs compare equal.
  */
@@ -433,8 +455,8 @@ function duplicateKeyExpr(column: ColumnSchema): string {
   // "duplicate", never corrupts data).
   const nullSentinel = `'\u2400NULL\u2400'`;
   if (column.type === "string") {
-    // trim + collapse internal whitespace, matching normalizeWhitespace.
-    const collapsed = `regexp_replace(trim(${ident}), '\\s+', ' ', 'g')`;
+    // trim + collapse internal whitespace (matching normalizeWhitespace), then fold case.
+    const collapsed = `lower(regexp_replace(trim(${ident}), '\\s+', ' ', 'g'))`;
     return `coalesce(${collapsed}, ${nullSentinel})`;
   }
   return `coalesce(CAST(${ident} AS VARCHAR), ${nullSentinel})`;

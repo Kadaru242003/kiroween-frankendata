@@ -71,10 +71,14 @@ describe("RecipePanel", () => {
     expect(names).toEqual(["Save recipe", "Export SQL script"]);
     expect(screen.queryByText(/Parquet/)).toBeNull();
   });
-  it("Apply recipe is always available with its hint", () => {
+  it("Apply recipe is always available, described by a tooltip (not a title attribute)", () => {
     render(apply());
-    expect(screen.getByLabelText("Apply recipe (JSON file)")).toBeInTheDocument();
-    expect(screen.getByText("Reuse a saved stitch on new files")).toBeInTheDocument();
+    const input = screen.getByLabelText("Apply recipe (JSON file)");
+    expect(input).toBeInTheDocument();
+    const tip = screen.getByRole("tooltip", { hidden: true });
+    expect(tip).toHaveTextContent("Reuse a saved stitch on new files");
+    expect(input).toHaveAttribute("aria-describedby", tip.id);
+    expect(input.closest("label")).not.toHaveAttribute("title");
   });
 
   it("saves through the download helper and confirms in place", () => {
@@ -137,7 +141,9 @@ describe("RecipePanel", () => {
     expect(screen.getByText("Not applied (1)")).toBeInTheDocument();
     expect(screen.getByText('Cleanup "category" on monsters.Species')).toBeInTheDocument();
     expect(screen.getByText("Nothing to clean here in the current data.")).toBeInTheDocument();
-    expect(screen.getByText(/2 proposals pre-approved, 1 not applied/)).toBeInTheDocument();
+    // One status line, not two.
+    expect(screen.getAllByText(/pre-approved/)).toHaveLength(1);
+    expect(screen.getByText("Recipe applied: 2 steps pre-approved, 1 not applied.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Review in stitching table" }));
     expect(onReview).toHaveBeenCalledTimes(1);
   });

@@ -73,9 +73,33 @@
   position: relative;
   display: inline-block;
 }
-.recipe-panel__hint {
+/* Tooltip anchored to the Apply recipe button: hover and focus only, below it. */
+.apply-recipe__anchor {
+  position: relative;
+  display: inline-flex;
+}
+.apply-recipe__tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: 220px;
+  padding: 4px 8px;
+  border: 1px solid var(--border, #2f6b2f);
+  border-radius: 6px;
+  background: var(--surface-raised, #112211);
+  color: var(--text-primary, inherit);
   font-size: 12px;
-  opacity: 0.75;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  visibility: hidden;
+}
+.apply-recipe__anchor:hover .apply-recipe__tooltip,
+.apply-recipe__anchor:focus-within .apply-recipe__tooltip {
+  visibility: visible;
 }
 .recipe-panel__actions {
   display: flex;
@@ -183,4 +207,9 @@
 .apply-recipe--compact .recipe-panel__result {
   flex: 1 0 100%;
   order: 5;
+  text-align: center;
+}
+/* Centered under the toolbar, like the toolbar itself. */
+.apply-recipe--compact .recipe-panel__result {
+  align-items: center;
 }

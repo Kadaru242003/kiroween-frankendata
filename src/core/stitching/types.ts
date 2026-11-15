@@ -163,6 +163,27 @@ export interface TableSample {
   // Up to MAX_SAMPLE_VALUES_PER_COLUMN distinct values per column, each with
   // its frequency, ordered by count DESC then value ASC (deterministic).
   samplesByColumn: Record<string, SampleValue[]>;
+  /**
+   * Exact totals for a column whose sample list was cut at
+   * MAX_SAMPLE_VALUES_PER_COLUMN: the number of non-null cells and the number of
+   * distinct RAW values over the whole column. Present only for such columns;
+   * when absent the samples are complete and the totals follow from them.
+   */
+  columnTotals?: Record<string, { nonNull: number; rawDistinct: number }>;
+}
+
+/**
+ * How key-like one column is: its distinct ratio over normalized, non-null
+ * values (trimmed, whitespace collapsed, case-folded), after an assumed
+ * duplicate-row cleanup. 1 means every value is unique.
+ */
+export interface ColumnKeyStats {
+  /** Non-null cells, after the proposed duplicate-row cleanup. */
+  nonNull: number;
+  /** Distinct normalized non-null values. */
+  distinct: number;
+  /** `distinct / nonNull`, in [0, 1]; 0 for an empty column. */
+  distinctRatio: number;
 }
 
 // ── Orchestration ────────────────────────────────────────────────────────────
@@ -176,6 +197,12 @@ export interface ProposalSet {
   matches: MatchProposal[]; // already filtered to >= MATCH_DISPLAY_THRESHOLD for display
   cleanings: CleaningProposal[];
   aiUsed: boolean; // false when fallback occurred (drives AiNotice)
+  /**
+   * Key-likeness of the columns, keyed by `statsKey(table, column)`. Used only
+   * to choose the default join key and anchor. Optional: when absent the
+   * defaults fall back to confidence alone and the most-rows table.
+   */
+  columnStats?: Record<string, ColumnKeyStats>;
 }
 
 // ── AI provider (injected; fakeable) ─────────────────────────────────────────
