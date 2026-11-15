@@ -5,7 +5,7 @@
  * fixed beside the 1200px main column, so it never shifts it.
  *
  *  - One jar per page section, shown only while that section exists, in
- *    workflow order (`shelf-model.ts`). Its liquid shows how far the step has got.
+ *    the order the sections appear on the page (`shelf-model.ts`). Its liquid shows how far the step has got.
  *  - Clicking a jar (or Enter or Space) scrolls that section into view, smoothly
  *    (at once under reduced motion), and moves keyboard focus to its heading.
  *  - The jar of the section in view is highlighted (`aria-current`), found with

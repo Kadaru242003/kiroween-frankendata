@@ -41,23 +41,24 @@ describe("which jars are shown, and in what order", () => {
     expect(ids(none)).toEqual(["intake"]);
   });
   it("adds Tables and Ask when tables are loaded", () => {
-    expect(ids(loaded)).toEqual(["intake", "tables", "ask"]);
+    expect(ids(loaded)).toEqual(["intake", "ask", "tables"]);
   });
   it("adds Stitching while proposals exist and the stitching table is open", () => {
-    expect(ids(pending)).toEqual(["intake", "tables", "stitching", "ask"]);
-    expect(ids({ ...pending, stitchOpen: false })).toEqual(["intake", "tables", "ask"]);
-    expect(ids({ ...loaded, stitchOpen: true })).toEqual(["intake", "tables", "ask"]);
+    expect(ids(pending)).toEqual(["intake", "stitching", "ask", "tables"]);
+    expect(ids({ ...pending, stitchOpen: false })).toEqual(["intake", "ask", "tables"]);
+    expect(ids({ ...loaded, stitchOpen: true })).toEqual(["intake", "ask", "tables"]);
   });
   it("adds Result and Recipes once a stitch exists", () => {
-    expect(ids(stitched)).toEqual(["intake", "tables", "stitching", "result", "recipes", "ask"]);
+    expect(ids(stitched)).toEqual(["intake", "stitching", "result", "recipes", "ask", "tables"]);
   });
   it("adds Autopsy only while one is open", () => {
     const withAutopsy = { ...stitched, autopsy: { tableName: "crm_customers", score: null } };
-    expect(ids(withAutopsy)).toEqual(["intake", "tables", "stitching", "result", "recipes", "autopsy", "ask"]);
+    expect(ids(withAutopsy)).toEqual(["intake", "stitching", "result", "recipes", "ask", "autopsy", "tables"]);
     expect(ids(loaded)).not.toContain("autopsy");
   });
-  it("always keeps workflow order, whatever is shown", () => {
+  it("always keeps page order, whatever is shown (intake, stitching, result, recipes, ask, autopsy, tables)", () => {
     const all = { ...stitched, autopsy: { tableName: "x", score: 90 } };
+    expect(ids(all)).toEqual(["intake", "stitching", "result", "recipes", "ask", "autopsy", "tables"]);
     expect(ids(all)).toEqual([...SECTION_ORDER]);
     const order = ids(all).map((id) => SECTION_ORDER.indexOf(id));
     expect(order).toEqual([...order].sort((a, b) => a - b));
@@ -107,9 +108,9 @@ describe("progress rules", () => {
 describe("labels, names and tooltips", () => {
   it("names each jar with short labels and 'Go to <section>'", () => {
     const jars = buildSectionJars({ ...stitched, autopsy: { tableName: "x", score: 1 } });
-    expect(jars.map((j) => j.label)).toEqual(["Intake", "Tables", "Stitching", "Result", "Recipes", "Autopsy", "Ask"]);
+    expect(jars.map((j) => j.label)).toEqual(["Intake", "Stitching", "Result", "Recipes", "Ask", "Autopsy", "Tables"]);
     expect(jars.map((j) => j.ariaLabel)).toEqual([
-      "Go to Intake", "Go to Tables", "Go to Stitching", "Go to Result", "Go to Recipes", "Go to Autopsy", "Go to Ask the Lab",
+      "Go to Intake", "Go to Stitching", "Go to Result", "Go to Recipes", "Go to Ask the Lab", "Go to Autopsy", "Go to Tables",
     ]);
   });
   it("puts the table names and row counts in the Tables tooltip", () => {

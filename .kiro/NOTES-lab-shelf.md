@@ -7,17 +7,17 @@ The shelf began as a decorative row of per-table jars. It is now page navigation
 ## What it is
 
 - **Where**: a `<nav aria-label="Lab sections">`, `position: fixed`, centred in the right gutter (`left: 75vw + 300px`, the middle of the space right of the 1200px column) and in the window (`top: 50%`, `translate(-50%, -50%)`). It is rendered only at 1440px and wider; below that it is not in the DOM (the CSS hides it as a second guard). It takes no space in the layout, so it cannot shift the main column. If the jars do not fit the window height it scales down to as little as 70% (`--shelf-scale`, measured on resize and when jars come and go) instead of clipping.
-- **Jars are sections**, in workflow order, each shown only while its section exists:
+- **Jars are sections**, in top-to-bottom page order, each shown only while its section exists:
 
   | Jar | Section it scrolls to | Shown when | Liquid |
   |---|---|---|---|
   | Intake | the drop zone or the toolbar | always | full when tables are loaded, else empty |
-  | Tables | the loaded table cards | tables loaded | full |
   | Stitching | the stitching table | proposals exist and the stitching table is open | half while pending, full when stitched |
   | Result | the stitched result card | a stitch exists (and the stitching table is open) | full |
   | Recipes | the recipes panel | a stitch exists (the panel's own rule) | full after Save recipe or Apply recipe |
-  | Autopsy | the open Autopsy panel | an Autopsy is open | half while it examines, full once it shows a score |
   | Ask | Ask the Lab | tables loaded | half while a question is pending, full after the first answer |
+  | Autopsy | the open Autopsy panel | an Autopsy is open | half while it examines, full once it shows a score |
+  | Tables | the loaded table cards | tables loaded | full |
 
   There are no per-table jars. Table names and row counts live in the Tables tooltip ("Tables: crm_customers 22 rows, billing_invoices 48 rows", listing up to six tables then "and N more").
 - **Readable**: the short name (Intake, Tables, Stitching, Result, Recipes, Autopsy, Ask) is real text under each jar, 12px, high contrast, `nowrap`, never truncated. Hovering or focusing a jar shows a tooltip to the left with the section name and a one-line status ("Result: 48 rows", "Stitching: 14 of 14 approved"). The tooltip is wired to the button with `aria-describedby` and `role="tooltip"`.
@@ -37,7 +37,7 @@ The shelf began as a decorative row of per-table jars. It is now page navigation
 
 ## Decisions and limits
 
-- **Order is workflow order, not DOM order.** The brief's list was used as given: Intake, Tables, Stitching, Result, Recipes, Autopsy, Ask. On the page the table cards are rendered last, below Ask the Lab and the Autopsy panel, and Ask is above Autopsy. So jar order and scroll order differ for Tables, Autopsy and Ask. The order is one constant (`SECTION_ORDER`) if you want it to follow the page instead.
+- **Jar order follows the page.** The first version used the brief's workflow order (Intake, Tables, Stitching, Result, Recipes, Autopsy, Ask), which is not how the page is laid out. The order was then read from the page itself, with every section open (loaded demo, stitched, Autopsy open), from each `data-lab-section` element's DOM position and its vertical position (they agree): Intake, Stitching, Result (inside Stitching), Recipes, Ask, Autopsy, Tables. The table cards are rendered last, below Ask the Lab and the Autopsy panel. That is `SECTION_ORDER`; an e2e check compares the jar order with the sections' real top-to-bottom order, so a layout change that reorders the page fails the test and the constant is the one place to fix.
 - **Stitching and Result need the stitching table open.** They live inside it, so if the user closes it the jars go (a jar with nothing to scroll to would be dead). The brief said "when proposals exist" and "when a stitch exists"; that is the same except while the stitching table is closed.
 - **A clicked jar stays current** until the user scrolls by hand (wheel, touch, or a scroll key). Without that, a section the page cannot bring to the middle of the window (Ask, right above the table cards) loses the highlight as soon as the smooth scroll ends. I found this in a screenshot; the e2e test now waits for the scroll to settle before checking.
 - **Tooltips overlap the main column** while open, since they open to the left of a jar that sits in the gutter. They are transient and ignore the pointer.

@@ -1,6 +1,6 @@
 /**
  * The lab shelf model (pure; no React, no DOM). The shelf is page navigation: one
- * jar per page section, shown only while that section exists, in workflow order.
+ * jar per page section, shown only while that section exists, in the order the sections appear on the page.
  * Each jar's liquid shows how far that step has got (empty, half, full), and its
  * tooltip gives a one-line status. This holds no state of its own: it is a
  * function of what the app already knows.
@@ -22,8 +22,13 @@ export const STATIC_ARC_RADIUS_PX = 40;
 /** How many tables the Tables tooltip names before it says "and N more". */
 export const TOOLTIP_MAX_TABLES = 6;
 
-/** Workflow order, which is the order of the jars. */
-export const SECTION_ORDER = ["intake", "tables", "stitching", "result", "recipes", "autopsy", "ask"] as const;
+/**
+ * Top-to-bottom page order, which is the order of the jars. Read from the page
+ * (the sections' `data-lab-section` markers, in DOM order and by vertical
+ * position) with every section open: the table cards are rendered last, below
+ * Ask the Lab and the Autopsy panel. Change it here if the page is reordered.
+ */
+export const SECTION_ORDER = ["intake", "stitching", "result", "recipes", "ask", "autopsy", "tables"] as const;
 export type SectionId = (typeof SECTION_ORDER)[number];
 
 /** The short name printed under each jar (never truncated). */

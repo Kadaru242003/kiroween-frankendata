@@ -112,9 +112,9 @@ describe("LabShelf (page navigation)", () => {
 
   it("shows Intake, Tables and Ask once tables are loaded, with names under the jars, no per-table jars", () => {
     const { view } = setup();
-    expect(names(view.container)).toEqual(["Go to Intake", "Go to Tables", "Go to Ask the Lab"]);
+    expect(names(view.container)).toEqual(["Go to Intake", "Go to Ask the Lab", "Go to Tables"]);
     const texts = Array.from(view.container.querySelectorAll(".shelf-jar__text")).map((e) => e.textContent);
-    expect(texts).toEqual(["Intake", "Tables", "Ask"]);
+    expect(texts).toEqual(["Intake", "Ask", "Tables"]);
     expect(view.container.querySelector(".shelf-coil--powered")).not.toBeNull();
   });
 
@@ -129,7 +129,7 @@ describe("LabShelf (page navigation)", () => {
   it("adds Stitching while proposals exist, Result and Recipes after a stitch, Autopsy while one is open", () => {
     const { view, update, stitchStore } = setup({ stitchOpen: true });
     act(() => stitchStore.setProposals(proposalSet, "v1", false));
-    expect(names(view.container)).toEqual(["Go to Intake", "Go to Tables", "Go to Stitching", "Go to Ask the Lab"]);
+    expect(names(view.container)).toEqual(["Go to Intake", "Go to Stitching", "Go to Ask the Lab", "Go to Tables"]);
     expect(screen.getByRole("button", { name: "Go to Stitching" })).toHaveAttribute("data-progress", "half");
     act(() => stitchStore.setDecision({ proposalId: "m1", decision: "approved" }));
     act(() => stitchStore.setDecision({ proposalId: "m2", decision: "approved" }));
@@ -138,7 +138,7 @@ describe("LabShelf (page navigation)", () => {
 
     act(() => stitchStore.setApplied(...applied("stitch_1_result", 48)));
     expect(names(view.container)).toEqual([
-      "Go to Intake", "Go to Tables", "Go to Stitching", "Go to Result", "Go to Recipes", "Go to Ask the Lab",
+      "Go to Intake", "Go to Stitching", "Go to Result", "Go to Recipes", "Go to Ask the Lab", "Go to Tables",
     ]);
     expect(screen.getByRole("button", { name: "Go to Result" })).toHaveAttribute("data-progress", "full");
     expect(screen.getByRole("button", { name: "Go to Stitching" })).toHaveAttribute("data-progress", "full");

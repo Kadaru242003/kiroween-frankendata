@@ -384,13 +384,13 @@ test.describe('lab shelf at 1600px', () => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Load business demo' }).click()
     await expect(page.locator('.shelf-arc--big')).toBeAttached()
-    await expect.poll(() => jarNames(page)).toEqual(['Go to Intake', 'Go to Tables', 'Go to Ask the Lab'])
+    await expect.poll(() => jarNames(page)).toEqual(['Go to Intake', 'Go to Ask the Lab', 'Go to Tables'])
     await expect(page.getByRole('button', { name: 'Go to Intake' })).toHaveAttribute('data-progress', 'full')
     await expect(page.getByRole('button', { name: 'Go to Ask the Lab' })).toHaveAttribute('data-progress', 'empty')
 
     // Names are real text under the jars: at least 12px, never cut off.
     const texts = page.locator('.lab-shelf .shelf-jar__text')
-    await expect(texts).toHaveText(['Intake', 'Tables', 'Ask'])
+    await expect(texts).toHaveText(['Intake', 'Ask', 'Tables'])
     const sizes = await texts.evaluateAll((els) =>
       els.map((e) => ({ px: parseFloat(getComputedStyle(e).fontSize), clipped: e.scrollWidth > e.clientWidth })),
     )
@@ -413,7 +413,17 @@ test.describe('lab shelf at 1600px', () => {
     await stitchEverything(page)
     await expect
       .poll(() => jarNames(page))
-      .toEqual(['Go to Intake', 'Go to Tables', 'Go to Stitching', 'Go to Result', 'Go to Recipes', 'Go to Ask the Lab'])
+      .toEqual(['Go to Intake', 'Go to Stitching', 'Go to Result', 'Go to Recipes', 'Go to Ask the Lab', 'Go to Tables'])
+    // The jars are in the page's real top-to-bottom order (DOM order and vertical position).
+    const pageOrder = await page.evaluate(() =>
+      (Array.from(document.querySelectorAll('[data-lab-section]')) as HTMLElement[])
+        .map((el, dom) => ({ id: el.dataset.labSection, dom, top: el.getBoundingClientRect().top + window.scrollY }))
+        .sort((a, b) => a.top - b.top || a.dom - b.dom)
+        .map((x) => x.id),
+    )
+    const jarOrder = await jars(page).evaluateAll((els) => els.map((e) => e.getAttribute('data-section')))
+    expect(jarOrder).toEqual(pageOrder)
+    expect(jarOrder).toEqual(['intake', 'stitching', 'result', 'recipes', 'ask', 'tables'])
     await expect(page.getByRole('button', { name: 'Go to Result' })).toHaveAttribute('data-progress', 'full')
     await expect(page.getByRole('button', { name: 'Go to Stitching' })).toHaveAttribute('data-progress', 'full')
     await expect(page.getByRole('button', { name: 'Go to Recipes' })).toHaveAttribute('data-progress', 'empty')
