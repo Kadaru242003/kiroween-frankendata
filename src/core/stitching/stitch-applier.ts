@@ -583,6 +583,13 @@ export interface JoinResultColumn {
   sourceColumnName: string;
   /** The inferred output type (preserved from the source column). */
   type: ColumnType;
+  /**
+   * Present when this output column merges approved matched columns: the OTHER
+   * members of the group (the leader is `sourceTableName.sourceColumnName`).
+   * The value is `COALESCE(leader, ...mergedFrom)`, so a matched pair becomes
+   * one column named after the member nearest the anchor.
+   */
+  mergedFrom?: { sourceTableName: string; sourceColumnName: string }[];
 }
 
 /** One table's placement in the LEFT JOIN chain, after ordering. */
@@ -760,31 +767,87 @@ export function planJoinChain(
     }
   }
 
-  const columns = planResultColumns(anchor, steps);
+  const columns = planResultColumns(anchor, steps, sortedMatches);
   return { tableName, anchor, steps, columns };
 }
 
 /**
  * Build the ordered, collision-resolved output column list (Req 7.6, 7.10).
  *
- * Every anchor column is emitted. For each joined table, every column is emitted
- * EXCEPT its key column (which is represented once by the already-joined side,
- * Req 7.6). A would-be output name that collides with a name already emitted
- * from a different source table is prefixed with its source table name
- * (`<table>_<column>`, Req 7.10); if the prefixed form still collides it is
- * suffixed with an incrementing counter so output names stay unique.
+ * Approved matched column pairs (the join keys and every other approved match
+ * between two tables in the chain, with equal types) are merged into ONE output
+ * column: `COALESCE(<member nearest the anchor>, <other members>)`, named after
+ * the member nearest the anchor; the other members' copies are dropped. So a
+ * matched pair never leaves a duplicate column or a `_1` suffix. Unmatched
+ * columns are emitted as before, and a would-be output name that collides with
+ * a name already emitted from a different source table is prefixed with its
+ * source table name (`<table>_<column>`, Req 7.10); if the prefixed form still
+ * collides it is suffixed with an incrementing counter.
  */
 function planResultColumns(
   anchor: JoinTableInput,
-  steps: JoinStep[]
+  steps: JoinStep[],
+  approvedMatches: MatchProposal[] = []
 ): JoinResultColumn[] {
+  const chain: JoinTableInput[] = [anchor, ...steps.map((st) => st.table)];
+  const tableIndex = new Map(chain.map((t, i) => [t.tableName, i]));
+  const schemaOf = new Map(chain.map((t) => [t.tableName, t.schema]));
+  const keyOf = (t: string, c: string): string => JSON.stringify([t, c]);
+  const typeOf = (t: string, c: string): ColumnType | undefined =>
+    schemaOf.get(t)?.find((col) => col.name === c)?.type;
+
+  // Union-find over (table, column) pairs joined by an approved same-type match.
+  const parent = new Map<string, string>();
+  const find = (k: string): string => {
+    let root = k;
+    while (parent.get(root) !== root) {
+      root = parent.get(root) ?? root;
+    }
+    parent.set(k, root);
+    return root;
+  };
+  for (const m of approvedMatches) {
+    const lt = m.left.tableName;
+    const rt = m.right.tableName;
+    const lc = m.left.columnName;
+    const rc = m.right.columnName;
+    if (!tableIndex.has(lt) || !tableIndex.has(rt) || lt === rt) continue;
+    const lType = typeOf(lt, lc);
+    const rType = typeOf(rt, rc);
+    if (lType === undefined || rType === undefined || lType !== rType) continue;
+    const lk = keyOf(lt, lc);
+    const rk = keyOf(rt, rc);
+    if (!parent.has(lk)) parent.set(lk, lk);
+    if (!parent.has(rk)) parent.set(rk, rk);
+    parent.set(find(lk), find(rk));
+  }
+  // Members of each group in chain order (table position, then column order).
+  const position = (t: string, c: string): number =>
+    (tableIndex.get(t) ?? 0) * 100000 +
+    (schemaOf.get(t)?.findIndex((col) => col.name === c) ?? 0);
+  const groups = new Map<string, { t: string; c: string }[]>();
+  for (const k of parent.keys()) {
+    const [t, c] = JSON.parse(k) as [string, string];
+    const root = find(k);
+    const list = groups.get(root) ?? [];
+    list.push({ t, c });
+    groups.set(root, list);
+  }
+  for (const list of groups.values()) {
+    list.sort((a, b) => position(a.t, a.c) - position(b.t, b.c));
+  }
+  const groupOf = (t: string, c: string): { t: string; c: string }[] | undefined => {
+    const k = keyOf(t, c);
+    return parent.has(k) ? groups.get(find(k)) : undefined;
+  };
+
   const columns: JoinResultColumn[] = [];
   const used = new Set<string>();
-
   const emit = (
     sourceTableName: string,
     sourceColumnName: string,
-    type: ColumnType
+    type: ColumnType,
+    mergedFrom?: JoinResultColumn["mergedFrom"]
   ): void => {
     let name = sourceColumnName;
     if (used.has(name)) {
@@ -797,18 +860,39 @@ function planResultColumns(
       }
     }
     used.add(name);
-    columns.push({ name, sourceTableName, sourceColumnName, type });
+    columns.push(
+      mergedFrom && mergedFrom.length > 0
+        ? { name, sourceTableName, sourceColumnName, type, mergedFrom }
+        : { name, sourceTableName, sourceColumnName, type }
+    );
+  };
+  const emitColumn = (table: string, col: ColumnSchema): void => {
+    const group = groupOf(table, col.name);
+    if (group && group.length > 1) {
+      const leader = group[0];
+      if (leader.t !== table || leader.c !== col.name) {
+        return; // dropped: represented by the member nearest the anchor.
+      }
+      emit(
+        table,
+        col.name,
+        col.type,
+        group.slice(1).map((g) => ({ sourceTableName: g.t, sourceColumnName: g.c }))
+      );
+      return;
+    }
+    emit(table, col.name, col.type);
   };
 
   for (const col of anchor.schema) {
-    emit(anchor.tableName, col.name, col.type);
+    emitColumn(anchor.tableName, col);
   }
   for (const step of steps) {
     for (const col of step.table.schema) {
-      if (col.name === step.rightColumnName) {
+      if (col.name === step.rightColumnName && !groupOf(step.table.tableName, col.name)) {
         continue; // key column folded into the already-joined side (Req 7.6).
       }
-      emit(step.table.tableName, col.name, col.type);
+      emitColumn(step.table.tableName, col);
     }
   }
   return columns;
@@ -838,10 +922,14 @@ export function buildJoinChainSql(
 
   // SELECT list: each planned column as `<alias>."<sourceCol>" AS "<outName>"`.
   const selectList = columns
-    .map(
-      (c) =>
-        `${alias(c.sourceTableName)}.${quoteIdent(c.sourceColumnName)} AS ${quoteIdent(c.name)}`
-    )
+    .map((c) => {
+      const refs = [
+        { sourceTableName: c.sourceTableName, sourceColumnName: c.sourceColumnName },
+        ...(c.mergedFrom ?? []),
+      ].map((r) => `${alias(r.sourceTableName)}.${quoteIdent(r.sourceColumnName)}`);
+      const expr = refs.length > 1 ? `COALESCE(${refs.join(", ")})` : refs[0];
+      return `${expr} AS ${quoteIdent(c.name)}`;
+    })
     .join(", ");
 
   // FROM anchor aliased by its logical name.

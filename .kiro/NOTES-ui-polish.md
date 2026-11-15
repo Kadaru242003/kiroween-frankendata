@@ -1,0 +1,32 @@
+# UI polish pass: notes
+
+Branch `ui-polish` (from `main`), three commits so each can be reverted alone: A layout and flow, B visual consistency and chart, C clean stitched output. After each commit: `npm test`, `npm run build`, `npm run check:api`, `npm run mcp:build`, `npm run test:e2e` all passed. Nothing was merged or pushed. I did not look at the result in a browser or take screenshots, so spacing, baseline alignment and color are verified only by CSS reasoning, unit and smoke tests, and the two Playwright flows.
+
+## Commit A: layout and flow
+
+1. **Done.** `#root` is 1200px max (centered, side padding from `#lab`). The chart no longer has a 560px cap. The grid background is on `body::before`, so the landing and loaded states share it.
+2. **Done.** With no tables: the drop zone and the four demo buttons. With tables: one toolbar ("Add files", "Load demo" dropdown with Business, Lab, Mismatched, Next month's files, "Apply recipe", "Reset lab"). Drag and drop works anywhere on the page (window listeners; the drop zone stops propagation so nothing loads twice). Apply recipe feedback (message, errors, Not applied list, review button) spans the row below the toolbar. No `data-testid`s existed, so none changed. "Reset lab" keeps its styling; it never had a confirm dialog, so there is no confirm behavior to keep.
+3. **Done.** Demo buttons share one baseline (the START HERE tag is absolutely positioned on the top edge of the button). "Load business demo" is the filled primary button (new `primary` prop). `text-wrap: balance` on the subtitle and the drop zone heading, with a `max-width` fallback.
+4. **Done.** "What leaves the browser?" is a popover under the trigger (absolute, max 520px, `aria-expanded`, `aria-controls`, closes on outside click and Esc). The switch and the trigger share one centered row above the title. Text is unchanged (`describeEgress`).
+5. **Done.** After a successful stitch the sticky bar shows "Stitched. N of M applied" and hides "Confirm & stitch". N and M are the approved and total proposal counts (for example 15 of 15). It reverts after Undo stitch or any decision change (the decisions object identity changes).
+6. **Done.** `ASK_VISIBLE_CHIPS_LIMIT` is now 6 (test updated). The only parenthetical hint was in the business chip ("(from invoice_date)"), now removed. After the first answer the starters collapse into a "Starter questions" toggle; New topic and Reset lab expand them again. After any Ask or chip answer the new answer scrolls into view (smooth, instant under reduced motion; focus still moves only for the Ask form).
+
+## Commit B: visual consistency and chart
+
+7. **Done.** Autopsy, Ask about this, CSV and Excel share one height (32px), border and baseline in the card header. Autopsy lost the amber outline.
+8. **Done.** Approve is the filled primary, Reject is quiet. The AI badge and "AI found this" chip already shared the RULES pill shape (same base class), so no markup change. Confidence percent is colored by value (90+ green, 70 to 89 neutral, below 70 amber, `confidenceTone`).
+9. **Done.** New `src/core/chat/format.ts` (`formatNumber`, `humanize`, `wrapLabel`, `isNumericColumnAt`). Numbers show thousands separators (whole numbers plain, otherwise 2 decimals, for example 105,200.40) in the table, axis ticks and bar labels. Left padding is reserved from the widest tick label so it cannot clip. Charts fill the card (viewBox 720 wide, no max width). X labels wrap to 2 lines, then truncate, with the full text in a `<title>`. Chart titles and result table headers are humanized for display only (the header cell keeps the raw name in a tooltip). SQL and the CSV download keep raw names. Numeric columns are right-aligned. Line chart uses the same helpers.
+10. **Done.** Answer order: question, chart, result table, SQL block with Copy SQL.
+11. **Done.** The Recipes panel only has Save recipe and Export SQL script. CSV and Excel stay on the stitched result card.
+12. **Done.** Removed the "Autopsy complete" line (smoke tests now wait for the health score stamp). "Fix all (N)" sits next to the stamp, skips proposals already added, runs the hand-offs one after another (each hand-off can recompute proposals, so they must not overlap), and uses the same review bar ("N fixes added" and "Review in stitching table").
+
+## Commit C: clean stitched output
+
+13. **Done.** In `planResultColumns` (`stitch-applier.ts`), every approved match between two tables in the chain whose column types are equal is merged (union-find, so chains of matches merge into one group). The member nearest the anchor leads: the output is `COALESCE(leader, others...) AS <leader name>` and the other members are dropped. The join key pair is merged the same way. Pairs with different types are not merged. Unmatched columns keep the old collision prefix rule. `buildJoinChainSql` emits the COALESCE, so the applier, recipes (replay), the MCP server and the Export SQL script all produce the same SQL. Result changes: the monster stitch no longer has `species_1`; with an AI-discovered `danger_level` match the column merges into `Threat_Level`; the business demo result has `region` (not `Region_1`). The business demo's stitched chip now groups by the merged `region` column. Goldens updated only where columns or names changed (stitch golden, recipes golden month two, business golden, join unit test); new unit tests cover merge, no merge on type mismatch, and chained merges.
+    - **Data tweak:** the billing file used `Emea` for EMEA customers, which would win over the CRM `EMEA` in the merged column (anchor side wins). The invented billing data now says `EMEA`, so the merged region column is consistent. Totals are unchanged (North America 105,200.40, EMEA 59,100, APAC 27,988.50).
+14. **Done.** `mostFrequentSurfaceForm` now breaks frequency ties by case shape (Title Case, then other mixed case, then ALL CAPS or all lowercase), then lexicographically. "Northwind Analytics" beats "NORTHWIND Analytics". Unit test and a property test (the choice is always an observed, most frequent, best-shaped variant). Side effect: the month-two golden now has `Bog Hag` where it had `BOG HAG` (a three-way tie), pinned in the test.
+
+## Other notes
+
+- The old business notes (`.kiro/NOTES-business-demo.md`) still mention `Region_1`; they describe the state before this pass.
+- Known follow-ups: no visual QA was possible here; `Add files` uses a visually hidden input; the toolbar "Apply recipe" shows its hint as a tooltip (`title`) instead of text.

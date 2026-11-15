@@ -126,7 +126,8 @@ describe("Recipes golden: month one to month two", () => {
     const plan = confirmedPlan(lab, res.mapping.overrides);
     const stitched = await lab.controller.applyPlan(plan);
     const snap = await resultSnapshot(lab.db, stitched.tableName);
-    // Pinned month-two result (regression anchor).
+    // Pinned month-two result (regression anchor). Matched pairs are merged into one
+    // column (no species_1), and ties pick Title Case (Bog Hag over BOG HAG).
     expect(summary).toEqual({ mapped: 9, notApplied: [], approved: 9 });
     expect(plan.anchorTableName).toBe("monsters");
     expect(plan.approvedMatches).toHaveLength(2);
@@ -140,24 +141,24 @@ describe("Recipes golden: month one to month two", () => {
       "clean:whitespace:monsters.Species",
     ]);
     expect(snap.columns).toEqual([
-      "Monster_Name", "Species", "Threat_Level", "Sedated", "species_1", "danger_level", "hazardous",
+      "Monster_Name", "Species", "Threat_Level", "Sedated", "danger_level", "hazardous",
     ]);
     // 14 roster rows minus the 2 extra Sorrow duplicates.
     expect(snap.rows).toHaveLength(12);
     expect(snap.rows).toEqual(
       [
-        ["Bogsworth", "BOG HAG", "High", "true", "Bog Hag", "High", "true"],
-        ["Dross", "Three-Eyed Ooze", "Medium", "false", "three-eyed ooze", "Medium", "true"],
-        ["Ember", "Moth Titan", "High", "false", "Moth Titan", "High", "true"],
-        ["Gloam", "Swamp Wraith", "Medium", "true", "Swamp Wraith", "Medium", "false"],
-        ["Hollow", "Moth Titan", "High", "true", "Moth Titan", "High", "false"],
-        ["Murk", "Swamp Wraith", "Low", "false", "Swamp Wraith", "Low", "true"],
-        ["Nettle", "BOG HAG", "High", "false", "Bog Hag", "High", "true"],
-        ["Pinch", "BOG HAG", "Low", "false", "Bog Hag", "Low", "true"],
-        ["Quill", "Cave Howler", "Medium", "false", "Cave Howler", "Medium", "false"],
-        ["Rattle", "Bone Shambler", "Low", "true", "Bone Shambler", "Low", "false"],
-        ["Skrill", "Rock Golem", "Medium", "true", "Rock Golem", "Medium", "false"],
-        ["Sorrow", "Cave Howler", "High", "true", "Cave Howler", "High", "false"],
+        ["Bogsworth", "Bog Hag", "High", "true", "High", "true"],
+        ["Dross", "Three-Eyed Ooze", "Medium", "false", "Medium", "true"],
+        ["Ember", "Moth Titan", "High", "false", "High", "true"],
+        ["Gloam", "Swamp Wraith", "Medium", "true", "Medium", "false"],
+        ["Hollow", "Moth Titan", "High", "true", "High", "false"],
+        ["Murk", "Swamp Wraith", "Low", "false", "Low", "true"],
+        ["Nettle", "Bog Hag", "High", "false", "High", "true"],
+        ["Pinch", "Bog Hag", "Low", "false", "Low", "true"],
+        ["Quill", "Cave Howler", "Medium", "false", "Medium", "false"],
+        ["Rattle", "Bone Shambler", "Low", "true", "Low", "false"],
+        ["Skrill", "Rock Golem", "Medium", "true", "Medium", "false"],
+        ["Sorrow", "Cave Howler", "High", "true", "High", "false"],
       ]
         .map((r) => JSON.stringify(r))
         .sort()
