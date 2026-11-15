@@ -9,14 +9,24 @@ Built for the Kiroween 2026 hackathon, Frankenstein category: a mad-scientist la
 ## Try it in 60 seconds
 
 1. Click **Reset lab** (if any tables are already loaded) to start clean.
-2. Click **Load mismatched demo** to load two files that describe the same creatures with different headers.
-3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch**, then **Apply & stitch** in the Join panel. You get the cleaned, deduplicated, joined `stitch_1_result` table with 12 rows. **Undo stitch** reverses it.
-4. In **Ask the Lab**, click the starter question "How many rows per Species in stitch_1_result?". You get a bar chart, and Swamp Wraith has a count of 3. Starter questions run with no AI at all.
-5. Click **Autopsy** on the `monsters` card to see its health score (81), the score breakdown, and the per-column findings.
+2. Click **Load business demo**: a CRM export (`crm_customers`, 22 rows) and a billing export (`billing_invoices`, 48 rows) that never agree. They have duplicate customers, casing and whitespace variants, mixed date formats, currency strings and nulls.
+3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch**, then **Apply & stitch**. The tables are joined on the email key (billing emails that differ in casing are cleaned first), giving 48 rows.
+4. In **Ask the Lab**, click the starter question "What is the monthly revenue by region in crm_customers?" for a bar chart, or "What is the invoiced amount by month (from invoice_date)?" for a line chart. Starter questions run with no AI at all.
+5. Click **Autopsy** on the `crm_customers` card to see its health score (79), the breakdown, and the per-column findings.
+
+With AI on, the stitching screen can also surface "AI found this" for `client_name` and `Customer_Name`, a pair the rules scored too low (0.38) to show.
+
+**AI: On / Off (fully local):** when the build has AI enabled, a switch in the header turns every AI request off for the session. The "What leaves the browser?" note lists exactly what is sent when it is on. When the build has AI disabled, the header says "Fully local".
+
+## Try the monster demo
+
+1. Click **Load mismatched demo**: two files about the same creatures with different headers.
+2. Stitch as above (**Stitch tables**, **Approve all suggestions**, **Confirm & stitch**, **Apply & stitch**) for 12 rows in `stitch_1_result`.
+3. Click the starter question "How many rows per Species in stitch_1_result?": Swamp Wraith has a count of 3. The Autopsy on `monsters` scores 81. **Load demo data** loads three more files.
 
 ## Try the recipe flow
 
-1. Do steps 1 to 3 above (month one).
+1. Load the monster demo and stitch it (month one, steps 1 and 2 of the monster demo).
 2. In the **Recipes** panel under the stitched result, click **Save recipe**. A small JSON file downloads (names and types only, never row values).
 3. Click **Reset lab**, then **Load next month's files** (same headers, new rows, new duplicates and spellings).
 4. Click **Apply recipe** and choose the saved file. The matches and cleanups come back pre-approved and anything that could not be mapped is listed as "not applied". Nothing stitches on its own.
@@ -41,12 +51,13 @@ With AI off, free-form questions show a message and the starter questions keep w
 - **Autopsy:** a data quality case file for any table or stitched result, with a transparent 0 to 100 health score, per-column findings, and **Fix it** buttons that add the matching cleanup to the approval flow. Export the report as Markdown or JSON.
 - **Recipes and export:** save a stitch as a recipe and replay it on new files through a strict validator and mapper. Export any table as **CSV or Excel**, and export a readable **DuckDB SQL script** of the cleanups and join.
 - **Ask the Lab:** plain-English questions become one read-only DuckDB query, checked by the SQL validator, with a table, the SQL, a CSV export, and **bar and line charts** (with a data table for screen readers). **Follow-up questions** use the last 3 turns as context (question text, SQL, column names and row counts only). **New topic** clears the thread, and **Ask about this** on a table card starts a question about that table.
+- **Fully local switch:** an "AI: On / Off (fully local)" header switch (or a static "Fully local" label when the build has AI off), with a "What leaves the browser?" disclosure built from the same limits the payload builders use.
 - **Starter questions that work with AI off:** deterministic example questions per table run with no LLM call at all.
 - **Little Frank:** a mascot stitched together from spreadsheet cells who reacts to every step: asleep until you load data, goggles while you review, bandages when you stitch, a chart sign for answers, a magnifying glass for the Autopsy, a recipe scroll after a recipe.
 - **FrankenData MCP server:** the same engine as eight `frankendata_*` tools for AI agents such as Kiro, over stdio, with a path guard, no network and no AI (see below).
 - **End-to-end test:** a Playwright spec runs the whole demo in a real browser.
 
-**By the numbers:** 7 specs, 10 steering docs, 9 hooks, 2 custom agents, 2 MCP servers (1 enabled), 156 test files with 960 tests (63 of them property-test files), 1 Playwright end-to-end spec.
+**By the numbers:** 7 specs, 10 steering docs, 9 hooks, 2 custom agents, 2 MCP servers (1 enabled), 159 test files with 975 tests (63 of them property-test files), 2 Playwright end-to-end tests.
 
 ## Architecture
 
@@ -151,7 +162,7 @@ The same engine that runs in the browser is also available to AI agents through 
 
 ### End-to-end browser test
 
-`npm run test:e2e` (add `E2E_SLOWMO=600` and `-- --headed` to watch it) runs one Playwright spec (`e2e/demo.spec.ts`) in a real browser against the Vite dev server. It is not part of `npm test`. First run `npx playwright install chromium`. The spec loads the mismatched demo, stitches with all suggestions (12 rows), checks the species chip (Swamp Wraith 3), opens the Autopsy on monsters (81), saves a recipe, resets, loads next month's files, applies the recipe and expects 12 rows.
+`npm run test:e2e` (add `E2E_SLOWMO=600` and `-- --headed` to watch it) runs the Playwright spec (`e2e/demo.spec.ts`, two tests) in a real browser against the Vite dev server. It is not part of `npm test`. First run `npx playwright install chromium`. One test loads the mismatched demo, stitches (12 rows), checks the species chip (Swamp Wraith 3), opens the Autopsy on monsters (81), saves a recipe, resets, loads next month's files, applies the recipe and expects 12 rows. The other loads the business demo, stitches (48 rows), checks revenue by region, and opens the CRM Autopsy (79).
 
 For agent-driven browser checks, the Playwright MCP server is registered in `.kiro/settings/mcp.json` but disabled by default. Enable it in the MCP Server view in Kiro, start `npm run dev`, then ask Kiro to open the app and click through the demo.
 

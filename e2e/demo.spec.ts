@@ -76,3 +76,23 @@ test('month one, recipe, month two', async ({ page }) => {
     page.getByRole('region', { name: 'Stitched result preview' }).getByText('12 rows', { exact: true }),
   ).toBeVisible()
 })
+
+test('business demo: stitch on the email key, revenue by region, Autopsy', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Preview of billing_invoices', exact: true })).toBeVisible()
+
+  await stitchEverything(page)
+  const result = page.getByRole('region', { name: 'Stitched result preview' })
+  await expect(result.getByText('48 rows', { exact: true })).toBeVisible()
+
+  await page
+    .getByRole('button', { name: 'What is the monthly revenue by region in crm_customers?' })
+    .click()
+  const ask = page.getByRole('region', { name: 'Ask the Lab' })
+  await expect(ask.getByRole('row', { name: /North America\s+34/ })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Autopsy of crm_customers' }).click()
+  await expect(page.getByLabel('Health score 79 out of 100')).toBeVisible()
+})
