@@ -10,19 +10,43 @@ Built for the Kiroween 2026 hackathon, Frankenstein category: a mad-scientist la
 
 1. Click **Reset lab** (if any tables are already loaded) to start clean.
 2. Click **Load mismatched demo** to load two files that describe the same creatures with different headers.
-3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch**, then **Apply & stitch** in the Join panel to build the cleaned, deduplicated, joined `stitch_1_result` table. Use **Undo stitch** to reverse it.
-4. In **Ask the Lab**, ask: "which species is most common?"
-5. You get back Swamp Wraith with a count of 3, answered from the cleaned stitch result, plus the generated SQL and a CSV export. Then click the starter question "How many rows per Species in stitch_1_result?" to get a bar chart.
+3. Click **Stitch tables**, then **Approve all suggestions**, then **Confirm & stitch**, then **Apply & stitch** in the Join panel. You get the cleaned, deduplicated, joined `stitch_1_result` table with 12 rows. **Undo stitch** reverses it.
+4. In **Ask the Lab**, click the starter question "How many rows per Species in stitch_1_result?". You get a bar chart, and Swamp Wraith has a count of 3. Starter questions run with no AI at all.
+5. Click **Autopsy** on the `monsters` card to see its health score (81), the score breakdown, and the per-column findings.
+
+## Try the recipe flow
+
+1. Do steps 1 to 3 above (month one).
+2. In the **Recipes** panel under the stitched result, click **Save recipe**. A small JSON file downloads (names and types only, never row values).
+3. Click **Reset lab**, then **Load next month's files** (same headers, new rows, new duplicates and spellings).
+4. Click **Apply recipe** and choose the saved file. The matches and cleanups come back pre-approved and anything that could not be mapped is listed as "not applied". Nothing stitches on its own.
+5. Click **Review in stitching table**, then **Confirm & stitch** and **Apply & stitch**. Month two has the same 12 row shape.
+
+## Try a follow-up question
+
+With AI on (the live site, or a local `.env` with the proxy variables):
+
+1. After stitching, ask "which species is most common?" in **Ask the Lab**.
+2. Ask "now only the High threat ones". The previous question appears as a card, and the new answer keeps the grouping and ordering and adds the filter.
+3. Click **New topic** to clear the thread and the input. Click **Ask about this** on any table card to start a question about that table.
+
+With AI off, free-form questions show a message and the starter questions keep working.
 
 ## Features
 
 - **Browser-only engine:** DuckDB-WASM runs entirely client-side, with no server round trip for your data.
-- **Typed intake:** CSV (PapaParse) and XLSX (SheetJS) are parsed and type-inferred through messy real-world values (currency, percents, mixed date formats, null tokens).
-- **Deterministic rules engine for stitching, with an optional AI enhancement:** each proposal carries an engine badge, and the AI can surface "AI found this" discoveries that the rules alone scored too low to show.
-- **Before and after approval screen:** review every match and cleanup as a diff, then approve, reject, or edit (re-pair a match to another column, or change a category's canonical value), with single-step undo. 
-- **Ask the Lab:** plain-English questions become DuckDB SQL, rendered as a table with an optional bar or line chart and a full CSV export. Short follow-ups ("now only the High ones") use the last 3 turns as context, sending only question text, SQL, column names and row counts, never result values. "New topic" clears the thread, and "Ask about this" on a table card starts a question about that table.
+- **Typed intake:** CSV (PapaParse) and XLSX (SheetJS 0.20.3 from the official release) are parsed and type-inferred through messy real-world values (currency, percents, mixed date formats, null tokens). Demo datasets are bundled.
+- **AI stitching with a rules-first engine:** a deterministic rules engine proposes column matches and cleanups. The optional AI only nudges scores of candidates the rules already found, and can surface an **"AI found this"** discovery that the rules scored too low to show. Every proposal carries an engine badge.
+- **Approval flow:** review each match and cleanup as a before and after diff, approve, reject or edit (re-pair a match, change a category's canonical value), approve in bulk, confirm, choose the anchor and join keys, apply, and undo. Originals are never changed; results are `stitch_<n>_*` tables.
+- **Autopsy:** a data quality case file for any table or stitched result, with a transparent 0 to 100 health score, per-column findings, and **Fix it** buttons that add the matching cleanup to the approval flow. Export the report as Markdown or JSON.
+- **Recipes and export:** save a stitch as a recipe and replay it on new files through a strict validator and mapper. Export any table as **CSV or Excel**, and export a readable **DuckDB SQL script** of the cleanups and join.
+- **Ask the Lab:** plain-English questions become one read-only DuckDB query, checked by the SQL validator, with a table, the SQL, a CSV export, and **bar and line charts** (with a data table for screen readers). **Follow-up questions** use the last 3 turns as context (question text, SQL, column names and row counts only). **New topic** clears the thread, and **Ask about this** on a table card starts a question about that table.
 - **Starter questions that work with AI off:** deterministic example questions per table run with no LLM call at all.
-- **Little Frank:** a mascot stitched together from spreadsheet cells who reacts to every step: asleep until you load data, alive after a lightning strike, goggles while you review, bandages when you stitch, a chart when you get an answer. Click him to poke him.
+- **Little Frank:** a mascot stitched together from spreadsheet cells who reacts to every step: asleep until you load data, goggles while you review, bandages when you stitch, a chart sign for answers, a magnifying glass for the Autopsy, a recipe scroll after a recipe.
+- **FrankenData MCP server:** the same engine as eight `frankendata_*` tools for AI agents such as Kiro, over stdio, with a path guard, no network and no AI (see below).
+- **End-to-end test:** a Playwright spec runs the whole demo in a real browser.
+
+**By the numbers:** 7 specs, 10 steering docs, 9 hooks, 2 custom agents, 2 MCP servers (1 enabled), 156 test files with 960 tests (63 of them property-test files), 1 Playwright end-to-end spec.
 
 ## Architecture
 
@@ -66,6 +90,7 @@ Built spec-first with Kiro. Everything below is checked into the repo.
 | `frankendata-autopsy` | data quality report, health score, Fix it |
 | `frankendata-recipes` | export, save and apply recipes, SQL script, next-month demo |
 | `frankendata-mcp` | local MCP server for agents |
+| `frankendata-smarter-ask` | follow-up questions, thread view, line charts, Ask about this, reset lock |
 
 **Steering** (`.kiro/steering/`)
 
