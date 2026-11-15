@@ -16,7 +16,7 @@ Branch `ci`, cut from `main`. Not merged.
 
 - **Triggers**: `push` to `main` and `pull_request`. A newer push to the same branch or pull request cancels a run in progress (`concurrency`). `permissions: contents: read` only.
 - **One job**, `ubuntu-latest`, 30 minute timeout. Steps, in order, each its own named step so the first red one names the gate:
-  1. check out, `actions/setup-node@v4` with `node-version-file: .nvmrc` and `cache: npm`, `npm ci`
+  1. check out, `actions/setup-node@v7` with `node-version-file: .nvmrc` and `cache: npm`, `npm ci`
   2. "Confirm AI is off": fails if `VITE_AI_ENABLED` is set in the environment
   3. Gate 1 `npm run lint`
   4. Gate 2 `npm test`
@@ -27,7 +27,7 @@ Branch `ci`, cut from `main`. Not merged.
   9. Gate 6 `npm run test:e2e`
   10. on failure, upload `playwright-report/` and `test-results/` (traces are kept on failure by the existing config) as the `playwright-report` artifact, 14 days
 - **No secrets, AI off**: the workflow reads no secret and never sets `VITE_AI_ENABLED`, which is also guarded by step 2. `.env` is gitignored, so a clean runner has none. The app and the tests therefore run fully local.
-- **Action versions** are pinned by major tag (`@v4`), not by commit SHA. Pinning to SHAs is stricter and is a reasonable follow-up.
+- **Action versions** are pinned by major tag (`checkout@v7`, `setup-node@v7`, `upload-artifact@v7`; see `.kiro/NOTES-ci-fix.md` for how they were verified), not by commit SHA. Pinning to SHAs is stricter and is a reasonable follow-up.
 - **Node pin**: neither `.nvmrc` nor `engines` existed, so I added `.nvmrc` with the exact version this repo was verified on. I did not add `engines` to `package.json`: Vercel reads `engines.node` to choose its runtime, so adding it would change deployment behavior, which was outside this task.
 
 ## Checked locally
