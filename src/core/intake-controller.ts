@@ -179,7 +179,11 @@ export function createIntakeController(
             schema,
             parsed.rows
           );
-          store.addTable({ ...loaded, sourceFileName });
+          store.addTable({
+            ...loaded,
+            sourceFileName,
+            ...(parsed.sheetNotice ? { sheetNotice: parsed.sheetNotice } : {}),
+          });
         } catch (error) {
           // Parsers and the DuckDB service signal failures with a structured
           // IntakeFailure; record its embedded IntakeError directly (Req 6.8,

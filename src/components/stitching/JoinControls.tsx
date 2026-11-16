@@ -75,6 +75,8 @@ export interface JoinControlsProps {
   fanOut: FanOutCounts | null;
   /** `true` once the plan has been applied (a stitched table exists). */
   applied: boolean;
+  /** A short message when the last apply failed, else `null`/omitted. */
+  applyError?: string | null;
   /** Change the anchor table (Req 7.2). */
   onChangeAnchor: (nextAnchorTableName: string) => void;
   /** Choose a different approved match as a pair's join key (Req 7.4). */
@@ -192,6 +194,7 @@ export function JoinControls({
   tables,
   fanOut,
   applied,
+  applyError = null,
   onChangeAnchor,
   onChangeJoinKey,
   onApply,
@@ -341,6 +344,12 @@ export function JoinControls({
           </button>
         ) : null}
       </div>
+
+      {applyError !== null ? (
+        <p className="join-controls__error" role="alert">
+          {applyError}
+        </p>
+      ) : null}
 
       {showFanOutWarning && fanOut ? (
         <div

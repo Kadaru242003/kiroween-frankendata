@@ -26,14 +26,11 @@
  *  - Wrap the bytes in a File, parse with XlsxParser, and assert the single
  *    data cell equals the expected ISO `YYYY-MM-DD` string.
  *
- * Timezone handling: the parser's `dateToIso` reads UTC getters, and SheetJS's
- * date <-> serial conversion is calendar-field based. To make the round trip
- * timezone-independent we construct the JS Date at **UTC noon** of the target
- * calendar day. UTC noon is far enough from either midnight boundary that no
- * local-timezone offset applied anywhere in the SheetJS write/read path can
- * push the date across a day boundary, so the parsed ISO string always names
- * the generated calendar day. The expected ISO string is computed from the
- * same UTC components the parser uses, keeping the assertion self-consistent.
+ * Timezone handling: the parser's `dateToIso` reads LOCAL getters, and
+ * SheetJS's date <-> serial conversion is calendar-field based. We construct
+ * the JS Date at **local noon** of the target calendar day, so the parsed ISO
+ * string always names the generated calendar day. (Midnight and non-UTC zones
+ * are covered by `xlsx-timezone.test.ts`.)
  */
 
 import fc from "fast-check";
@@ -63,11 +60,11 @@ const calendarDateArb = fc
   })
   .filter(({ year, month, day }) => {
     // UTC noon keeps us clear of midnight boundaries in both directions.
-    const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+    const d = new Date(year, month - 1, day, 12, 0, 0, 0);
     return (
-      d.getUTCFullYear() === year &&
-      d.getUTCMonth() === month - 1 &&
-      d.getUTCDate() === day
+      d.getFullYear() === year &&
+      d.getMonth() === month - 1 &&
+      d.getDate() === day
     );
   });
 
@@ -98,7 +95,7 @@ describe("XlsxParser — Property 5: Excel serial date conversion", () => {
     await fc.assert(
       fc.asyncProperty(calendarDateArb, async ({ year, month, day }) => {
         // Target calendar day at UTC noon (boundary-safe for the round trip).
-        const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+        const date = new Date(year, month - 1, day, 12, 0, 0, 0);
         const expectedIso = `${pad(year, 4)}-${pad(month, 2)}-${pad(day, 2)}`;
 
         const bytes = xlsxBytesWithDate(date);

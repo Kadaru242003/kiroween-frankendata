@@ -82,7 +82,7 @@ export function toCsvText(columns: string[], rows: ExportCell[][]): string {
   return toCsv(
     columns,
     rows.map((r) =>
-      r.map((c) => (c === null ? "" : typeof c === "string" ? c : String(c)))
+      r.map((c) => (c === null ? "" : c))
     )
   );
 }

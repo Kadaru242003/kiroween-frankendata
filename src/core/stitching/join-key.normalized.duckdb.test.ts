@@ -71,7 +71,9 @@ describe("the shared join builder", () => {
     const sql = buildJoinChainSql(1, tables("number", "number"), [m("k", "k")], "a").createSql;
     expect(sql).toContain(`ON "a"."k" = "b"."k"`);
     expect(sql).not.toContain("regexp_replace");
+    // Mixed text and number keys convert the text side with TRY_CAST (a plain
+    // `=` fails the whole apply on the first non-numeric value).
     const mixed = buildJoinChainSql(1, tables("string", "number"), [m("k", "k")], "a").createSql;
-    expect(mixed).toContain(`ON "a"."k" = "b"."k"`);
+    expect(mixed).toContain(`ON TRY_CAST(trim("a"."k") AS DOUBLE) = "b"."k"`);
   });
 });

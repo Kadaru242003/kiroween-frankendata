@@ -372,7 +372,6 @@ export function createStitchController(
    */
   async function applyPlan(plan: StitchPlan): Promise<StitchedTable> {
     const tables = getTables();
-    store.setPlan(plan);
     const result: StitchApplyResult = await applier.apply(
       plan,
       tables.slice()
@@ -381,6 +380,9 @@ export function createStitchController(
       db,
       result.resultTableName
     );
+    // The plan is recorded only once the apply succeeded, so a failure leaves
+    // the store as it was.
+    store.setPlan(plan);
     store.setApplied(stitchedTable, result.undoStep, result.fanOut);
     return stitchedTable;
   }

@@ -131,6 +131,32 @@ export function cleanedCopyTableName(n: number, sourceTableName: string): string
   return `${STITCH_TABLE_PREFIX}${n}_clean_${sourceTableName}`;
 }
 
+/** The ON condition for one join step; text keys normalize, mixed types convert safely. */
+export function joinOnClause(
+  leftRef: string,
+  leftType: string | undefined,
+  rightRef: string,
+  rightType: string | undefined
+): string {
+  if (leftType === "string" && rightType === "string") {
+    return `${joinKeyExpr(leftRef)} = ${joinKeyExpr(rightRef)}`;
+  }
+  if (leftType === rightType) {
+    return `${leftRef} = ${rightRef}`;
+  }
+  // Mixed types: a plain `=` makes DuckDB cast the text side and fail on the
+  // first non-convertible value. Convert the text side with TRY_CAST (no match
+  // instead of an error); two different non-text types compare as text.
+  const target: Record<string, string> = { number: "DOUBLE", date: "DATE", boolean: "BOOLEAN" };
+  if (leftType === "string" && rightType && target[rightType]) {
+    return `TRY_CAST(trim(${leftRef}) AS ${target[rightType]}) = ${rightRef}`;
+  }
+  if (rightType === "string" && leftType && target[leftType]) {
+    return `${leftRef} = TRY_CAST(trim(${rightRef}) AS ${target[leftType]})`;
+  }
+  return `CAST(${leftRef} AS VARCHAR) = CAST(${rightRef} AS VARCHAR)`;
+}
+
 /**
  * The normalized form of a text join key: whitespace collapsed, trimmed,
  * lower-cased. Matches the normalization the value overlap and the key stats use.
@@ -966,10 +992,7 @@ export function buildJoinChainSql(
     const rightType = step.table.schema.find((c) => c.name === step.rightColumnName)?.type;
     const leftRef = `${alias(step.leftTableName)}.${quoteIdent(step.leftColumnName)}`;
     const rightRef = `${alias(step.table.tableName)}.${quoteIdent(step.rightColumnName)}`;
-    const textKey = leftType === "string" && rightType === "string";
-    const onClause = textKey
-      ? `${joinKeyExpr(leftRef)} = ${joinKeyExpr(rightRef)}`
-      : `${leftRef} = ${rightRef}`;
+    const onClause = joinOnClause(leftRef, leftType, rightRef, rightType);
     fromClause +=
       ` LEFT JOIN ${quoteIdent(step.table.readTableName)} AS ${alias(step.table.tableName)}` +
       ` ON ${onClause}`;
@@ -1184,7 +1207,9 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
     //    creation order so the UndoStep captures EXACTLY what was created.
     const createdTableNames: string[] = [];
     const joinInputs: JoinTableInput[] = [];
+    let joined!: AppliedJoinChain;
 
+    try {
     for (const table of tables) {
       const approved = byTableCleanings.get(table.tableName) ?? [];
       if (approved.length > 0) {
@@ -1222,7 +1247,7 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
     }
 
     // 3. Materialize the joined result reading the copies/originals (Req 7.8).
-    const joined = await applyJoinChain(
+    joined = await applyJoinChain(
       db,
       n,
       joinInputs,
@@ -1231,6 +1256,22 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
       new Set(Object.values(plan.joinKeysByPair))
     );
     createdTableNames.push(joined.tableName);
+    } catch (error) {
+      // A failed apply leaves nothing behind: drop what this attempt created.
+      const candidates = [
+        ...createdTableNames,
+        ...tables.map((t) => cleanedCopyTableName(n, t.tableName)),
+        resultTableName(n),
+      ];
+      for (const name of new Set(candidates)) {
+        try {
+          await db.query(`DROP TABLE IF EXISTS ${quoteIdent(name)}`);
+        } catch {
+          /* best effort */
+        }
+      }
+      throw error;
+    }
 
     // 4. Record the undo step capturing exactly the created tables (Req 4.2).
     const undoStep: UndoStep = { createdTableNames };

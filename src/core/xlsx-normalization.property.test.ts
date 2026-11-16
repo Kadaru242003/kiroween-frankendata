@@ -56,13 +56,13 @@ interface GeneratedCell {
 }
 
 /**
- * Format a Date's UTC calendar fields as ISO `YYYY-MM-DD`. Mirrors the parser's
- * `dateToIso`, which uses UTC getters to avoid timezone day-shift.
+ * Format a Date's local calendar fields as ISO `YYYY-MM-DD`. Mirrors the
+ * parser's `dateToIso`, which uses local getters.
  */
-function isoFromUtc(date: Date): string {
-  const year = date.getUTCFullYear().toString().padStart(4, "0");
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
-  const day = date.getUTCDate().toString().padStart(2, "0");
+function isoFromLocal(date: Date): string {
+  const year = date.getFullYear().toString().padStart(4, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -89,7 +89,7 @@ const booleanCellArb: fc.Arbitrary<GeneratedCell> = fc
   .map((b) => ({ native: b, expected: b ? "true" : "false" }));
 
 /**
- * Date cells → ISO `YYYY-MM-DD`. Build the Date from UTC parts in a restricted
+ * Date cells → ISO `YYYY-MM-DD`. Build the Date from local parts in a restricted
  * year range (1950..2100) so there is no timezone day-shift and no Excel-epoch
  * edge weirdness. Day is kept at 1..28 so every (year, month) pair is valid.
  */
@@ -100,8 +100,8 @@ const dateCellArb: fc.Arbitrary<GeneratedCell> = fc
     day: fc.integer({ min: 1, max: 28 }),
   })
   .map(({ year, month, day }) => {
-    const native = new Date(Date.UTC(year, month, day));
-    return { native, expected: isoFromUtc(native) };
+    const native = new Date(year, month, day);
+    return { native, expected: isoFromLocal(native) };
   });
 
 /**

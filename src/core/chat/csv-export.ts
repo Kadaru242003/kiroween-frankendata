@@ -26,9 +26,22 @@ function needsQuoting(field: string): boolean {
   );
 }
 
+/** Plain numeric text such as "-5" or "1.5e3": safe, and must stay exact. */
+const NUMERIC_TEXT = /^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/;
+
+/**
+ * Spreadsheet apps run text that starts with = + - @ tab or CR as a formula.
+ * Prefix such text with an apostrophe so it opens as text. Numbers and plain
+ * numeric text are left as they are.
+ */
+function neutralizeFormula(s: string): string {
+  if (s === "" || NUMERIC_TEXT.test(s)) return s;
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+}
+
 /** Quote one field per RFC 4180: wrap in quotes and double any inner quote. */
 function quoteField(value: DisplayValue): string {
-  const s = typeof value === "string" ? value : String(value);
+  const s = typeof value === "string" ? neutralizeFormula(value) : String(value);
   if (!needsQuoting(s)) return s;
   return `"${s.replace(/"/g, '""')}"`;
 }
@@ -48,4 +61,16 @@ export function toCsv(columns: string[], rows: DisplayValue[][]): string {
     lines.push(row.map((cell) => quoteField(cell)).join(","));
   }
   return lines.join(CRLF);
+}
+
+/** The UTF-8 byte order mark. Excel needs it to read accented CSV text. */
+export const CSV_BOM = "\uFEFF";
+
+/**
+ * Prefix CSV text with a UTF-8 BOM for a browser download. Idempotent. The app's
+ * own CSV intake strips it, so a downloaded file loads back unchanged. Not used
+ * for MCP output or SQL scripts.
+ */
+export function csvWithBom(csv: string): string {
+  return csv.startsWith(CSV_BOM) ? csv : CSV_BOM + csv;
 }

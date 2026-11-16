@@ -56,7 +56,14 @@ function classifyColumn(values: CellValue[]): ColumnType {
     return "string";
   }
 
-  if (present.every(isNumber)) {
+  // Identifier-like digit strings (zip codes, phone numbers, long ids) are
+  // text: parsing them as numbers drops leading zeros or loses precision.
+  const identifierLike = present.some((value) => {
+    const text = String(value).trim();
+    return /^[+-]?0\d/.test(text) || /^\d{16,}$/.test(text);
+  });
+
+  if (!identifierLike && present.every(isNumber)) {
     return "number";
   }
   if (present.every(isBoolean)) {

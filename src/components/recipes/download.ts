@@ -1,3 +1,5 @@
+import { csvWithBom } from "../../core/chat/csv-export";
+
 /**
  * Browser download helper for binary exports (Feature 5, UI edge only).
  * Creates a Blob URL, clicks a temporary link, and revokes the URL, like the
@@ -9,7 +11,14 @@ export function downloadBytes(
   data: Uint8Array | string
 ): void {
   try {
-    const part: BlobPart = typeof data === "string" ? data : (data as BlobPart);
+    // CSV text gets a UTF-8 BOM so Excel reads accents; SQL scripts and the
+    // rest of the text downloads are left exactly as built.
+    const part: BlobPart =
+      typeof data === "string"
+        ? mime.startsWith("text/csv")
+          ? csvWithBom(data)
+          : data
+        : (data as BlobPart);
     const blob = new Blob([part], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
