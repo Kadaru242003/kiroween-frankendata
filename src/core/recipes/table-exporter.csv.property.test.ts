@@ -34,7 +34,15 @@ describe("Feature: frankendata-recipes, Property 4: CSV round trip", () => {
           const text = toCsvText(columns, rows);
           const parsed = await new CsvParser().parse(new File([text], "t.csv", { type: "text/csv" }));
           expect(parsed.columnNames).toEqual(columns);
-          const expected = rows.map((r) => r.map((c) => (c === null ? "" : String(c))));
+          // Text that a spreadsheet would run as a formula comes back with a
+          // leading apostrophe (see csv-export.formula.test.ts).
+          const back = (c: ExportCell): string => {
+            if (c === null) return "";
+            if (typeof c !== "string") return String(c);
+            const numeric = /^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(c);
+            return !numeric && /^[=+\-@\t\r]/.test(c) ? `'${c}` : c;
+          };
+          const expected = rows.map((r) => r.map(back));
           expect(parsed.rows.map((r) => r.map((c) => c ?? ""))).toEqual(expected);
         }
       ),
