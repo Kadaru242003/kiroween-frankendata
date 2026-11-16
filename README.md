@@ -63,7 +63,7 @@ With AI off, free-form questions show a message and the starter questions keep w
 - **FrankenData MCP server:** the same engine as eight `frankendata_*` tools for AI agents such as Kiro, over stdio, with a path guard, no network and no AI (see below).
 - **End-to-end tests:** 25 Playwright tests run the demos, Little Frank and the lab shelf in a real browser.
 
-**By the numbers:** 8 specs, 10 steering docs, 9 hooks, 2 custom agents, 8 MCP tools in 1 MCP server of ours (the config also lists a disabled Playwright server), 204 test files with 1417 tests (74 of them property-test files), 25 Playwright end-to-end tests.
+**By the numbers:** 8 specs, 10 steering docs, 9 hooks, 2 custom agents, 8 MCP tools in 1 MCP server of ours (the config also lists a disabled Playwright server), 208 test files with 1437 tests (74 of them property-test files), 25 Playwright end-to-end tests.
 
 ## Architecture
 
@@ -158,7 +158,7 @@ The lab shelf, the join-key work, the security hardening and the other follow-up
 - **`spec-reviewer`, on `frankendata-smarter-ask`.** It found a requirement that contradicted the code: the spec said a text-plus-number result "SHALL" be a bar chart, but the controller only draws a bar when a supplied chart spec passes validation, and only the line chart is automatic. The requirement was rewritten, and the spec gained the missing criteria (New topic and Reset behavior, the one-shot prefill, the egress line for follow-ups) and coverage for the criteria that had none.
 - **Found while testing: the Join key dropdown never changed the SQL.** A fixture test for the new default join key returned 8 rows instead of 5. The join planner picked the highest-confidence match between two tables and never read the key chosen in the dropdown. It now tries the chosen key first, the default is picked by key-likeness, and text keys compare case-insensitively (`.kiro/NOTES-join-key.md`).
 
-**Tests:** Vitest unit, property (fast-check) and DuckDB golden tests under `npm test` (204 files, 1417 tests), plus 25 Playwright tests in `e2e/demo.spec.ts` under `npm run test:e2e`.
+**Tests:** Vitest unit, property (fast-check) and DuckDB golden tests under `npm test` (208 files, 1437 tests), plus 25 Playwright tests in `e2e/demo.spec.ts` under `npm run test:e2e`.
 
 We drove each spec through spec-driven task execution with Kiro, ran the build, tests, lint and the serverless graph check at every checkpoint, and used focused prompts for follow-ups.
 
