@@ -623,3 +623,58 @@ test('lab shelf: not rendered at 1280px', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 800 })
   await expect(page.locator('.lab-shelf button.shelf-jar')).toHaveCount(3)
 })
+
+test.describe('starter chips after the full business flow, at 1600px', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  test('every visible starter chip answers, and the whole moment fires after the first starter answer', async ({ page }) => {
+    await page.goto('/')
+    // Load, Autopsy, Fix all, stitch, save the recipe.
+    await page.getByRole('button', { name: 'Load business demo' }).click()
+    await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Autopsy of crm_customers' }).click()
+    await expect(page.getByLabel(/Health score/)).toBeVisible()
+    await page.getByRole('button', { name: /^Fix all/ }).click()
+    await page.getByRole('button', { name: 'Review in stitching table' }).click()
+    await page.getByRole('button', { name: 'Approve all suggestions' }).click()
+    await page.getByRole('button', { name: /Confirm & stitch/ }).click()
+    await page.getByRole('button', { name: 'Apply & stitch' }).click()
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Save recipe' }).click()
+    await download
+
+    const ask = page.getByRole('region', { name: 'Ask the Lab' }).first()
+    const bubble = page.locator('.specimen__bubble')
+    const moments = () => page.getByTestId('lab-shelf').getAttribute('data-whole-moments')
+    expect(await moments()).toBe('0')
+
+    // The first starter: the one that failed on the live site.
+    const first = 'What is the invoiced revenue by region in stitch_1_result?'
+    const starters = ask.getByLabel('Starter questions')
+    await starters.getByRole('button', { name: first, exact: true }).click()
+    await expect(ask.getByLabel('Latest answer').locator('.ask-panel__question')).toHaveText(first)
+    await expect(page.getByText(/could not (answer|run)/)).toHaveCount(0)
+    await expect(bubble).toHaveText('I feel... whole.')
+    expect(await moments()).toBe('1')
+
+    // Then EVERY visible starter chip, including the ones behind "Show more": each answers.
+    const openStarters = async () => {
+      const toggle = ask.getByRole('button', { name: /^Starter questions/ })
+      if ((await toggle.count()) > 0 && (await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+      const more = ask.getByRole('button', { name: /^Show more/ })
+      if ((await more.count()) > 0) await more.click()
+    }
+    await openStarters()
+    const questions = await ask.locator('.ask-chips__chip').evaluateAll((els) => els.map((e) => (e.textContent ?? '').trim()))
+    expect(questions.length).toBeGreaterThanOrEqual(10)
+    expect(questions).toContain(first)
+    for (const question of questions) {
+      await openStarters()
+      await starters.getByRole('button', { name: question, exact: true }).click()
+      await expect(ask.getByLabel('Latest answer').locator('.ask-panel__question'), question).toHaveText(question)
+      await expect(page.getByText(/could not (answer|run)/), question).toHaveCount(0)
+    }
+    // None of the later answers repeats the whole moment.
+    expect(await moments()).toBe('1')
+  })
+})

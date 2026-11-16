@@ -31,6 +31,8 @@ function duckDbTypeToColumnType(dataType: string): ColumnType {
     t === "FLOAT" ||
     t.startsWith("DECIMAL") ||
     t.endsWith("INT") ||
+    // DuckDB spells the 32-bit types out: INTEGER and UINTEGER do not end in "INT".
+    t.endsWith("INTEGER") ||
     t === "HUGEINT" ||
     t === "UHUGEINT"
   ) {
@@ -50,22 +52,31 @@ interface InfoSchemaRow {
 /**
  * Discover the currently-present `stitch_*` tables and their columns from
  * `information_schema`, returning them as {@link QueryableTable}s in a stable
- * order (by table name, then column ordinal). Returns `[]` on any query error
- * so a discovery failure never breaks the panel.
+ * order (by table name, then column ordinal). The query is tried twice. If both
+ * fail it returns `[]` so a discovery failure never breaks a caller (the MCP
+ * tools); with `{ strict: true }` it throws instead, so the Ask panel can keep
+ * its previous, consistent table list rather than quietly losing the stitched
+ * tables from the SQL allowlist.
  */
 export async function discoverStitchTables(
-  db: DuckDBService
+  db: DuckDBService,
+  options: { strict?: boolean } = {}
 ): Promise<QueryableTable[]> {
-  let rows: InfoSchemaRow[];
-  try {
-    rows = await db.query<InfoSchemaRow>(
-      "SELECT table_name, column_name, data_type, ordinal_position " +
-        "FROM information_schema.columns " +
-        "ORDER BY table_name, ordinal_position"
-    );
-  } catch {
-    return [];
+  let rows: InfoSchemaRow[] | undefined;
+  // One quick retry: a transient failure here must not silently drop every
+  // stitched table from the list (and so from the SQL allowlist).
+  for (let attempt = 0; attempt < 2 && rows === undefined; attempt += 1) {
+    try {
+      rows = await db.query<InfoSchemaRow>(
+        "SELECT table_name, column_name, data_type, ordinal_position " +
+          "FROM information_schema.columns " +
+          "ORDER BY table_name, ordinal_position"
+      );
+    } catch (err) {
+      if (attempt === 1 && options.strict) throw err;
+    }
   }
+  if (rows === undefined) return [];
 
   const byTable = new Map<string, QueryableColumn[]>();
   for (const r of rows) {
@@ -99,11 +110,12 @@ export function loadedToQueryable(table: LoadedTable): QueryableTable {
  */
 export async function buildQueryableTables(
   db: DuckDBService,
-  loaded: readonly LoadedTable[]
+  loaded: readonly LoadedTable[],
+  options: { strict?: boolean } = {}
 ): Promise<QueryableTable[]> {
   const result: QueryableTable[] = loaded.map(loadedToQueryable);
   const seen = new Set(result.map((t) => t.tableName));
-  for (const stitch of await discoverStitchTables(db)) {
+  for (const stitch of await discoverStitchTables(db, options)) {
     if (!seen.has(stitch.tableName)) {
       result.push(stitch);
       seen.add(stitch.tableName);

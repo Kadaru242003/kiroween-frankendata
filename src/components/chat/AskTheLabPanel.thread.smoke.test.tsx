@@ -64,6 +64,47 @@ describe("Ask thread view", () => {
     expect(screen.getByLabelText("Latest answer")).not.toHaveFocus();
   });
 
+  it("with AI on, a chip runs its own SQL (never the typed-question path), and a follow-up carries the starter in its thread", async () => {
+    const c = controller([ok(1, { sql: "SELECT region FROM stitch_1_result", columns: ["region"] }), ok(2)]);
+    render(
+      <AskTheLabPanel
+        controller={c}
+        store={new AskStore()}
+        chips={[
+          {
+            tableName: "stitch_1_result",
+            question: "What is the invoiced revenue by region in stitch_1_result?",
+            sql: "SELECT region FROM stitch_1_result",
+            kind: "numeric",
+          },
+        ]}
+        aiAvailable
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "What is the invoiced revenue by region in stitch_1_result?" }));
+    await waitFor(() => expect(screen.getByLabelText("Latest answer")).toBeInTheDocument());
+    // The chip's own SQL ran locally; the AI path was never touched.
+    expect(c.runSql).toHaveBeenCalledTimes(1);
+    expect(c.runSql).toHaveBeenCalledWith(
+      "SELECT region FROM stitch_1_result",
+      "What is the invoiced revenue by region in stitch_1_result?",
+      undefined
+    );
+    expect(c.ask).not.toHaveBeenCalled();
+    // A typed follow-up then gets the starter's question, SQL and result shape as its thread.
+    await submit("and only EMEA?");
+    await waitFor(() => expect(c.ask).toHaveBeenCalledTimes(1));
+    const [, thread] = c.ask.mock.calls[0] as [string, Array<{ question: string; sql: string; columns: string[]; rowCount: number }>];
+    expect(thread).toHaveLength(1);
+    expect(thread[0]).toMatchObject({
+      question: "What is the invoiced revenue by region in stitch_1_result?",
+      sql: "SELECT region FROM stitch_1_result",
+      columns: ["region"],
+      rowCount: 1,
+    });
+    expect(JSON.stringify(thread)).not.toContain("VALUE-1");
+  });
+
   it("New topic clears the thread, announces it, and keeps the answer on screen", async () => {
     const c = controller([ok(1), ok(2)]);
     const store = new AskStore();

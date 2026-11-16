@@ -52,7 +52,7 @@ With AI off, free-form questions show a message and the starter questions keep w
 - **Recipes and export:** save a stitch as a recipe and replay it on new files through a strict validator and mapper. Export any table as **CSV or Excel**, and export a readable **DuckDB SQL script** of the cleanups and join.
 - **Ask the Lab:** plain-English questions become one read-only DuckDB query, checked by the SQL validator, with a table, the SQL, a CSV export, and **bar and line charts** (with a data table for screen readers). **Follow-up questions** use the last 3 turns as context (question text, SQL, column names and row counts only). **New topic** clears the thread, and **Ask about this** on a table card starts a question about that table.
 - **Fully local switch:** an "AI: On / Off (fully local)" header switch (or a static "Fully local" label when the build has AI off), with a "What leaves the browser?" disclosure built from the same limits the payload builders use.
-- **Starter questions that work with AI off:** deterministic example questions per table run with no LLM call at all.
+- **Starter questions that never need the AI:** deterministic example questions per table always run their own rule-built SQL locally, with AI on or off. They never call the AI or the network, and still pass the SQL validator and the row cap. A typed question that fails says why (read-only rule, a table that is not loaded, a query that could not run, a timeout) instead of a generic message.
 - **Little Frank:** the lab's mascot, a patchwork creature stitched from mismatched parts, in the corner of the screen.
   - **The wake:** loading the first data brings a forked lightning bolt, a flash, a small page shake and sparks, then he jolts upright and says "It's alive!". The bolt is generated fresh for each strike.
   - **Reactions to every action:** he peers at proposals, nods, gives a thumbs up or shrugs at your decisions, sews when you confirm a stitch and wears bandages and a new seam once it is applied, grabs his head at a fan-out warning, puts on a stethoscope for an Autopsy (and faints at a low score), writes on and stamps a recipe scroll, bubbles a flask while a question is pending, smokes on an error, waves goodbye to an export, unplugs a cable when AI goes off, and flickers out on Reset lab. After a minute of quiet he falls asleep, and now and then he reads a tiny book or nibbles an acorn.
@@ -61,9 +61,9 @@ With AI off, free-form questions show a message and the starter questions keep w
   - **Calm Frank and reduced motion:** a **Calm Frank** toggle (remembered in your browser) turns off his animations and keeps the poses and speech bubbles. `prefers-reduced-motion` does the same: no lightning, flash or shake, only still poses and fades.
 - **Lab shelf:** on screens at least 1440px wide, a shelf in the empty right gutter works as page navigation. A Tesla coil crackles over one jar per section of the page (Intake, Stitching, Result, Recipes, Ask, Autopsy, Tables), shown only while that section exists. Each jar's liquid is empty, half or full as you complete the step, and each jar holds a small cartoon specimen floating in it (a hand, bones, a stitched arm, a heart that beats once the result is ready, a brain, an ear, an eye that looks around). The specimen is dim in an empty jar, brightens as the liquid rises, and does one short trick when you hover over its jar. When every visible jar is full, the specimens glow together, the coil throws an arc and Little Frank says "I feel... whole." (once per lab session; Reset lab re-arms it). Click a jar to scroll to its section and move focus to its heading, and the jar for the section in view is highlighted. The coil arcs with Frank's wake and sparks when you confirm a stitch. All of it is static under Calm Frank or reduced motion, and not rendered below 1440px.
 - **FrankenData MCP server:** the same engine as eight `frankendata_*` tools for AI agents such as Kiro, over stdio, with a path guard, no network and no AI (see below).
-- **End-to-end tests:** 24 Playwright tests run the demos, Little Frank and the lab shelf in a real browser.
+- **End-to-end tests:** 25 Playwright tests run the demos, Little Frank and the lab shelf in a real browser.
 
-**By the numbers:** 8 specs, 10 steering docs, 9 hooks, 2 custom agents, 8 MCP tools in 1 MCP server of ours (the config also lists a disabled Playwright server), 202 test files with 1335 tests (74 of them property-test files), 24 Playwright end-to-end tests.
+**By the numbers:** 8 specs, 10 steering docs, 9 hooks, 2 custom agents, 8 MCP tools in 1 MCP server of ours (the config also lists a disabled Playwright server), 204 test files with 1417 tests (74 of them property-test files), 25 Playwright end-to-end tests.
 
 ## Architecture
 
@@ -158,7 +158,7 @@ The lab shelf, the join-key work, the security hardening and the other follow-up
 - **`spec-reviewer`, on `frankendata-smarter-ask`.** It found a requirement that contradicted the code: the spec said a text-plus-number result "SHALL" be a bar chart, but the controller only draws a bar when a supplied chart spec passes validation, and only the line chart is automatic. The requirement was rewritten, and the spec gained the missing criteria (New topic and Reset behavior, the one-shot prefill, the egress line for follow-ups) and coverage for the criteria that had none.
 - **Found while testing: the Join key dropdown never changed the SQL.** A fixture test for the new default join key returned 8 rows instead of 5. The join planner picked the highest-confidence match between two tables and never read the key chosen in the dropdown. It now tries the chosen key first, the default is picked by key-likeness, and text keys compare case-insensitively (`.kiro/NOTES-join-key.md`).
 
-**Tests:** Vitest unit, property (fast-check) and DuckDB golden tests under `npm test` (202 files, 1335 tests), plus 24 Playwright tests in `e2e/demo.spec.ts` under `npm run test:e2e`.
+**Tests:** Vitest unit, property (fast-check) and DuckDB golden tests under `npm test` (204 files, 1417 tests), plus 25 Playwright tests in `e2e/demo.spec.ts` under `npm run test:e2e`.
 
 We drove each spec through spec-driven task execution with Kiro, ran the build, tests, lint and the serverless graph check at every checkpoint, and used focused prompts for follow-ups.
 
@@ -183,7 +183,7 @@ The same engine that runs in the browser is also available to AI agents through 
 
 ### End-to-end browser tests
 
-`npm run test:e2e` (add `E2E_SLOWMO=600` and `-- --headed` to watch it) runs 24 Playwright tests (`e2e/demo.spec.ts`) in a real browser against the Vite dev server. They are not part of `npm test`. First run `npx playwright install chromium`. They cover:
+`npm run test:e2e` (add `E2E_SLOWMO=600` and `-- --headed` to watch it) runs 25 Playwright tests (`e2e/demo.spec.ts`) in a real browser against the Vite dev server. They are not part of `npm test`. First run `npx playwright install chromium`. They cover:
 
 - **The demos end to end:** the mismatched demo (12 rows, Swamp Wraith 3, Autopsy 81), a saved recipe replayed on next month's files, the business demo (48 rows, revenue by region, Autopsy 79), and the business recipe on April's invoices (24 rows).
 - **The toolbar and the page:** the Load demo menu order, the Apply recipe tooltip, the Autopsy scrolling into view, and the landing layout at 100% and 67% zoom.
