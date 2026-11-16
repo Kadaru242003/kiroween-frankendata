@@ -131,6 +131,32 @@ export function cleanedCopyTableName(n: number, sourceTableName: string): string
   return `${STITCH_TABLE_PREFIX}${n}_clean_${sourceTableName}`;
 }
 
+/** The ON condition for one join step; text keys normalize, mixed types convert safely. */
+export function joinOnClause(
+  leftRef: string,
+  leftType: string | undefined,
+  rightRef: string,
+  rightType: string | undefined
+): string {
+  if (leftType === "string" && rightType === "string") {
+    return `${joinKeyExpr(leftRef)} = ${joinKeyExpr(rightRef)}`;
+  }
+  if (leftType === rightType) {
+    return `${leftRef} = ${rightRef}`;
+  }
+  // Mixed types: a plain `=` makes DuckDB cast the text side and fail on the
+  // first non-convertible value. Convert the text side with TRY_CAST (no match
+  // instead of an error); two different non-text types compare as text.
+  const target: Record<string, string> = { number: "DOUBLE", date: "DATE", boolean: "BOOLEAN" };
+  if (leftType === "string" && rightType && target[rightType]) {
+    return `TRY_CAST(trim(${leftRef}) AS ${target[rightType]}) = ${rightRef}`;
+  }
+  if (rightType === "string" && leftType && target[leftType]) {
+    return `${leftRef} = TRY_CAST(trim(${rightRef}) AS ${target[leftType]})`;
+  }
+  return `CAST(${leftRef} AS VARCHAR) = CAST(${rightRef} AS VARCHAR)`;
+}
+
 /**
  * The normalized form of a text join key: whitespace collapsed, trimmed,
  * lower-cased. Matches the normalization the value overlap and the key stats use.
@@ -966,10 +992,7 @@ export function buildJoinChainSql(
     const rightType = step.table.schema.find((c) => c.name === step.rightColumnName)?.type;
     const leftRef = `${alias(step.leftTableName)}.${quoteIdent(step.leftColumnName)}`;
     const rightRef = `${alias(step.table.tableName)}.${quoteIdent(step.rightColumnName)}`;
-    const textKey = leftType === "string" && rightType === "string";
-    const onClause = textKey
-      ? `${joinKeyExpr(leftRef)} = ${joinKeyExpr(rightRef)}`
-      : `${leftRef} = ${rightRef}`;
+    const onClause = joinOnClause(leftRef, leftType, rightRef, rightType);
     fromClause +=
       ` LEFT JOIN ${quoteIdent(step.table.readTableName)} AS ${alias(step.table.tableName)}` +
       ` ON ${onClause}`;
