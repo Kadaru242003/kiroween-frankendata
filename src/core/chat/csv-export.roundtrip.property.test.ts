@@ -34,7 +34,11 @@ function cellArb(): fc.Arbitrary<DisplayValue> {
 
 /** What a CSV parser will read a cell back as: its string form. */
 function expectedText(cell: DisplayValue): string {
-  return typeof cell === "string" ? cell : String(cell);
+  if (typeof cell !== "string") return String(cell);
+  // Text a spreadsheet would run as a formula gets a leading apostrophe
+  // (see csv-export.formula.test.ts); plain numeric text is left alone.
+  const numeric = /^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(cell);
+  return !numeric && /^[=+\-@\t\r]/.test(cell) ? `'${cell}` : cell;
 }
 
 /** Generate a column count and a matrix of rows aligned to it. */
