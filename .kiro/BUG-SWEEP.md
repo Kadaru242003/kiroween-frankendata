@@ -12,13 +12,13 @@ Severity: Critical = data loss, security or privacy break, or a crash in the mai
 | INTAKE-ZERO | Intake (CSV) | High | CSV with values `01234`, `0044123`, `007`, or a 20-digit id | Expected the text kept. Actual stored as 1234, 44123, 7; long ids lost precision (12345678901234567890 became 12345678901234567000). | yes | Fixed (`fix: keep leading-zero and 16+ digit identifiers as text`) |
 | STITCH-MIXED-KEY | Stitching | High | Load `id,v / 1,a` and `id,w / x1,a`, Approve all suggestions, Apply | Expected a result. Actual: apply throws (DuckDB conversion error) and the UI shows nothing. | yes | Fixed (`fix: number-to-text join key no longer fails the whole stitch`) |
 | CSV-FORMULA | Exports | High | Export or download CSV with a cell `=1+1`, `+cmd\|...`, `-2+3`, `@SUM(1)`, tab or CR first | Expected neutralised. Actual written raw (Ask CSV, table export, MCP export). | yes | Fixed (`fix: neutralise spreadsheet formulas in CSV exports`). Strings only; numbers and numeric text unchanged. |
-| APPLY-SILENT | Stitching UI | Medium | Any apply failure in `handleApplyPlan` (`src/App.tsx`) | Expected a visible message. Actual swallowed silently. | no (the only reproducible trigger, STITCH-MIXED-KEY, is fixed) | Open. Needs a new UI element, so it is left for a decision. |
-| CSV-BOM | Exports | Medium | Download CSV with accented text, open in Excel | Excel may show garbled text because the download has no BOM | no (depends on the Excel version) | Open. Would touch three download helpers; left for a decision. |
+| APPLY-SILENT | Stitching UI | Medium | Make Apply & stitch fail (for example the old mixed-key crash) | Expected a visible message. Actual swallowed silently, and a failed apply left cleaned copies behind. | yes | Fixed (`fix: show an inline error when Apply & stitch fails, and roll the failed apply back`). `role="alert"` next to the Join buttons with a category reason (never the raw DuckDB text), Frank puffs smoke, the failed apply drops its partial tables and no plan is stored. |
+| CSV-BOM | Exports | Medium | Download CSV with accented text, open in Excel | Excel may show garbled text because the download has no BOM | yes (known Excel behavior) | Fixed (`fix: add a UTF-8 BOM to CSV downloads so Excel reads accents`). Ask download and table export CSV only; MCP output, SQL scripts, recipe JSON and Autopsy files unchanged. Round trip through FrankenData's own intake tested (José, Zürich, São Paulo). |
 | ORPHAN-TABLES | Stitching | Low | Apply twice without undo leaves `stitch_N_*` tables | Not reachable from the UI (the Apply button is disabled once applied) | no | Open |
 | STALE-AFTER-BACK | Stitching UI | Low | Stitch, Back to tables, reopen | Stitched result card hidden while the stitched table exists | yes | Open (Question below) |
-| FOCUS-DROP | Accessibility | Low | Activate "Load business demo" or Apply by keyboard | Focus falls to body when the control is removed | yes | Open |
+| FOCUS-DROP | Accessibility | Low | Activate "Load business demo" or Apply by keyboard | Focus falls to body when the control is removed | yes | Partly fixed: focus now moves to the Stitched result heading after Apply. Load business demo unchanged. |
 | H-SCROLL-768 | Layout | Low | 768px width | 19px horizontal scroll from `div.lab-intro__flash` | yes | Open |
-| ASK-INPUT-RING | Accessibility | Low | Focus `.ask-panel__input` | No outline ring (the border changes) | yes | Open |
+| ASK-INPUT-RING | Accessibility | Low | Focus `.ask-panel__input` | No outline ring (the border changes) | yes | Fixed (`fix: visible focus ring on the Ask input, and focus the Stitched result after Apply`) |
 | COPY-NOCLIP | Ask the Lab | Low | `navigator.clipboard` undefined | SqlBlock still says "Copied" | yes | Open |
 | BAR-NEGATIVE | Ask the Lab | Low | Bar chart with negative values | Zero-height bar (the label shows the number) | yes | Open |
 | XLSX-CORRUPT | Intake | Low | `.xlsx` with garbage bytes | Reports "empty file" rather than "corrupt" | yes | Open |
@@ -27,15 +27,14 @@ Severity: Critical = data loss, security or privacy break, or a crash in the mai
 | RECIPE-BOM | Recipes | Low | Recipe JSON that starts with a BOM, via the API path | Rejected as invalid JSON (the UI reads through `file.text()`, not checked) | partly | Open |
 | PROXY-NOMETHOD | API | Low | Call `handleAiProxyRequest` or `handleSqlProxyRequest` without `method` | Throws. Not reachable through the Node adapter. | yes | Open |
 
-Counts: Critical 0, High 4 (all fixed), Medium 2 (both open, neither confirmed as a defect), Low 12 (open).
+Counts: Critical 0, High 4 (all fixed), Medium 2 (both fixed), Low 12 (ASK-INPUT-RING fixed, FOCUS-DROP partly fixed, the rest open). Also added from the Questions list: XLSX multi-sheet notice (`fix: tell the user when only the first sheet of an XLSX was loaded`).
 
 ## Questions (not changed)
 
-- XLSX reads only the first sheet, and a workbook whose first sheet is empty gives an empty-file error. Treated as intended.
+- XLSX still reads only the first sheet and errors if it is empty (a notice now appears on the table card when there are several sheets).
 - Non-ASCII column names are sanitised to `_`. Intended by the name sanitiser design?
 - MM/DD versus DD/MM date interpretation.
 - After "Back to tables", should the stitched result card stay visible?
-- Should the CSV downloads carry a UTF-8 BOM (CSV-BOM) and should apply failures show a message (APPLY-SILENT)?
 
 ## Verified clean
 
@@ -45,12 +44,14 @@ CSV BOM stripped, UTF-16 and latin1 give a clear error, delimiters auto-detected
 
 - Firefox: Playwright could not launch it in this sandbox. Chromium and WebKit pass. A code scan found one regex lookbehind (`src/core/chat/redact-error.ts`, Safari 16.4+) and nothing else version-sensitive.
 - The `security-auditor` and `spec-reviewer` agents were not invoked in this sweep; the review was done by hand.
-- The production preview business flow passed in Chromium and WebKit before the fixes. After the fixes it was not repeated; the dev-server e2e suite (25 tests) and `npm run build` pass.
+- Production preview: the business flow business flow (load, Autopsy, Fix all, stitch 48 rows, focus on the result heading, save recipe, starter question, Reset, next-month recipe 24 rows) was repeated after all fixes in Chromium and WebKit: both pass with 0 console errors.
 
 ## Gate (CI=true)
 
-`npm test` 208 files, 1437 tests pass. `npm run build`, `npm run check:api`, `npm run mcp:build` pass. `npm run test:e2e` 25 of 25 pass. Lint reports warnings only (existing React warnings).
+`npm test` 214 files, 1451 tests pass. `npm run build`, `npm run check:api`, `npm run mcp:build` pass. `npm run test:e2e` 27 of 27 pass. Lint reports warnings only (existing React warnings).
 
 ## Test notes
 
 Two existing property tests pinned the old XLSX behavior (UTC dates) and one pinned plain `=` for mixed join keys and verbatim CSV text; each was adjusted narrowly in the fixing commit.
+
+- The inline apply error is unit-tested (JoinControls, message category, rollback in DuckDB), but the App wiring (catch, alert, Frank smoke) was not driven in a browser because no UI path makes an apply fail any more.
