@@ -115,3 +115,39 @@ describe("buildQueryableTables", () => {
     expect(out.map((t) => t.tableName)).toEqual(["monsters"]);
   });
 });
+
+describe("discovery failures", () => {
+  const failing = (times: number, rows: unknown[] = []): DuckDBService => {
+    let n = 0;
+    return {
+      ...fakeDb([]),
+      query: (async () => {
+        n += 1;
+        if (n <= times) throw new Error("transient");
+        return rows;
+      }) as DuckDBService["query"],
+    };
+  };
+  const row = { table_name: "stitch_1_result", column_name: "amount", data_type: "DOUBLE", ordinal_position: 1 };
+
+  it("tries twice, so one transient failure does not drop the stitched tables", async () => {
+    const out = await discoverStitchTables(failing(1, [row]));
+    expect(out.map((t) => t.tableName)).toEqual(["stitch_1_result"]);
+  });
+
+  it("strict mode throws after two failures, so the caller can keep its previous list", async () => {
+    await expect(discoverStitchTables(failing(5), { strict: true })).rejects.toThrow("transient");
+    await expect(buildQueryableTables(failing(5), [], { strict: true })).rejects.toThrow("transient");
+    expect(await discoverStitchTables(failing(5))).toEqual([]);
+  });
+});
+
+describe("column types", () => {
+  it("treats INTEGER, UINTEGER and the other whole-number types as numbers", async () => {
+    const types = ["INTEGER", "UINTEGER", "BIGINT", "SMALLINT", "TINYINT", "UBIGINT", "HUGEINT", "DOUBLE", "DECIMAL(18,3)", "FLOAT"];
+    const db = fakeDb(types.map((t, i) => ({ table_name: "stitch_1_result", column_name: `c${i}`, data_type: t, ordinal_position: i + 1 })));
+    const [table] = await discoverStitchTables(db);
+    expect(table.columns.map((c) => c.type)).toEqual(types.map(() => "number"));
+  });
+});
+

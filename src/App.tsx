@@ -28,7 +28,7 @@ import { generateBusinessChips } from './core/chat/business-chips'
 import { loadNextMonthFiles } from './core/recipes/next-month-demo'
 import { loadBusinessNextMonthFiles } from './core/recipes/business-next-month-demo'
 import { revealProposalCard } from './components/autopsy/reveal-proposal'
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createDuckDBService } from './db/duckdb-service'
 import { createIntakeController } from './core/intake-controller'
 import { demoDataLoader } from './core/demo-data-loader'
@@ -253,6 +253,11 @@ function getLabStack(): Promise<LabStack> {
       const askController = createAskController({
         getQueryableTableNames: () => [...queryableTableNamesHolder],
         runQuery,
+        // Development only: log WHICH kind of failure (a category, never SQL,
+        // values or the question) so a flaky answer can be diagnosed.
+        onDiagnostic: import.meta.env.DEV
+          ? (d) => console.debug('[ask] could not answer:', d.path, d.category)
+          : undefined,
         aiEnabled: ASK_AI_AVAILABLE,
         provider: ASK_AI_AVAILABLE
           ? gateSqlProvider(createProxySqlProvider(), aiSwitch)
@@ -1248,6 +1253,14 @@ function AskPanelRegion({
 }: AskPanelRegionProps) {
   const [queryable, setQueryable] = useState<QueryableTable[]>([])
   const [chips, setChips] = useState<StarterChip[]>([])
+  const [schemaSources, setSchemaSources] = useState<SchemaSourceTable[]>([])
+  // The validator's allowlist and the AI schema read these module holders. They
+  // are written from the SAME state the chips render from, before the browser
+  // can deliver a click on a chip.
+  useLayoutEffect(() => {
+    queryableTableNamesHolder = queryable.map((t) => t.tableName)
+    queryableSchemaSourceHolder = schemaSources
+  }, [queryable, schemaSources])
   // The applied stitched table (or null) — changes on apply/undo and triggers
   // a refresh so stitch_* tables enter/leave the queryable set.
   const { stitchedTable } = useStitchStore(stitchStore)
@@ -1258,7 +1271,9 @@ function AskPanelRegion({
     let cancelled = false
     void (async () => {
       try {
-        const tables = await buildQueryableTables(duckDBService, loadedTables)
+        const tables = await buildQueryableTables(duckDBService, loadedTables, {
+          strict: true,
+        })
         const generated = await generateStarterChips(duckDBService, tables)
         // Row counts for the schema builder (LLM path). Intake tables carry a
         // known count; stitch_* tables are counted via DuckDB. A count failure
@@ -1266,7 +1281,7 @@ function AskPanelRegion({
         const loadedCounts = new Map(
           loadedTables.map((t) => [t.tableName, t.rowCount]),
         )
-        const schemaSources: SchemaSourceTable[] = await Promise.all(
+        const sources: SchemaSourceTable[] = await Promise.all(
           tables.map(async (t) => {
             let rowCount = loadedCounts.get(t.tableName) ?? 0
             if (!loadedCounts.has(t.tableName)) {
@@ -1280,9 +1295,12 @@ function AskPanelRegion({
           }),
         )
         if (cancelled || runId !== runIdRef.current) return
-        queryableTableNamesHolder = tables.map((t) => t.tableName)
-        queryableSchemaSourceHolder = schemaSources
+        // One state update: the table list, the chips and the schema sources
+        // change together, and the SQL allowlist is written from them in a
+        // layout effect below, so what is on screen and what the validator
+        // allows can never disagree.
         setQueryable(tables)
+        setSchemaSources(sources)
         setChips([...generateBusinessChips(tables), ...generated])
       } catch {
         // A refresh failure must not break the lab; keep the prior view.

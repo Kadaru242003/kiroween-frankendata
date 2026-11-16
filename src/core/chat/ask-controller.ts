@@ -38,6 +38,7 @@ import {
   type ChartSpec,
   type SchemaSummary,
   type SqlProvider,
+  type SqlRejectReason,
   type SqlResponse,
   type ThreadTurn,
 } from "./types.js";
@@ -72,7 +73,36 @@ export type QueryRunner = (sql: string) => Promise<QueryExecResult>;
 /** Builds the bounded SchemaSummary for the current tables. Injected. */
 export type SchemaSummaryProvider = () => Promise<SchemaSummary>;
 
+/**
+ * Why a question could not be answered: the category only, never a value (no SQL
+ * text, no cell, no question). Reported through {@link AskControllerDeps.onDiagnostic}
+ * so a developer can see what failed without anything sensitive being logged.
+ */
+export type AskFailureCategory =
+  | `rejected:${SqlRejectReason}`
+  | "execution"
+  | "timeout"
+  | "provider-error"
+  | "schema";
+
+export interface AskDiagnostic {
+  /** Which path failed: a starter chip, a typed question, or the repair retry. */
+  path: "chip" | "ask" | "repair";
+  category: AskFailureCategory;
+}
+
 export interface AskControllerDeps {
+  /**
+   * Optional hook told the failure category (see {@link AskFailureCategory}).
+   * The app wires it to the console in development only. Never throws into the
+   * controller.
+   */
+  onDiagnostic?: (diagnostic: AskDiagnostic) => void;
+  /**
+   * How long a starter chip waits before its one retry (ms). Default
+   * {@link CHIP_RETRY_DELAY_MS}; tests pass 0.
+   */
+  chipRetryDelayMs?: number;
   /** Current queryable table names (for the SqlValidator allowlist). */
   getQueryableTableNames: () => string[];
   /** Executes validator-accepted SQL (already wrapped with the fetch cap). */
@@ -95,9 +125,39 @@ export interface AskController {
 const FRIENDLY_ERROR =
   "The lab could not answer that question. Try rephrasing it, or pick one of the starter questions.";
 
+/** Specific, non-leaky reasons for a typed question that failed (no SQL, names or values). */
+export const READ_ONLY_MESSAGE =
+  "The lab only runs read-only queries on your loaded tables. Try rephrasing your question, or pick one of the starter questions.";
+export const UNKNOWN_TABLE_MESSAGE =
+  "That question needs a table the lab does not have loaded. Try asking about one of your loaded tables, or pick one of the starter questions.";
+export const EXECUTION_MESSAGE =
+  "The lab could not run that query on your data, even after a second try. Try rephrasing your question, or pick one of the starter questions.";
+export const TIMEOUT_MESSAGE = "The lab took too long to answer, try again.";
+export const PROVIDER_MESSAGE =
+  "The lab could not get an answer just now, try again in a moment, or pick one of the starter questions.";
+/** Pause before a starter chip's single retry. */
+export const CHIP_RETRY_DELAY_MS = 75;
+/** A starter chip runs local SQL; if it fails, say so plainly. */
+export const CHIP_MESSAGE =
+  "That starter question could not run just now, try it again.";
+
 /** Wrap accepted SQL so no model-written LIMIT exceeds ASK_MAX_FETCH_ROWS. */
 export function wrapWithFetchCap(sql: string): string {
   return `SELECT * FROM (${sql}) AS q LIMIT ${ASK_MAX_FETCH_ROWS}`;
+}
+
+/** Did the provider call time out (the client aborts after AI_REQUEST_TIMEOUT_MS)? */
+function isTimeoutError(err: unknown): boolean {
+  const name = err instanceof Error ? err.name : "";
+  const msg = err instanceof Error ? err.message : String(err);
+  return name === "AbortError" || name === "TimeoutError" || /abort|timed? ?out/i.test(msg);
+}
+
+/** The specific message for a validator rejection of a typed question's SQL. */
+function rejectionMessage(reason: SqlRejectReason): string {
+  return reason === "unknown-table" || reason === "bad-table-position"
+    ? UNKNOWN_TABLE_MESSAGE
+    : READ_ONLY_MESSAGE;
 }
 
 /** Heuristic: does a provider failure look like an "AI unavailable" (429/503)? */
@@ -108,14 +168,24 @@ function isUnavailableError(err: unknown): boolean {
 
 export function createAskController(deps: AskControllerDeps): AskController {
   /** Validate → wrap → execute → convert → build an `ok` outcome. Never throws. */
+  function report(path: AskDiagnostic["path"], category: AskFailureCategory): void {
+    try {
+      deps.onDiagnostic?.({ path, category });
+    } catch {
+      /* a diagnostics hook must never affect an answer */
+    }
+  }
+
   async function executeValidated(
     rawSql: string,
     explanation: string,
-    chart: ChartSpec | undefined
-  ): Promise<{ outcome: AskOutcome; duckdbError?: string }> {
+    chart: ChartSpec | undefined,
+    path: AskDiagnostic["path"] = "ask"
+  ): Promise<{ outcome: AskOutcome; duckdbError?: string; rejected?: SqlRejectReason }> {
     const validation = validateSql(rawSql, deps.getQueryableTableNames());
     if (!validation.ok) {
-      return { outcome: { kind: "error", message: FRIENDLY_ERROR } };
+      report(path, `rejected:${validation.reason}`);
+      return { outcome: { kind: "error", message: FRIENDLY_ERROR }, rejected: validation.reason };
     }
     try {
       const exec = await deps.runQuery(wrapWithFetchCap(validation.sql));
@@ -151,6 +221,7 @@ export function createAskController(deps: AskControllerDeps): AskController {
     } catch (err) {
       // A DuckDB execution error (not a validation reject) — surfaced so the
       // caller can decide whether to attempt a repair.
+      report(path, "execution");
       return {
         outcome: { kind: "error", message: FRIENDLY_ERROR },
         duckdbError: err instanceof Error ? err.message : String(err),
@@ -163,8 +234,27 @@ export function createAskController(deps: AskControllerDeps): AskController {
     explanation: string,
     chart?: ChartSpec
   ): Promise<AskOutcome> {
-    const { outcome } = await executeValidated(sql, explanation, chart);
-    return outcome;
+    // A starter's SQL is built by rules, with no model involved, and was valid
+    // when its chip was made. If it fails, the cause is almost always timing
+    // (the table list refreshing, one query racing another). Try once more with
+    // a freshly read allowlist before giving up.
+    const first = await executeValidated(sql, explanation, chart, "chip");
+    if (first.outcome.kind === "ok") return first.outcome;
+    const wait = deps.chipRetryDelayMs ?? CHIP_RETRY_DELAY_MS;
+    if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, wait));
+    const second = await executeValidated(sql, explanation, chart, "chip");
+    return second.outcome.kind === "ok" ? second.outcome : { kind: "error", message: CHIP_MESSAGE };
+  }
+
+  /** Map a provider failure to an outcome: unavailable, timed out, or a general failure. */
+  function providerFailure(err: unknown, path: "ask" | "repair"): AskOutcome {
+    if (isUnavailableError(err)) return { kind: "ai-unavailable" };
+    if (isTimeoutError(err)) {
+      report(path, "timeout");
+      return { kind: "error", message: TIMEOUT_MESSAGE };
+    }
+    report(path, "provider-error");
+    return { kind: "error", message: PROVIDER_MESSAGE };
   }
 
   async function ask(question: string, thread: ThreadTurn[] = []): Promise<AskOutcome> {
@@ -180,6 +270,7 @@ export function createAskController(deps: AskControllerDeps): AskController {
     try {
       schema = await deps.buildSchema();
     } catch {
+      report("ask", "schema");
       return { kind: "error", message: FRIENDLY_ERROR };
     }
 
@@ -190,14 +281,16 @@ export function createAskController(deps: AskControllerDeps): AskController {
         fitRequestToCap({ question: trimmed, schema, thread })
       );
     } catch (err) {
-      return isUnavailableError(err)
-        ? { kind: "ai-unavailable" }
-        : { kind: "error", message: FRIENDLY_ERROR };
+      return providerFailure(err, "ask");
     }
 
-    const firstRun = await executeValidated(first.sql, first.explanation, first.chart);
+    const firstRun = await executeValidated(first.sql, first.explanation, first.chart, "ask");
     if (firstRun.outcome.kind === "ok") return firstRun.outcome;
-    // Only a DuckDB execution error (not a validation reject) earns a repair.
+    // A validation reject is final: say why (read-only, or an unknown table).
+    if (firstRun.rejected !== undefined) {
+      return { kind: "error", message: rejectionMessage(firstRun.rejected) };
+    }
+    // Only a DuckDB execution error earns a repair.
     if (firstRun.duckdbError === undefined) return firstRun.outcome;
 
     // ONE RepairCall: send the failed SQL + error back to the model.
@@ -216,18 +309,21 @@ export function createAskController(deps: AskControllerDeps): AskController {
         })
       );
     } catch (err) {
-      return isUnavailableError(err)
-        ? { kind: "ai-unavailable" }
-        : { kind: "error", message: FRIENDLY_ERROR };
+      return providerFailure(err, "repair");
     }
 
     const secondRun = await executeValidated(
       repaired.sql,
       repaired.explanation,
-      repaired.chart
+      repaired.chart,
+      "repair"
     );
-    // Whatever the repair yields (ok or a friendly error), that is the result.
-    return secondRun.outcome;
+    if (secondRun.outcome.kind === "ok") return secondRun.outcome;
+    // The repair is the last try: say why it failed.
+    if (secondRun.rejected !== undefined) {
+      return { kind: "error", message: rejectionMessage(secondRun.rejected) };
+    }
+    return { kind: "error", message: EXECUTION_MESSAGE };
   }
 
   return { ask, runSql };
