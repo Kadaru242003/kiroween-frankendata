@@ -171,6 +171,16 @@
   background: rgba(255, 179, 0, 0.1);
 }
 
+.join-controls__error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--amber-accent);
+  border-radius: 8px;
+  background: rgba(255, 179, 0, 0.1);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
 .join-controls__warning-title {
   margin: 0;
   color: var(--amber-accent);

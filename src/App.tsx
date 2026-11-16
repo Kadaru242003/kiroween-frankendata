@@ -40,6 +40,7 @@ import { LabIntro, TeslaNode, TitleSeam } from './components/LabIntro'
 import { FrankRegion } from './components/frank/FrankRegion'
 import { LabShelf } from './components/shelf/LabShelf'
 import { frankBus } from './state/frank-bus'
+import { describeApplyError } from './core/stitching/apply-error'
 import { CaseFilePanel } from './components/autopsy/CaseFilePanel'
 import { TablePreview, type TablePreviewData } from './components/TablePreview'
 import { ErrorDisplay } from './components/ErrorDisplay'
@@ -802,12 +803,19 @@ function App() {
   // JOIN) and surface it via TablePreview. The fan-out counts land in the store
   // for the JoinControls warning (Req 7.9, 7.11). A failure is swallowed so the
   // lab stays usable.
+  // Tied to the plan that failed: editing the plan (or closing the screen) hides it.
+  const [applyFailure, setApplyFailure] = useState<{ plan: StitchPlan; message: string } | null>(null)
   const handleApplyPlan = useCallback(() => {
     if (stack === null || workingPlan === null) {
       return
     }
-    void stack.stitchController.applyPlan(workingPlan).catch(() => {
-      // Non-fatal: leave the controls in place without a stitched preview.
+    setApplyFailure(null)
+    const attempted = workingPlan
+    void stack.stitchController.applyPlan(attempted).catch((error: unknown) => {
+      // Non-fatal: the apply rolled itself back. Say so next to the buttons and
+      // let Frank puff smoke.
+      setApplyFailure({ plan: attempted, message: describeApplyError(error) })
+      frankBus.emit({ type: 'ask-error' })
     })
   }, [stack, workingPlan])
 
@@ -815,6 +823,7 @@ function App() {
   // the created stitch_* tables and remove the preview, keeping the working
   // plan so the user can adjust and re-apply.
   const handleUndoStitch = useCallback(() => {
+    setApplyFailure(null)
     if (stack === null) {
       return
     }
@@ -1051,6 +1060,11 @@ function App() {
                   onChangeAnchor={handleChangeAnchor}
                   onChangeJoinKey={handleChangeJoinKey}
                   onApply={handleApplyPlan}
+                  applyError={
+                    applyFailure !== null && applyFailure.plan === workingPlan
+                      ? applyFailure.message
+                      : null
+                  }
                   onCancel={handleUndoStitch}
                   onAutopsy={handleAutopsy}
                 />
@@ -1464,6 +1478,8 @@ interface StitchStageProps {
   onChangeJoinKey: (pairKeyValue: string, nextMatchId: string) => void
   onApply: () => void
   onCancel: () => void
+  /** The last apply failure message, if any. */
+  applyError: string | null
   /** Opens an Autopsy on the stitched result (Autopsy Req 1.1). */
   onAutopsy: (table: LoadedTable) => void
 }
@@ -1487,6 +1503,7 @@ function StitchStage({
   onChangeJoinKey,
   onApply,
   onCancel,
+  applyError,
   onAutopsy,
 }: StitchStageProps) {
   const { stitchedTable, fanOut } = useStitchStore(store)
@@ -1522,6 +1539,7 @@ function StitchStage({
         tables={tables as readonly JoinControlsTable[]}
         fanOut={fanOut}
         applied={applied}
+        applyError={applyError}
         onChangeAnchor={onChangeAnchor}
         onChangeJoinKey={onChangeJoinKey}
         onApply={onApply}

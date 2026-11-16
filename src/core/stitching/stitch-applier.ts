@@ -1207,7 +1207,9 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
     //    creation order so the UndoStep captures EXACTLY what was created.
     const createdTableNames: string[] = [];
     const joinInputs: JoinTableInput[] = [];
+    let joined!: AppliedJoinChain;
 
+    try {
     for (const table of tables) {
       const approved = byTableCleanings.get(table.tableName) ?? [];
       if (approved.length > 0) {
@@ -1245,7 +1247,7 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
     }
 
     // 3. Materialize the joined result reading the copies/originals (Req 7.8).
-    const joined = await applyJoinChain(
+    joined = await applyJoinChain(
       db,
       n,
       joinInputs,
@@ -1254,6 +1256,22 @@ export function createStitchApplier(db: DuckDBService): StitchApplier {
       new Set(Object.values(plan.joinKeysByPair))
     );
     createdTableNames.push(joined.tableName);
+    } catch (error) {
+      // A failed apply leaves nothing behind: drop what this attempt created.
+      const candidates = [
+        ...createdTableNames,
+        ...tables.map((t) => cleanedCopyTableName(n, t.tableName)),
+        resultTableName(n),
+      ];
+      for (const name of new Set(candidates)) {
+        try {
+          await db.query(`DROP TABLE IF EXISTS ${quoteIdent(name)}`);
+        } catch {
+          /* best effort */
+        }
+      }
+      throw error;
+    }
 
     // 4. Record the undo step capturing exactly the created tables (Req 4.2).
     const undoStep: UndoStep = { createdTableNames };
