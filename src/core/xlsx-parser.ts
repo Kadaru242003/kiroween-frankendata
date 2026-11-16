@@ -168,17 +168,18 @@ function normalizeCell(cell: RawCell): CellValue {
 /**
  * Format a JS `Date` as an ISO `YYYY-MM-DD` string.
  *
- * SheetJS constructs dates (with `cellDates: true`) in a way that the calendar
- * fields read correctly from the UTC getters, so UTC components are used to
- * avoid timezone drift shifting the day.
+ * SheetJS (with `cellDates: true`) builds Dates whose LOCAL calendar fields
+ * equal the fields shown in the sheet, so the local getters are used. UTC
+ * getters shift the day in zones east of UTC (midnight serials) and shift
+ * times of day in zones west of it.
  */
 function dateToIso(date: Date): CellValue {
   if (Number.isNaN(date.getTime())) {
     return null;
   }
-  const year = date.getUTCFullYear().toString().padStart(4, "0");
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
-  const day = date.getUTCDate().toString().padStart(2, "0");
+  const year = date.getFullYear().toString().padStart(4, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
