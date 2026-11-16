@@ -678,3 +678,24 @@ test.describe('starter chips after the full business flow, at 1600px', () => {
     expect(await moments()).toBe('1')
   })
 })
+
+test('after Apply & stitch succeeds, keyboard focus moves to the Stitched result heading', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  await expect(page.getByRole('region', { name: 'Preview of crm_customers', exact: true })).toBeVisible()
+  await stitchEverything(page)
+  await expect(page.getByRole('heading', { name: 'Stitched result' })).toBeFocused()
+})
+
+test('the Ask the Lab input shows a visible focus ring', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load business demo' }).click()
+  const input = page.locator('.ask-panel__input')
+  await input.focus()
+  const style = await input.evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { width: s.outlineWidth, style: s.outlineStyle }
+  })
+  expect(style.style).toBe('solid')
+  expect(parseFloat(style.width)).toBeGreaterThanOrEqual(2)
+})

@@ -1509,6 +1509,7 @@ function StitchStage({
   const { stitchedTable, fanOut } = useStitchStore(store)
   const applied = stitchedTable !== null
   const resultRef = useRef<HTMLElement | null>(null)
+  const resultHeadingRef = useRef<HTMLHeadingElement | null>(null)
 
   // On a successful stitch, smoothly scroll the result into view (instant when
   // the user prefers reduced motion). Keyed on the stitched table name so it
@@ -1530,6 +1531,8 @@ function StitchStage({
       behavior: prefersReduced ? 'auto' : 'smooth',
       block: 'start',
     })
+    // Keyboard users land on the new result (no second scroll).
+    resultHeadingRef.current?.focus({ preventScroll: true })
   }, [stitchedName])
 
   return (
@@ -1552,7 +1555,13 @@ function StitchStage({
           aria-label="Stitched result preview"
           data-lab-section="result"
         >
-          <h3 className="lab-stitch__result-title">Stitched result</h3>
+          <h3
+            className="lab-stitch__result-title"
+            ref={resultHeadingRef}
+            tabIndex={-1}
+          >
+            Stitched result
+          </h3>
           <TablePreviewRegion
             tables={[stitchedTable]}
             duckDBService={duckDBService}
