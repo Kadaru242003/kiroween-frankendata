@@ -125,7 +125,13 @@ export class XlsxParser implements FileParser {
       return normalized;
     });
 
-    return { sourceFileName, columnNames, rows };
+    const sheetCount = workbook.SheetNames.length;
+    return {
+      sourceFileName,
+      columnNames,
+      rows,
+      ...(sheetCount > 1 ? { sheetNotice: { sheetName: firstSheetName, sheetCount } } : {}),
+    };
   }
 }
 

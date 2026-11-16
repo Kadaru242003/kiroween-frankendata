@@ -100,6 +100,11 @@ function TablePreviewCard({
         <h3 className="table-preview-card__title">{tableName}</h3>
         <p className="table-preview-card__source">{sourceFileName}</p>
         <p className="table-preview-card__rowcount">{rowCountLabel(rowCount)}</p>
+        {table.sheetNotice ? (
+          <p className="table-preview-card__sheet-notice">
+            {`Loaded the first sheet of ${table.sheetNotice.sheetCount} (${table.sheetNotice.sheetName}). Other sheets were skipped.`}
+          </p>
+        ) : null}
         {onAutopsy ? (
           <button
             type="button"

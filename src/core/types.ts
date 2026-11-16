@@ -29,12 +29,20 @@ export interface ColumnSchema {
 export type CellValue = string | null;
 
 /** The result of parsing a file, before typing. */
+/** Set when an XLSX workbook had several sheets and only the first was read. */
+export interface SheetNotice {
+  sheetName: string;
+  sheetCount: number;
+}
+
 export interface ParsedFile {
   sourceFileName: string;
   /** From the first row (CSV) / first row of first sheet (XLSX). */
   columnNames: string[];
   /** Data rows only, aligned with columnNames. */
   rows: CellValue[][];
+  /** Present only for a multi-sheet XLSX (the first sheet was read). */
+  sheetNotice?: SheetNotice;
 }
 
 /** A successfully loaded table. */
@@ -58,6 +66,8 @@ export interface LoadedTable {
   schema: ColumnSchema[];
   /** Total data rows inserted. */
   rowCount: number;
+  /** Present only for a multi-sheet XLSX (the first sheet was read). */
+  sheetNotice?: SheetNotice;
 }
 
 /** A per-file failure captured during the pipeline. */

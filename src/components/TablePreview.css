@@ -53,6 +53,13 @@
   font-size: 14px;
 }
 
+.table-preview-card__sheet-notice {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 .table-preview-card__rowcount {
   margin: 0 0 0 auto;
   color: var(--amber-accent);

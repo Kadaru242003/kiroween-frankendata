@@ -26,6 +26,20 @@ function makeTable(overrides: Partial<LoadedTable> = {}): LoadedTable {
   }
 }
 
+describe('TablePreview sheet notice', () => {
+  it('tells the user when only the first of several sheets was loaded', () => {
+    const table = makeTable({ sheetNotice: { sheetName: 'Sheet1', sheetCount: 3 } })
+    render(<TablePreview tables={[{ table, previewRows: [] }]} />)
+    expect(
+      screen.getByText('Loaded the first sheet of 3 (Sheet1). Other sheets were skipped.'),
+    ).toBeInTheDocument()
+  })
+  it('shows no notice for a normal table', () => {
+    render(<TablePreview tables={[{ table: makeTable(), previewRows: [] }]} />)
+    expect(screen.queryByText(/Other sheets were skipped/)).toBeNull()
+  })
+})
+
 describe('TablePreview', () => {
   it('renders nothing when there are no tables', () => {
     const { container } = render(<TablePreview tables={[]} />)
