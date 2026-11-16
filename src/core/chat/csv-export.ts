@@ -62,3 +62,15 @@ export function toCsv(columns: string[], rows: DisplayValue[][]): string {
   }
   return lines.join(CRLF);
 }
+
+/** The UTF-8 byte order mark. Excel needs it to read accented CSV text. */
+export const CSV_BOM = "\uFEFF";
+
+/**
+ * Prefix CSV text with a UTF-8 BOM for a browser download. Idempotent. The app's
+ * own CSV intake strips it, so a downloaded file loads back unchanged. Not used
+ * for MCP output or SQL scripts.
+ */
+export function csvWithBom(csv: string): string {
+  return csv.startsWith(CSV_BOM) ? csv : CSV_BOM + csv;
+}

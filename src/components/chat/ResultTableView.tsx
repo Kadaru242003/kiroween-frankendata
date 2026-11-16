@@ -19,7 +19,7 @@ import {
   ASK_MAX_FETCH_ROWS,
   type DisplayValue,
 } from "../../core/chat/types";
-import { toCsv } from "../../core/chat/csv-export";
+import { csvWithBom, toCsv } from "../../core/chat/csv-export";
 import { formatCell, humanize, isNumericColumnAt } from "../../core/chat/format";
 import "./ResultTableView.css";
 
@@ -44,7 +44,7 @@ export function ResultTableView({ columns, rows, capped }: ResultTableViewProps)
   const handleDownload = useCallback(() => {
     try {
       const csv = toCsv(columns, rows);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const blob = new Blob([csvWithBom(csv)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
